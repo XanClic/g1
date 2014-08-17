@@ -54,10 +54,10 @@ void init_environment(void)
     atmo_mv  = mat4::identity().scale(vec3(6478.f, 6457.f, 6478.f));
 
 
-    earth_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
-    cloud_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
-    atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/atmob_frag.glsl")};
-    atmof_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
+    earth_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/earth_frag.glsl")};
+    cloud_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/cloud_frag.glsl")};
+    atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/atmob_frag.glsl")};
+    atmof_prg = new gl::program {gl::shader::vert("assets/atmof_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
 
     earth->bind_program_vertex_attribs(*earth_prg);
     earth->bind_program_vertex_attribs(*cloud_prg);
@@ -178,7 +178,6 @@ void draw_environment(const GraphicsStatus &status)
     atmof_prg->uniform<mat3>("mat_nrm") = mat3(atmo_mv).transposed_inverse();
     atmof_prg->uniform<vec3>("cam_pos") = status.camera_position;
     atmof_prg->uniform<vec3>("light_dir") = light_dir;
-    atmof_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
     atmof_prg->uniform<vec2>("z_dim") = vec2(status.z_near, status.z_far);
     atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
     atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
