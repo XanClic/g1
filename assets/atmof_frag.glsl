@@ -26,7 +26,7 @@ void main(void)
     float div = 2000.0 - 1000.0 * old_sample.a;
     float exp =    2.0 -    1.5 * old_sample.a;
 
-    float strength = pow(min(1.0, (zb_a - zf_a) / div), exp);
+    float strength = pow(min(1.0, max((zb_a - zf_a), 0.0) / div), exp);
 
     vec3 normal = normalize(vf_nrm);
     vec3 to_viewer = normalize(cam_pos - vf_pos);
