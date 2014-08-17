@@ -116,9 +116,12 @@ void draw_environment(const GraphicsStatus &status)
     gl::framebuffer *main_fbo = gl::framebuffer::current();
 
     sub_atmo_fbo->bind();
+    glClearDepth(0.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearDepth(1.f);
 
 
+    glDepthFunc(GL_ALWAYS);
     glCullFace(GL_FRONT);
 
     atmo_mv.rotate(.001f, vec3(0.f, 1.f, 0.f));
@@ -130,6 +133,7 @@ void draw_environment(const GraphicsStatus &status)
     earth->draw();
 
 
+    glDepthFunc(GL_LESS);
     glCullFace(GL_BACK);
 
     earth_tex->bind();
