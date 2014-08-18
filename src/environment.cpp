@@ -91,10 +91,10 @@ static void resize(unsigned w, unsigned h)
 
 void draw_environment(const GraphicsStatus &status)
 {
-    static float step = M_PI;
+    static float step = static_cast<float>(M_PI);
 
     vec3 light_dir = vec3(sinf(step), 0.f, cosf(step));
-    step -= .005f;
+    step -= .001f;
 
 
     vec4 sun_pos = 149.6e6f * -light_dir;
@@ -105,9 +105,14 @@ void draw_environment(const GraphicsStatus &status)
     projected_sun /= projected_sun.w();
 
     if (sun_pos.z() < 0.f) {
+        float sun_radius = atanf(696.e3f / sun_pos.length()) * 2.f / status.yfov;
+
+        // artificial correction (pre-blur)
+        sun_radius *= 3.f;
+
         sun_prg->use();
         sun_prg->uniform<vec2>("sun_position") = projected_sun;
-        sun_prg->uniform<vec2>("sun_size") = vec2(.05f * status.height / status.width, .05f);
+        sun_prg->uniform<vec2>("sun_size") = vec2(sun_radius * status.height / status.width, sun_radius);
 
         sun_va->draw(GL_TRIANGLE_STRIP);
     }
@@ -124,7 +129,7 @@ void draw_environment(const GraphicsStatus &status)
     glDepthFunc(GL_ALWAYS);
     glCullFace(GL_FRONT);
 
-    atmo_mv.rotate(.001f, vec3(0.f, 1.f, 0.f));
+    atmo_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
 
     atmob_prg->use();
     atmob_prg->uniform<mat4>("mat_mv") = atmo_mv;
@@ -138,7 +143,7 @@ void draw_environment(const GraphicsStatus &status)
 
     earth_tex->bind();
 
-    earth_mv.rotate(.001f, vec3(0.f, 1.f, 0.f));
+    earth_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
 
     earth_prg->use();
     earth_prg->uniform<mat4>("mat_mv") = earth_mv;
@@ -154,7 +159,7 @@ void draw_environment(const GraphicsStatus &status)
     glDepthMask(GL_FALSE);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
-    cloud_mv.rotate(.001f, vec3(0.f, 1.f, 0.f));
+    cloud_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
 
     cloud_tex->bind();
 

@@ -38,5 +38,5 @@ void main(void)
                      pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 5.0));
 
     // Use alpha blending for background
-    out_col = vec4(mix(old_sample.rgb, brightness * color, min(strength + 1.0 - old_sample.a, 1.0)), max(old_sample.a + strength, 0.0));
+    out_col = vec4(mix(old_sample.rgb, brightness * color, min(strength + 1.0 - old_sample.a, 1.0)), min(old_sample.a + strength, 1.0));
 }
