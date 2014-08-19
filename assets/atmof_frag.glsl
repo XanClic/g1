@@ -1,22 +1,24 @@
 #version 150 core
 
 
-in vec3 vf_pos, vf_nrm, vf_screen_pos;
+in vec3 vf_pos, vf_nrm;
 
 out vec4 out_col;
 
 uniform sampler2D color, depth;
-uniform vec2 z_dim;
-uniform vec3 cam_pos, light_dir;
+uniform vec2 sa_z_dim, screen_dim;
+uniform vec3 cam_pos, cam_fwd, light_dir;
 
 
 void main(void)
 {
-    float zb = 2.0 * texture(depth, vf_screen_pos.xy).r - 1.0, zf = vf_screen_pos.z;
-    float zb_a = 2.0 * z_dim.x * z_dim.y / (z_dim.y + z_dim.x - zb * (z_dim.y - z_dim.x));
-    float zf_a = 2.0 * z_dim.x * z_dim.y / (z_dim.y + z_dim.x - zf * (z_dim.y - z_dim.x));
+    vec2 screen_pos = gl_FragCoord.xy / screen_dim;
 
-    vec4 old_sample = texture(color, vf_screen_pos.xy);
+    float zb = 2.0 * texture(depth, screen_pos).r - 1.0;
+    float zb_a = 2.0 * sa_z_dim.x * sa_z_dim.y / (sa_z_dim.y + sa_z_dim.x - zb * (sa_z_dim.y - sa_z_dim.x));
+    float zf_a = dot(vf_pos - cam_pos, cam_fwd);
+
+    vec4 old_sample = texture(color, screen_pos);
 
     /*
     float div = old_sample.a == 0.0 ? 2000.0 : 1000.0;

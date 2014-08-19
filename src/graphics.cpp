@@ -97,7 +97,8 @@ void init_graphics(void)
     }
 
 
-    status.z_near =   100.f;
+    // what the fuck i don't even
+    status.z_near =     1.f;
     status.z_far  = 50000.f;
 
     status.yfov   = static_cast<float>(M_PI) / 4.f;
@@ -167,8 +168,10 @@ static void calculate_camera(mat4 &mat, const vec3 &pos, const vec3 &forward, co
 
 void do_graphics(const WorldState &input)
 {
-    status.camera_position = vec3(0.f, 6000.f, 18000.f);
-    calculate_camera(status.world_to_camera, status.camera_position, vec3(0.f, -.34f, -1.f), vec3(0.f, 1.f, 0.f));
+    status.camera_position = input.player_position;
+    status.camera_forward  = input.player_forward;
+
+    calculate_camera(status.world_to_camera, status.camera_position, input.player_forward, input.player_up);
 
 
     glEnable(GL_BLEND);
