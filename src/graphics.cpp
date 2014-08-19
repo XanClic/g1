@@ -26,6 +26,7 @@ void init_graphics(void)
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_BLEND);
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -97,9 +98,8 @@ void init_graphics(void)
     }
 
 
-    // what the fuck i don't even
-    status.z_near =     1.f;
-    status.z_far  = 50000.f;
+    status.z_near =  .01f;
+    status.z_far  = 500.f;
 
     status.yfov   = static_cast<float>(M_PI) / 4.f;
 
