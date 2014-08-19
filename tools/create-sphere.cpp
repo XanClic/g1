@@ -108,10 +108,12 @@ int main(int argc, char *argv[])
             2.f * static_cast<float>(M_PI) * (hor + 1) / hor_count
         };
 
-        vertices[vi].position = vec3(0.f, 1.f, 0.f);
-        vertices[vi].normal   = vertices[vi].position.normalized();
-        vertices[vi].texcoord = vec2(1.f - (hangle[0] + hangle[1]) / (4.f * static_cast<float>(M_PI)), 0.f);
-        vi++;
+        for (int i = 0; i < (hor ? 2 : 1); i++) {
+            vertices[vi].position = vec3(0.f, 1.f, 0.f);
+            vertices[vi].normal   = vertices[vi].position.normalized();
+            vertices[vi].texcoord = vec2(1.f - (hangle[0] + hangle[1]) / (4.f * static_cast<float>(M_PI)), 0.f);
+            vi++;
+        }
 
         for (long ver = 0; ver < ver_count - 1; ver++) {
             float vangle = (ver + .5f) / (ver_count - 1) * static_cast<float>(M_PI);
@@ -124,7 +126,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        for (int i = 0; i < (hor < hor_count - 1 ? 3 : 1); i++) {
+        for (int i = 0; i < (hor < hor_count - 1 ? 2 : 1); i++) {
             vertices[vi].position = vec3(0.f, -1.f, 0.f);
             vertices[vi].normal   = vertices[vi].position.normalized();
             vertices[vi].texcoord = vec2(1.f - (hangle[0] + hangle[1]) / (4.f * static_cast<float>(M_PI)), 1.f);
