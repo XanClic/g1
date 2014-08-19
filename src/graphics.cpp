@@ -119,7 +119,7 @@ void set_resolution(unsigned width, unsigned height)
     main_fb->resize(width, height);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb->resize(width / 4, height / 4);
+        bloom_fb->resize(width / 2, height / 2);
     }
 
     for (void (*rh)(unsigned w, unsigned h): resize_handlers) {
@@ -188,7 +188,7 @@ void do_graphics(const WorldState &input)
 
     bloom_fbs[0]->bind();
     glClear(GL_DEPTH_BUFFER_BIT);
-    glViewport(0, 0, status.width / 4, status.height / 4);
+    glViewport(0, 0, status.width / 2, status.height / 2);
 
     (*main_fb)[0].bind();
 
@@ -197,11 +197,11 @@ void do_graphics(const WorldState &input)
 
     fb_vertices->draw(GL_TRIANGLE_STRIP);
 
-    for (int i = 6; i >= 0; i--) {
+    for (int i = 7; i >= 0; i--) {
         float mag = exp2f(i);
 
         for (int cur_fb: {0, 1}) {
-            gl::program *blur_prg = blur_prgs[(i == 6 ? 0 : 2) + cur_fb];
+            gl::program *blur_prg = blur_prgs[(i == 7 ? 0 : 2) + cur_fb];
 
             bloom_fbs[!cur_fb]->bind();
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -209,7 +209,7 @@ void do_graphics(const WorldState &input)
             (*bloom_fbs[cur_fb])[0].bind();
 
             blur_prg->use();
-            blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 256.f : 256.f * status.width / status.height);
+            blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 512.f : 512.f * status.width / status.height);
             blur_prg->uniform<gl::texture>("tex") = (*bloom_fbs[cur_fb])[0];
 
             fb_vertices->draw(GL_TRIANGLE_STRIP);
