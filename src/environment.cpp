@@ -116,11 +116,16 @@ void draw_environment(const GraphicsStatus &status)
         // artificial correction (pre-blur)
         sun_radius *= 3.f;
 
+        // everything is in front of the sun
+        glDisable(GL_DEPTH_TEST);
+
         sun_prg->use();
         sun_prg->uniform<vec2>("sun_position") = projected_sun;
         sun_prg->uniform<vec2>("sun_size") = vec2(sun_radius * status.height / status.width, sun_radius);
 
         sun_va->draw(GL_TRIANGLE_STRIP);
+
+        glEnable(GL_DEPTH_TEST);
     }
 
 
@@ -144,7 +149,7 @@ void draw_environment(const GraphicsStatus &status)
     earth->draw();
 
 
-    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LEQUAL);
     glCullFace(GL_BACK);
 
     earth_tex->bind();
