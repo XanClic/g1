@@ -8,5 +8,5 @@ out vec4 out_col;
 
 void main(void)
 {
-    out_col = vec4(30.0) * max(1.0 - length(vf_position), 0.0);
+    out_col = vec4(13.0) * smoothstep(0.0, 0.1, 1.0 - length(vf_position));
 }
