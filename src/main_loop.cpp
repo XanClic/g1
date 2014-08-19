@@ -14,11 +14,12 @@ void main_loop(void)
     std::shared_ptr<WorldState> states[2] = { std::make_shared<WorldState>(), std::make_shared<WorldState>() };
     int source = 0;
 
-    while (!quit) {
-        ui_process_events();
+    states[0]->initialize();
 
+    while (!quit) {
         int next_source = (source + 1) % 2;
 
+        ui_process_events(*states[next_source]);
         do_physics(*states[next_source], *states[source]);
         do_graphics(*states[source]);
 

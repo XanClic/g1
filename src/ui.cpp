@@ -2,12 +2,16 @@
 #include <stdexcept>
 #include <string>
 
-#include <dake/gl/gl.hpp>
+#include <dake/dake.hpp>
 #include <SDL2/SDL.h>
 
 #include "graphics.hpp"
 #include "main_loop.hpp"
+#include "physics.hpp"
 #include "ui.hpp"
+
+
+using namespace dake::math;
 
 
 static SDL_Window *wnd;
@@ -66,6 +70,7 @@ void init_ui(void)
     }
 
     SDL_GL_SetSwapInterval(1);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
 
     printf("OpenGL %i.%i Core initialized\n", maj, min);
 
@@ -75,9 +80,12 @@ void init_ui(void)
 }
 
 
-void ui_process_events(void)
+void ui_process_events(WorldState &state)
 {
     SDL_Event event;
+
+    state.right = 0.f;
+    state.up    = 0.f;
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -92,6 +100,26 @@ void ui_process_events(void)
                        break;
                 }
                 break;
+
+            case SDL_MOUSEMOTION:
+                state.right =  event.motion.xrel;
+                state.up    = -event.motion.yrel;
+                break;
+
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_x:
+                        state.player_accel += state.player_forward * state.interval;
+                        break;
+
+                    case SDLK_z:
+                        state.player_accel -= state.player_forward * state.interval;
+                        break;
+
+                    case SDLK_BACKSPACE:
+                        state.player_accel    = vec3::zero();
+                        break;
+                }
         }
     }
 }

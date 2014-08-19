@@ -97,6 +97,12 @@ void draw_environment(const GraphicsStatus &status)
     step -= .001f;
 
 
+    float sa_zn = (status.camera_position.length() - 6400.f) / 1.5f;
+    float sa_zf =  status.camera_position.length() + 7000.f;
+
+    mat4 sa_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, sa_zn, sa_zf);
+
+
     vec4 sun_pos = 149.6e6f * -light_dir;
     sun_pos.w() = 1.f;
     sun_pos = status.world_to_camera * sun_pos;
@@ -133,7 +139,7 @@ void draw_environment(const GraphicsStatus &status)
 
     atmob_prg->use();
     atmob_prg->uniform<mat4>("mat_mv") = atmo_mv;
-    atmob_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+    atmob_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
 
     earth->draw();
 
@@ -147,7 +153,7 @@ void draw_environment(const GraphicsStatus &status)
 
     earth_prg->use();
     earth_prg->uniform<mat4>("mat_mv") = earth_mv;
-    earth_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+    earth_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
     earth_prg->uniform<mat3>("mat_nrm") = mat3(earth_mv).transposed_inverse();
     earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
     earth_prg->uniform<vec3>("light_dir") = light_dir;
@@ -165,7 +171,7 @@ void draw_environment(const GraphicsStatus &status)
 
     cloud_prg->use();
     cloud_prg->uniform<mat4>("mat_mv") = cloud_mv;
-    cloud_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+    cloud_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
     cloud_prg->uniform<mat3>("mat_nrm") = mat3(cloud_mv).transposed_inverse();
     cloud_prg->uniform<vec3>("light_dir") = light_dir;
     cloud_prg->uniform<gl::texture>("tex") = *cloud_tex;
@@ -186,8 +192,10 @@ void draw_environment(const GraphicsStatus &status)
     atmof_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
     atmof_prg->uniform<mat3>("mat_nrm") = mat3(atmo_mv).transposed_inverse();
     atmof_prg->uniform<vec3>("cam_pos") = status.camera_position;
+    atmof_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
     atmof_prg->uniform<vec3>("light_dir") = light_dir;
-    atmof_prg->uniform<vec2>("z_dim") = vec2(status.z_near, status.z_far);
+    atmof_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
+    atmof_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
     atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
     atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
 
