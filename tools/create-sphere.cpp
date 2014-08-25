@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
         }
 
         for (long ver = 0; ver < ver_count - 1; ver++) {
-            float vangle = (ver + .5f) / (ver_count - 1) * static_cast<float>(M_PI);
+            float vangle = (ver + 1.f) / ver_count * static_cast<float>(M_PI);
 
             for (int i: {1, 0}) {
                 vertices[vi].position = vec3(sinf(vangle) * cosf(hangle[i]), cosf(vangle), sinf(vangle) * sinf(hangle[i]));

@@ -37,11 +37,11 @@ void WorldState::initialize(void)
     timestamp = std::chrono::steady_clock::now();
     interval  = 1.f / 60.f;
 
-    player_forward = vec3( 0.f, 0.f, -1.f);
+    player_forward = vec3( 0.f, 0.f,  1.f);
     player_up      = vec3( 0.f, 1.f,  0.f);
-    player_right   = vec3( 1.f, 0.f,  0.f);
+    player_right   = vec3(-1.f, 0.f,  0.f);
 
-    player_position = vec3(0.f, 0.f, 6500.f);
+    player_position = vec3(0.f, 1.f, 6500.f);
     player_velocity = vec3::zero();
     player_accel    = vec3::zero();
 }

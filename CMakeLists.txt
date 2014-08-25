@@ -7,6 +7,7 @@ project(g1)
 
 find_package(OpenGL REQUIRED)
 find_package(PNG REQUIRED)
+find_package(JPEG REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
 
@@ -23,12 +24,12 @@ ExternalProject_Add(
 
 ExternalProject_Get_Property(dake binary_dir)
 
-include_directories(include ${binary_dir}/include ${PNG_INCLUDE} ${SDL2_INCLUDE})
+include_directories(include ${binary_dir}/include ${SDL2_INCLUDE})
 link_directories(${binary_dir})
 
 add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp src/physics.cpp src/environment.cpp src/xsmd.cpp)
 add_dependencies(g1 dake)
-target_link_libraries(g1 libdake.a ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${SDL2_LIBRARIES})
+target_link_libraries(g1 libdake.a ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES})
 
 add_executable(create-sphere tools/create-sphere.cpp)
 add_dependencies(create-sphere dake)

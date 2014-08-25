@@ -1,5 +1,7 @@
 build
 assets/from
-assets/earth.png
-assets/clouds.png
+assets/earth/
+assets/night/
+assets/clouds/
+assets/earth_spec.jpg
 assets/earth.xsmd
