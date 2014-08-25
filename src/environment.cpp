@@ -26,6 +26,7 @@ using namespace dake::math;
 
 
 static XSMD *earth;
+static gl::texture *day_tex, *night_tex, *cloud_tex;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_array *sun_va;
@@ -115,15 +116,8 @@ void Tile::unload(void)
 static void resize(unsigned w, unsigned h);
 
 
-void init_environment(void)
+static void init_lods(void)
 {
-    earth = load_xsmd("assets/earth.xsmd");
-    earth->make_vertex_array();
-
-    earth_tex_va = earth->va->attrib(3);
-    earth_tex_va->format(2, GL_INT);
-    earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
-
     day_lods.resize(9);
     night_lods.resize(9);
     cloud_lods.resize(9);
@@ -199,7 +193,37 @@ void init_environment(void)
             lod = -1;
         }
     }
+}
 
+
+void init_environment(void)
+{
+    earth = load_xsmd("assets/earth.xsmd");
+    earth->make_vertex_array();
+
+    if (gl::glext.has_bindless_textures()) {
+        earth_tex_va = earth->va->attrib(3);
+        earth_tex_va->format(2, GL_INT);
+        earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
+
+        init_lods();
+    } else {
+        day_tex = new gl::texture("assets/earth/5-0-0.jpg");
+        day_tex->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+        night_tex = new gl::texture("assets/night/5-0-0.jpg");
+        night_tex->set_tmu(1);
+        night_tex->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+        cloud_tex = new gl::texture("assets/clouds/5-0-0.jpg");
+        cloud_tex->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+    }
 
     sun_va = new gl::vertex_array;
     sun_va->set_elements(4);
@@ -219,8 +243,13 @@ void init_environment(void)
     atmo_mv  = mat4::identity().scale(vec3(6478.f, 6457.f, 6478.f));
 
 
-    earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
-    cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
+    if (gl::glext.has_bindless_textures()) {
+        earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
+    } else {
+        earth_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/earth_nbl_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
+    }
     atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/atmob_frag.glsl")};
     atmof_prg = new gl::program {gl::shader::vert("assets/atmof_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
 
@@ -229,8 +258,10 @@ void init_environment(void)
     earth->bind_program_vertex_attribs(*atmob_prg);
     earth->bind_program_vertex_attribs(*atmof_prg);
 
-    earth_prg->bind_attrib("va_textures", 3);
-    cloud_prg->bind_attrib("va_textures", 3);
+    if (gl::glext.has_bindless_textures()) {
+        earth_prg->bind_attrib("va_textures", 3);
+        cloud_prg->bind_attrib("va_textures", 3);
+    }
 
     earth_prg->bind_frag("out_col", 0);
     cloud_prg->bind_frag("out_col", 0);
@@ -472,7 +503,9 @@ void draw_environment(const GraphicsStatus &status)
     cloud_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
 
 
-    update_lods(status);
+    if (gl::glext.has_bindless_textures()) {
+        update_lods(status);
+    }
 
 
     static float step = static_cast<float>(M_PI);
@@ -541,6 +574,14 @@ void draw_environment(const GraphicsStatus &status)
     earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
     earth_prg->uniform<vec3>("light_dir") = light_dir;
 
+    if (!gl::glext.has_bindless_textures()) {
+        day_tex->bind();
+        night_tex->bind();
+
+        earth_prg->uniform<gl::texture>("day_texture") = *day_tex;
+        earth_prg->uniform<gl::texture>("night_texture") = *night_tex;
+    }
+
     earth->draw();
 
 
@@ -552,6 +593,11 @@ void draw_environment(const GraphicsStatus &status)
     cloud_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
     cloud_prg->uniform<mat3>("mat_nrm") = mat3(cloud_mv).transposed_inverse();
     cloud_prg->uniform<vec3>("light_dir") = light_dir;
+
+    if (!gl::glext.has_bindless_textures()) {
+        cloud_tex->bind();
+        cloud_prg->uniform<gl::texture>("cloud_texture") = *cloud_tex;
+    }
 
     earth->draw();
 
