@@ -29,7 +29,7 @@ link_directories(${binary_dir})
 
 add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp src/physics.cpp src/environment.cpp src/xsmd.cpp)
 add_dependencies(g1 dake)
-target_link_libraries(g1 libdake.a ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES})
+target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES} libdake.a)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 add_dependencies(create-sphere dake)
