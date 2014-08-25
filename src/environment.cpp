@@ -21,9 +21,11 @@ using namespace dake::math;
 #define EARTH_HORZ 256
 #define EARTH_VERT 128
 
+// type \in \{ day, night, clouds \}
+#define MAX_TEX_PER_TYPE 20
+
 
 static XSMD *earth;
-static gl::texture *earth_spec_tex;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_array *sun_va;
@@ -121,9 +123,6 @@ void init_environment(void)
     earth_tex_va = earth->va->attrib(3);
     earth_tex_va->format(2, GL_INT);
     earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
-
-    earth_spec_tex = new gl::texture("assets/earth_spec.jpg");
-    earth_spec_tex->make_bindless();
 
     day_lods.resize(9);
     night_lods.resize(9);
@@ -310,7 +309,7 @@ static void update_lods(const GraphicsStatus &gstat)
 
         if (++lod_tiles_i >= lod_tiles) {
             lod_tiles_i = 0;
-            lod_tiles *= 2;
+            lod_tiles *= 4;
 
             if (base_lod < 8) {
                 base_lod++;
@@ -321,7 +320,7 @@ static void update_lods(const GraphicsStatus &gstat)
     if (changed) {
         vec<2, int32_t> *mapping = static_cast<vec<2, int32_t> *>(earth_tex_va->map());
         uint64_t vertex = 0;
-        int day_uniform_index = 0, night_uniform_index = 0, cloud_uniform_index = 0;
+        int uniform_indices[3] = {0};
 
         for (int lod = 0; lod <= 8; lod++) {
             for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
@@ -348,43 +347,53 @@ static void update_lods(const GraphicsStatus &gstat)
                     ty = 15;
                 }
 
-                LOD &day_lod = day_lods[tile_lods[tx][ty]];
-                LOD &night_lod = night_lods[helper::maximum(tile_lods[tx][ty], 2)];
-                LOD &cloud_lod = cloud_lods[tile_lods[tx][ty]];
+                int lods[3] = {
+                    tile_lods[tx][ty],
+                    helper::maximum(tile_lods[tx][ty], 2),
+                    tile_lods[tx][ty]
+                };
 
-                // I don't even myself
-                int day_xtex = (31 - tx) * day_lod.horz_tiles / 32;
-                int day_ytex =       ty  * day_lod.vert_tiles / 16;
+                Tile *tiles[3] = {nullptr};
 
-                int night_xtex = (31 - tx) * night_lod.horz_tiles / 32;
-                int night_ytex =       ty  * night_lod.vert_tiles / 16;
+                for (int type = 0; type < 3; type++) {
+                    for (bool retrying = false;; retrying = true) {
+                        LOD &lod = type == 0 ?   day_lods[lods[type]]
+                                 : type == 1 ? night_lods[lods[type]]
+                                 :             cloud_lods[lods[type]];
 
-                int cloud_xtex = (31 - tx) * cloud_lod.horz_tiles / 32;
-                int cloud_ytex =       ty  * cloud_lod.vert_tiles / 16;
+                        // I don't even myself
+                        int xtex = (31 - tx) * lod.horz_tiles / 32;
+                        int ytex =       ty  * lod.vert_tiles / 16;
 
-                Tile &day_tile = day_lod.tiles[day_xtex][day_ytex];
-                Tile &night_tile = night_lod.tiles[night_xtex][night_ytex];
-                Tile &cloud_tile = cloud_lod.tiles[cloud_xtex][cloud_ytex];
+                        Tile &tile = lod.tiles[xtex][ytex];
 
-                if (!day_tile.refcount++) {
-                    assert(day_uniform_index < 128);
-                    day_tile.index = day_uniform_index++;
+                        if (!tile.refcount++) {
+                            // FIXME this is not working
+                            if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
+                                tile.refcount = 0;
+                                lods[type] = type == 1 ? 2 : 0;
+                                continue;
+                            } else if (retrying) {
+                                tile.refcount = 0;
+                                if (++lods[type] >= 9) {
+                                    throw std::runtime_error("Could not determine appropriate texture");
+                                }
+                                continue;
+                            }
+
+                            tile.index = uniform_indices[type]++;
+                        }
+
+                        tiles[type] = &tile;
+
+                        break;
+                    }
                 }
 
-                if (!night_tile.refcount++) {
-                    assert(night_uniform_index < 128);
-                    night_tile.index = night_uniform_index++;
-                }
+                assert(tiles[0]->index == tiles[2]->index);
 
-                if (!cloud_tile.refcount++) {
-                    assert(cloud_uniform_index < 128);
-                    cloud_tile.index = cloud_uniform_index++;
-                }
-
-                assert(day_tile.index == cloud_tile.index);
-
-                mapping[vertex][0] = day_tile.index;
-                mapping[vertex][1] = night_tile.index;
+                mapping[vertex][0] = tiles[0]->index;
+                mapping[vertex][1] = tiles[1]->index;
 
                 vertex++;
             }
@@ -524,7 +533,6 @@ void draw_environment(const GraphicsStatus &status)
     earth_prg->uniform<mat3>("mat_nrm") = mat3(earth_mv).transposed_inverse();
     earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
     earth_prg->uniform<vec3>("light_dir") = light_dir;
-    earth_prg->uniform<gl::texture>("spec_tex") = *earth_spec_tex;
 
     earth->draw();
 

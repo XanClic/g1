@@ -8,8 +8,8 @@ flat in ivec2 vf_tex;
 
 out vec4 out_col;
 
-layout(bindless_sampler) uniform sampler2D cloud_textures[128];
-uniform vec4 cloud_texture_params[128];
+layout(bindless_sampler) uniform sampler2D cloud_textures[20];
+uniform vec4 cloud_texture_params[20];
 
 uniform vec3 light_dir;
 
