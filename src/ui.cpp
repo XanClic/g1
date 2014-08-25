@@ -119,6 +119,10 @@ void ui_process_events(WorldState &state)
                     case SDLK_BACKSPACE:
                         state.player_accel    = vec3::zero();
                         break;
+
+                    case SDLK_ESCAPE:
+                        quit_main_loop();
+                        break;
                 }
         }
     }
