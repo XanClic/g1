@@ -36,8 +36,8 @@ void main(void)
     float brightness = clamp(pow(dot(normal, -light_dir) + 1.0, 2.0), 0.1, 1.0);
 
     vec3 color = mix(vec3(0.5, 0.7, 1.0), vec3(1.0, 0.3, 0.0),
-                     smoothstep(brightness, 0.0, 0.2) *
-                     pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 10.0));
+                     smoothstep(brightness, 0.0, 0.1) *
+                     pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 5.0));
 
     // Use alpha blending for background
     out_col = vec4(mix(old_sample.rgb, brightness * color, min(strength + 1.0 - old_sample.a, 1.0)), min(old_sample.a + strength, 1.0));
