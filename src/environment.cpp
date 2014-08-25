@@ -437,11 +437,18 @@ static void update_lods(const GraphicsStatus &gstat)
                         Tile &tile = night_lods[lod].tiles[x][y];
 
                         tile.load();
+
                         std::string si(std::to_string(tile.index));
                         earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
                         earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
                     }
+                }
+            }
+        }
 
+        for (int lod = 0; lod <= 8; lod++) {
+            for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+                for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                     if (cloud_lods[lod].tiles[x][y].refcount) {
                         Tile &tile = cloud_lods[lod].tiles[x][y];
 
