@@ -256,7 +256,7 @@ void init_environment(void)
 
     earth_mv = mat4::identity().scale(vec3(6378.f, 6357.f, 6378.f));
     cloud_mv = mat4::identity().scale(vec3(6388.f, 6367.f, 6388.f));
-    atmo_mv  = mat4::identity().scale(vec3(6478.f, 6457.f, 6478.f));
+    atmo_mv  = mat4::identity().scale(vec3(6448.f, 6417.f, 6448.f));
 
 
     if (gl::glext.has_bindless_textures()) {
@@ -658,7 +658,7 @@ void draw_environment(const GraphicsStatus &status)
         float sun_radius = atanf(696.e3f / sun_pos.length()) * 2.f / status.yfov;
 
         // artificial correction (pre-blur)
-        sun_radius *= 3.f;
+        sun_radius *= 2.f;
 
         // everything is in front of the sun
         glDisable(GL_DEPTH_TEST);

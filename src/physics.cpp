@@ -41,7 +41,7 @@ void WorldState::initialize(void)
     player_up      = vec3( 0.f, 1.f,  0.f);
     player_right   = vec3(-1.f, 0.f,  0.f);
 
-    player_position = vec3(0.f, 1.f, 6500.f);
+    player_position = vec3(0.f, 1.f, 6450.f);
     player_velocity = vec3::zero();
     player_accel    = vec3::zero();
 }
