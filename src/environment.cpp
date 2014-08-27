@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -46,8 +47,10 @@ struct Tile {
     int refcount = 0;
     int index = 0;
 
-    void load(void);
-    void unload(void);
+    void load_image(void);
+    void load_texture(void);
+    void unload_image(void);
+    void unload_texture(void);
 
     void load_source(const char *name, int lod, int si, int ti);
 };
@@ -88,13 +91,22 @@ void Tile::load_source(const char *name, int lod, int si, int ti)
 }
 
 
-void Tile::load(void)
+void Tile::load_image(void)
 {
     if (image) {
         return;
     }
 
     image = new gl::image(source, source_size);
+}
+
+
+void Tile::load_texture(void)
+{
+    if (texture) {
+        return;
+    }
+
     texture = new gl::texture(*image);
     texture->bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
@@ -103,12 +115,16 @@ void Tile::load(void)
 }
 
 
-void Tile::unload(void)
+void Tile::unload_image(void)
 {
     delete image;
-    delete texture;
-
     image = nullptr;
+}
+
+
+void Tile::unload_texture(void)
+{
+    delete texture;
     texture = nullptr;
 }
 
@@ -288,8 +304,257 @@ static void resize(unsigned w, unsigned h)
 }
 
 
+static void perform_lod_update(vec<2, int32_t> *indices)
+{
+    uint64_t vertex = 0;
+    int uniform_indices[3] = {0};
+
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                day_lods[lod].tiles[x][y].refcount = 0;
+                cloud_lods[lod].tiles[x][y].refcount = 0;
+                if (lod >= 2) {
+                    night_lods[lod].tiles[x][y].refcount = 0;
+                }
+            }
+        }
+    }
+
+    // FIXME
+    for (int x = 0; x < EARTH_HORZ; x++) {
+        int tx = x / (EARTH_HORZ / 32);
+
+        for (int y = (x ? -1 : 0); y < EARTH_VERT * 2 + (x < EARTH_HORZ - 1 ? 1 : 0); y++) {
+            int ty = (y - 1) / (EARTH_VERT / 8);
+
+            if (ty < 0) {
+                ty = 0;
+            } else if (ty > 15) {
+                ty = 15;
+            }
+
+            int lods[3] = {
+                tile_lods[tx][ty],
+                helper::maximum(tile_lods[tx][ty], 2),
+                tile_lods[tx][ty]
+            };
+
+            Tile *tiles[3] = {nullptr};
+
+            for (int type = 0; type < 3; type++) {
+                for (bool retrying = false;; retrying = true) {
+                    LOD &lod = type == 0 ?   day_lods[lods[type]]
+                             : type == 1 ? night_lods[lods[type]]
+                             :             cloud_lods[lods[type]];
+
+                    // I don't even myself
+                    int xtex = (31 - tx) * lod.horz_tiles / 32;
+                    int ytex =       ty  * lod.vert_tiles / 16;
+
+                    Tile &tile = lod.tiles[xtex][ytex];
+
+                    if (!tile.refcount++) {
+                        // FIXME this is not working
+                        if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
+                            tile.refcount = 0;
+                            lods[type] = type == 1 ? 2 : 0;
+                            continue;
+                        } else if (retrying) {
+                            tile.refcount = 0;
+                            if (++lods[type] >= 9) {
+                                throw std::runtime_error("Could not determine appropriate texture");
+                            }
+                            continue;
+                        }
+
+                        tile.index = uniform_indices[type]++;
+                    }
+
+                    tiles[type] = &tile;
+
+                    break;
+                }
+            }
+
+            assert(tiles[0]->index == tiles[2]->index);
+
+            indices[vertex][0] = tiles[0]->index;
+            indices[vertex][1] = tiles[1]->index;
+
+            vertex++;
+        }
+    }
+
+    assert(vertex == earth->hdr->vertex_count);
+}
+
+
+static bool lod_loading_complete = false, lod_unloading_complete = false;
+
+
+static void lod_load_images(void)
+{
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (day_lods[lod].tiles[x][y].refcount) {
+                    day_lods[lod].tiles[x][y].load_image();
+                }
+                if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
+                    night_lods[lod].tiles[x][y].load_image();
+                }
+                if (cloud_lods[lod].tiles[x][y].refcount) {
+                    cloud_lods[lod].tiles[x][y].load_image();
+                }
+            }
+        }
+    }
+
+    lod_loading_complete = true;
+}
+
+
+static void lod_load_textures(void)
+{
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (day_lods[lod].tiles[x][y].refcount) {
+                    day_lods[lod].tiles[x][y].load_texture();
+                }
+                if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
+                    night_lods[lod].tiles[x][y].load_texture();
+                }
+                if (cloud_lods[lod].tiles[x][y].refcount) {
+                    cloud_lods[lod].tiles[x][y].load_texture();
+                }
+            }
+        }
+    }
+}
+
+
+static void lod_unload_images(void)
+{
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (!day_lods[lod].tiles[x][y].refcount) {
+                    day_lods[lod].tiles[x][y].unload_image();
+                }
+                if ((lod >= 2) && !night_lods[lod].tiles[x][y].refcount) {
+                    night_lods[lod].tiles[x][y].unload_image();
+                }
+                if (!cloud_lods[lod].tiles[x][y].refcount) {
+                    cloud_lods[lod].tiles[x][y].unload_image();
+                }
+            }
+        }
+    }
+
+    lod_unloading_complete = true;
+}
+
+
+static void lod_unload_textures(void)
+{
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (!day_lods[lod].tiles[x][y].refcount) {
+                    day_lods[lod].tiles[x][y].unload_texture();
+                }
+                if ((lod >= 2) && !night_lods[lod].tiles[x][y].refcount) {
+                    night_lods[lod].tiles[x][y].unload_texture();
+                }
+                if (!cloud_lods[lod].tiles[x][y].refcount) {
+                    cloud_lods[lod].tiles[x][y].unload_texture();
+                }
+            }
+        }
+    }
+
+    lod_unloading_complete = true;
+}
+
+
+static void lod_set_uniforms(void)
+{
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (day_lods[lod].tiles[x][y].refcount) {
+                    Tile &tile = day_lods[lod].tiles[x][y];
+
+                    std::string si(std::to_string(tile.index));
+                    earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
+                    earth_prg->uniform<vec4>("day_texture_params[" + si + "]") = vec4(static_cast<float>(day_lods[lod].horz_tiles), static_cast<float>(day_lods[lod].vert_tiles), tile.s, tile.t);
+                }
+
+                if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
+                    Tile &tile = night_lods[lod].tiles[x][y];
+
+                    std::string si(std::to_string(tile.index));
+                    earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
+                    earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
+                }
+            }
+        }
+    }
+
+    for (int lod = 0; lod <= 8; lod++) {
+        for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
+                if (cloud_lods[lod].tiles[x][y].refcount) {
+                    Tile &tile = cloud_lods[lod].tiles[x][y];
+
+                    std::string si(std::to_string(tile.index));
+                    cloud_prg->uniform<gl::texture>("cloud_textures[" + si + "]") = *tile.texture;
+                    cloud_prg->uniform<vec4>("cloud_texture_params[" + si + "]") = vec4(static_cast<float>(cloud_lods[lod].horz_tiles), static_cast<float>(cloud_lods[lod].vert_tiles), tile.s, tile.t);
+                }
+            }
+        }
+    }
+}
+
+
 static void update_lods(const GraphicsStatus &gstat)
 {
+    static std::thread *loading_thread = nullptr, *unloading_thread = nullptr;
+    static vec<2, int32_t> *indices;
+
+    if ((loading_thread && !lod_loading_complete) || (unloading_thread && !lod_unloading_complete)) {
+        return;
+    }
+
+    if (loading_thread) {
+        loading_thread->join();
+        delete loading_thread;
+        loading_thread = nullptr;
+
+        lod_loading_complete = false;
+
+        lod_load_textures();
+        lod_set_uniforms();
+
+        memcpy(earth_tex_va->map(), indices, earth->hdr->vertex_count * sizeof(indices[0]));
+        earth_tex_va->unmap();
+        delete[] indices;
+
+        unloading_thread = new std::thread(lod_unload_images);
+
+        return;
+    } else if (unloading_thread) {
+        unloading_thread->join();
+        delete unloading_thread;
+        unloading_thread = nullptr;
+
+        lod_unloading_complete = false;
+
+        lod_unload_textures();
+    }
+
     mat3 norm_mat = mat3(earth_mv).transposed_inverse();
     bool changed = false;
 
@@ -349,149 +614,11 @@ static void update_lods(const GraphicsStatus &gstat)
     }
 
     if (changed) {
-        vec<2, int32_t> *mapping = static_cast<vec<2, int32_t> *>(earth_tex_va->map());
-        uint64_t vertex = 0;
-        int uniform_indices[3] = {0};
+        indices = new vec<2, int32_t>[earth->hdr->vertex_count];
 
-        for (int lod = 0; lod <= 8; lod++) {
-            for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
-                for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
-                    day_lods[lod].tiles[x][y].refcount = 0;
-                    cloud_lods[lod].tiles[x][y].refcount = 0;
-                    if (lod >= 2) {
-                        night_lods[lod].tiles[x][y].refcount = 0;
-                    }
-                }
-            }
-        }
+        perform_lod_update(indices);
 
-        // FIXME
-        for (int x = 0; x < EARTH_HORZ; x++) {
-            int tx = x / (EARTH_HORZ / 32);
-
-            for (int y = (x ? -1 : 0); y < EARTH_VERT * 2 + (x < EARTH_HORZ - 1 ? 1 : 0); y++) {
-                int ty = (y - 1) / (EARTH_VERT / 8);
-
-                if (ty < 0) {
-                    ty = 0;
-                } else if (ty > 15) {
-                    ty = 15;
-                }
-
-                int lods[3] = {
-                    tile_lods[tx][ty],
-                    helper::maximum(tile_lods[tx][ty], 2),
-                    tile_lods[tx][ty]
-                };
-
-                Tile *tiles[3] = {nullptr};
-
-                for (int type = 0; type < 3; type++) {
-                    for (bool retrying = false;; retrying = true) {
-                        LOD &lod = type == 0 ?   day_lods[lods[type]]
-                                 : type == 1 ? night_lods[lods[type]]
-                                 :             cloud_lods[lods[type]];
-
-                        // I don't even myself
-                        int xtex = (31 - tx) * lod.horz_tiles / 32;
-                        int ytex =       ty  * lod.vert_tiles / 16;
-
-                        Tile &tile = lod.tiles[xtex][ytex];
-
-                        if (!tile.refcount++) {
-                            // FIXME this is not working
-                            if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
-                                tile.refcount = 0;
-                                lods[type] = type == 1 ? 2 : 0;
-                                continue;
-                            } else if (retrying) {
-                                tile.refcount = 0;
-                                if (++lods[type] >= 9) {
-                                    throw std::runtime_error("Could not determine appropriate texture");
-                                }
-                                continue;
-                            }
-
-                            tile.index = uniform_indices[type]++;
-                        }
-
-                        tiles[type] = &tile;
-
-                        break;
-                    }
-                }
-
-                assert(tiles[0]->index == tiles[2]->index);
-
-                mapping[vertex][0] = tiles[0]->index;
-                mapping[vertex][1] = tiles[1]->index;
-
-                vertex++;
-            }
-        }
-
-        assert(vertex == earth->hdr->vertex_count);
-
-        earth_tex_va->unmap();
-        earth_tex_va->load();
-
-        for (int lod = 0; lod <= 8; lod++) {
-            for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
-                for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
-                    if (!day_lods[lod].tiles[x][y].refcount) {
-                        day_lods[lod].tiles[x][y].unload();
-                    }
-                    if ((lod >= 2) && !night_lods[lod].tiles[x][y].refcount) {
-                        night_lods[lod].tiles[x][y].unload();
-                    }
-                    if (!cloud_lods[lod].tiles[x][y].refcount) {
-                        cloud_lods[lod].tiles[x][y].unload();
-                    }
-                }
-            }
-        }
-
-        for (int lod = 0; lod <= 8; lod++) {
-            for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
-                for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
-                    if (day_lods[lod].tiles[x][y].refcount) {
-                        Tile &tile = day_lods[lod].tiles[x][y];
-
-                        tile.load();
-
-                        std::string si(std::to_string(tile.index));
-                        earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
-                        earth_prg->uniform<vec4>("day_texture_params[" + si + "]") = vec4(static_cast<float>(day_lods[lod].horz_tiles), static_cast<float>(day_lods[lod].vert_tiles), tile.s, tile.t);
-                    }
-
-                    if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
-                        Tile &tile = night_lods[lod].tiles[x][y];
-
-                        tile.load();
-
-                        std::string si(std::to_string(tile.index));
-                        earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
-                        earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
-                    }
-                }
-            }
-        }
-
-        for (int lod = 0; lod <= 8; lod++) {
-            for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
-                for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
-                    if (cloud_lods[lod].tiles[x][y].refcount) {
-                        Tile &tile = cloud_lods[lod].tiles[x][y];
-
-                        tile.load();
-
-                        std::string si(std::to_string(tile.index));
-                        cloud_prg->uniform<gl::texture>("cloud_textures[" + si + "]") = *tile.texture;
-                        cloud_prg->uniform<vec4>("cloud_texture_params[" + si + "]") = vec4(static_cast<float>(cloud_lods[lod].horz_tiles), static_cast<float>(cloud_lods[lod].vert_tiles), tile.s, tile.t);
-                    }
-                }
-            }
-        }
+        loading_thread = new std::thread(lod_load_images);
     }
 }
 
