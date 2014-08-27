@@ -20,13 +20,8 @@ void main(void)
 
     vec4 old_sample = texture(color, screen_pos);
 
-    /*
-    float div = old_sample.a == 0.0 ? 2000.0 : 1000.0;
-    float exp = old_sample.a == 0.0 ? 2.0 : 0.5;
-    */
-
-    float div = 2000.0 - 1000.0 * old_sample.a;
-    float exp =    2.0 -    1.5 * old_sample.a;
+    float div = 1000 + (1.0 - old_sample.a) * (900.0 * (1.0 - length(gl_FragCoord.xy - 0.5 * screen_dim) / length(screen_dim)));
+    float exp = 3.0 - 2.7 * old_sample.a;
 
     float strength = pow(min(1.0, max((zb_a - zf_a), 0.0) / div), exp);
 
@@ -35,7 +30,7 @@ void main(void)
 
     float brightness = clamp(pow(dot(normal, -light_dir) + 1.0, 2.0), 0.1, 1.0);
 
-    vec3 color = mix(vec3(0.5, 0.7, 1.0), vec3(1.0, 0.3, 0.0),
+    vec3 color = mix(vec3(0.51, 0.73, 1.0), vec3(1.0, 0.3, 0.0),
                      smoothstep(brightness, 0.0, 0.1) *
                      pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 5.0));
 
