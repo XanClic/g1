@@ -254,10 +254,8 @@ void init_environment(void)
     sun_pos->load();
 
 
-    earth_mv = mat4::identity().scale(vec3(6378.f, 6357.f, 6378.f));
-    cloud_mv = mat4::identity().scale(vec3(6388.f, 6367.f, 6388.f));
-    atmo_mv  = mat4::identity().scale(vec3(6448.f, 6417.f, 6448.f));
-
+    earth_mv = mat4::identity().scaled(vec3(6378.f, 6357.f, 6378.f))
+                               .rotated(.41f, vec3(1.f, 0.f, 0.f)); // axial tilt
 
     if (gl::glext.has_bindless_textures()) {
         earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
@@ -519,7 +517,7 @@ static void lod_set_uniforms(void)
 }
 
 
-static void update_lods(const GraphicsStatus &gstat)
+static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
 {
     static std::thread *loading_thread = nullptr, *unloading_thread = nullptr;
     static vec<2, int32_t> *indices;
@@ -555,7 +553,7 @@ static void update_lods(const GraphicsStatus &gstat)
         lod_unload_textures();
     }
 
-    mat3 norm_mat = mat3(earth_mv).transposed_inverse();
+    mat3 norm_mat = mat3(cur_earth_mv).transposed_inverse();
     bool changed = false;
 
     std::vector<std::tuple<float, int, int>> lod_list;
@@ -623,22 +621,16 @@ static void update_lods(const GraphicsStatus &gstat)
 }
 
 
-void draw_environment(const GraphicsStatus &status)
+void draw_environment(const GraphicsStatus &status, const WorldState &world)
 {
-    atmo_mv .rotate(.0004f, vec3(0.f, 1.f, 0.f));
-    earth_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
-    cloud_mv.rotate(.0004f, vec3(0.f, 1.f, 0.f));
+    mat4 cur_earth_mv = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
+    mat4 cur_cloud_mv = cur_earth_mv.scaled(vec3(6388.f / 6378.f, 6367.f / 6357.f, 6388.f / 6378.f));
+    mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6448.f / 6378.f, 6427.f / 6357.f, 6448.f / 6378.f));
 
 
     if (gl::glext.has_bindless_textures()) {
-        update_lods(status);
+        update_lods(status, cur_earth_mv);
     }
-
-
-    static float step = static_cast<float>(M_PI);
-
-    vec3 light_dir = vec3(sinf(step), 0.f, cosf(step));
-    step -= .001f;
 
 
     float sa_zn = (status.camera_position.length() - 6400.f) / 1.5f;
@@ -647,7 +639,7 @@ void draw_environment(const GraphicsStatus &status)
     mat4 sa_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, sa_zn, sa_zf);
 
 
-    vec4 sun_pos = 149.6e6f * -light_dir;
+    vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
     sun_pos.w() = 1.f;
     sun_pos = status.world_to_camera * sun_pos;
 
@@ -685,7 +677,7 @@ void draw_environment(const GraphicsStatus &status)
     glCullFace(GL_FRONT);
 
     atmob_prg->use();
-    atmob_prg->uniform<mat4>("mat_mv") = atmo_mv;
+    atmob_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
     atmob_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
 
     earth->draw();
@@ -695,11 +687,11 @@ void draw_environment(const GraphicsStatus &status)
     glCullFace(GL_BACK);
 
     earth_prg->use();
-    earth_prg->uniform<mat4>("mat_mv") = earth_mv;
+    earth_prg->uniform<mat4>("mat_mv") = cur_earth_mv;
     earth_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
-    earth_prg->uniform<mat3>("mat_nrm") = mat3(earth_mv).transposed_inverse();
+    earth_prg->uniform<mat3>("mat_nrm") = mat3(cur_earth_mv).transposed_inverse();
     earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
-    earth_prg->uniform<vec3>("light_dir") = light_dir;
+    earth_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
 
     if (!gl::glext.has_bindless_textures()) {
         day_tex->bind();
@@ -716,10 +708,10 @@ void draw_environment(const GraphicsStatus &status)
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
     cloud_prg->use();
-    cloud_prg->uniform<mat4>("mat_mv") = cloud_mv;
+    cloud_prg->uniform<mat4>("mat_mv") = cur_cloud_mv;
     cloud_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
-    cloud_prg->uniform<mat3>("mat_nrm") = mat3(cloud_mv).transposed_inverse();
-    cloud_prg->uniform<vec3>("light_dir") = light_dir;
+    cloud_prg->uniform<mat3>("mat_nrm") = mat3(cur_cloud_mv).transposed_inverse();
+    cloud_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
 
     if (!gl::glext.has_bindless_textures()) {
         cloud_tex->bind();
@@ -738,12 +730,12 @@ void draw_environment(const GraphicsStatus &status)
     sub_atmo_fbo->depth().bind();
 
     atmof_prg->use();
-    atmof_prg->uniform<mat4>("mat_mv") = atmo_mv;
+    atmof_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
     atmof_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
-    atmof_prg->uniform<mat3>("mat_nrm") = mat3(atmo_mv).transposed_inverse();
+    atmof_prg->uniform<mat3>("mat_nrm") = mat3(cur_atmo_mv).transposed_inverse();
     atmof_prg->uniform<vec3>("cam_pos") = status.camera_position;
     atmof_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
-    atmof_prg->uniform<vec3>("light_dir") = light_dir;
+    atmof_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
     atmof_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
     atmof_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
     atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
