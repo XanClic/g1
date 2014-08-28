@@ -29,7 +29,7 @@ void main(void)
     float day_co = dot(normal, -light_dir);
     float spec_co = pow(max(0.0, dot(reflect(light_dir, normal), to_viewer) * night_tex.g), 10.0);
 
-    vec3 color = mix(night, day, clamp(2.0 * day_co + 0.5, 0.0, 1.0));
+    vec3 color = mix(night, day, smoothstep(-0.15, 0.3, day_co));
 
     out_col = vec4(color + spec_co * vec3(1.0, 1.0, 1.0), 1.0);
 }
