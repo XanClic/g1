@@ -86,6 +86,7 @@ void ui_process_events(WorldState &state)
 
     state.right = 0.f;
     state.up    = 0.f;
+    state.player_thrusters = vec3::zero();
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -109,15 +110,16 @@ void ui_process_events(WorldState &state)
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
                     case SDLK_x:
-                        state.player_accel += state.player_forward * state.interval;
+                        state.player_thrusters =  state.player_forward * 420.f;
                         break;
 
                     case SDLK_z:
-                        state.player_accel -= state.player_forward * state.interval;
+                        state.player_thrusters = -state.player_forward * 420.f;
                         break;
 
                     case SDLK_BACKSPACE:
-                        state.player_accel    = vec3::zero();
+                        // top keki
+                        state.player_thrusters = -vec3(INFINITY, INFINITY, INFINITY);
                         break;
 
                     case SDLK_ESCAPE:

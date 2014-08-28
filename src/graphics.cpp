@@ -180,7 +180,7 @@ void do_graphics(const WorldState &input)
     main_fb->bind();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    draw_environment(status);
+    draw_environment(status, input);
 
 
     glDisable(GL_BLEND);
