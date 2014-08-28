@@ -353,7 +353,6 @@ static void perform_lod_update(vec<2, int32_t> *indices)
                     Tile &tile = lod.tiles[xtex][ytex];
 
                     if (!tile.refcount++) {
-                        // FIXME this is not working
                         if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
                             tile.refcount = 0;
                             lods[type] = type == 1 ? 2 : 0;
@@ -583,7 +582,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
     std::sort(lod_list.begin(), lod_list.end(), [](const std::tuple<float, int, int> &x, const std::tuple<float, int, int> &y) { return std::get<0>(x) > std::get<0>(y); });
 
     float cam_ground_dist = gstat.camera_position.length() - 6357.f;
-    int base_lod = (log2f(cam_ground_dist) - 8.f) / 1.5f;
+    int base_lod = log2f(cam_ground_dist * gstat.width) - 19.5f;
 
     if (base_lod < 0) {
         base_lod = 0;
@@ -591,7 +590,17 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
         base_lod = 8;
     }
 
-    int lod_tiles = 1 << base_lod, lod_tiles_i = 0;
+    int lod_tiles, lod_tiles_i = 0;
+
+    // highly technolaged algorithm
+    int lod_falloff = base_lod;
+
+    switch (lod_falloff) {
+        case 0:  lod_tiles = 2; break;
+        case 1:  lod_tiles = 16; break;
+        case 2:  lod_tiles = 64; break;
+        default: lod_tiles = 32 * 16;
+    }
 
     for (auto &tile: lod_list) {
         int x = std::get<1>(tile), y = std::get<2>(tile);
@@ -603,10 +612,30 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
 
         if (++lod_tiles_i >= lod_tiles) {
             lod_tiles_i = 0;
-            lod_tiles *= 4;
 
             if (base_lod < 8) {
                 base_lod++;
+            }
+
+            switch (lod_falloff) {
+                case 0:
+                    switch (base_lod) {
+                        case 1:  lod_tiles = 10; break;
+                        case 2:  lod_tiles = 20; break;
+                        default: lod_tiles = 32 * 16; break;
+                    }
+                    break;
+
+                case 1:
+                    if (base_lod == 2) {
+                        lod_tiles = 40;
+                    } else {
+                        lod_tiles = 32 * 16;
+                    }
+                    break;
+
+                default:
+                    lod_tiles = 32 * 16;
             }
         }
     }
