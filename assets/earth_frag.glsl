@@ -9,8 +9,8 @@ flat in ivec2 vf_tex;
 out vec4 out_col;
 out float out_stencil;
 
-layout(bindless_sampler) uniform sampler2D day_textures[20], night_textures[20];
-uniform vec4 day_texture_params[20], night_texture_params[20];
+layout(bindless_sampler) uniform sampler2D day_textures[20], night_textures[20], cloud_textures[20];
+uniform vec4 day_texture_params[20], night_texture_params[20], cloud_texture_params[20];
 
 uniform vec3 light_dir, cam_pos;
 
@@ -23,6 +23,9 @@ void main(void)
     vec2 cntxc = (vf_txc - night_texture_params[vf_tex.y].pq) * night_texture_params[vf_tex.y].st;
     vec2 night_tex = texture(night_textures[vf_tex.y], cntxc).rg;
     vec3 night = mix(vec3(0.0, 0.01, 0.05), vec3(0.8, 0.8, 0.4), pow(night_tex.r, 2.0));
+
+    vec2 cctxc = (vf_txc - cloud_texture_params[vf_tex.x].pq) * cloud_texture_params[vf_tex.x].st;
+    float cloud = texture(cloud_textures[vf_tex.x], cctxc).r;
 
     vec3 normal = normalize(vf_nrm);
     vec3 to_viewer = normalize(cam_pos - vf_pos);
@@ -47,6 +50,6 @@ void main(void)
     vec3 diff_color = mix(night, day, smoothstep(-0.15, 0.0, ndotx));
     vec3 spec_color = mix(vec3(2.0, 2.0, 1.0), vec3(2.0, 2.0, 2.0), smoothstep(0.0, 0.2, dot(normal, to_viewer)));
 
-    out_col = vec4(diff_color + spec_co * spec_color, 1.0);
+    out_col = vec4((1.0 - cloud * 0.7) * (diff_color + spec_co * spec_color), 1.0);
     out_stencil = 1.0;
 }
