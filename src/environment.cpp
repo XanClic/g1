@@ -245,12 +245,13 @@ void init_environment(void)
         night_tex->format(GL_RG, 2048, 2048, MAX_TEX_PER_TYPE);
 
         cloud_tex = new gl::array_texture;
+        cloud_tex->tmu() = 2;
         cloud_tex->wrap(GL_MIRRORED_REPEAT);
         cloud_tex->format(GL_RED, 2048, 2048, MAX_TEX_PER_TYPE);
     }
 
     cloud_normal_map = new gl::texture("assets/cloud_normals.jpg");
-    cloud_normal_map->tmu() = 2;
+    cloud_normal_map->tmu() = 3;
     cloud_normal_map->wrap(GL_REPEAT);
 
     sun_va = new gl::vertex_array;
@@ -550,6 +551,16 @@ static void lod_set_uniforms(void)
                     }
                     earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
                 }
+
+                if (cloud_lods[lod].tiles[x][y].refcount) {
+                    Tile &tile = cloud_lods[lod].tiles[x][y];
+
+                    std::string si(std::to_string(tile.index));
+                    if (gl::glext.has_bindless_textures()) {
+                        earth_prg->uniform<gl::texture>("cloud_textures[" + si + "]") = *tile.texture;
+                    }
+                    earth_prg->uniform<vec4>("cloud_texture_params[" + si + "]") = vec4(static_cast<float>(cloud_lods[lod].horz_tiles), static_cast<float>(cloud_lods[lod].vert_tiles), tile.s, tile.t);
+                }
             }
         }
     }
@@ -794,9 +805,11 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     if (!gl::glext.has_bindless_textures()) {
         day_tex->bind();
         night_tex->bind();
+        cloud_tex->bind();
 
         earth_prg->uniform<gl::array_texture>("day_texture") = *day_tex;
         earth_prg->uniform<gl::array_texture>("night_texture") = *night_tex;
+        earth_prg->uniform<gl::array_texture>("cloud_texture") = *cloud_tex;
     }
 
     earth->draw();
