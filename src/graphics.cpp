@@ -35,8 +35,7 @@ void init_graphics(void)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
-    main_fb = new gl::framebuffer(1);
-    main_fb->color_format(0, GL_R11F_G11F_B10F);
+    main_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
     (*main_fb)[0].filter(GL_LINEAR);
 
     (*main_fb)[0].bind();
@@ -45,8 +44,7 @@ void init_graphics(void)
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb = new gl::framebuffer(1);
-        bloom_fb->color_format(0, GL_R11F_G11F_B10F);
+        bloom_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
         (*bloom_fb)[0].set_tmu(1);
         (*bloom_fb)[0].filter(GL_LINEAR);
 

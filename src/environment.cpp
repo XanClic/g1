@@ -283,6 +283,7 @@ void init_environment(void)
     cloud_prg->bind_attrib("va_textures", 3);
 
     earth_prg->bind_frag("out_col", 0);
+    earth_prg->bind_frag("out_stencil", 1);
     cloud_prg->bind_frag("out_col", 0);
     atmob_prg->bind_frag("out_col", 0);
     atmof_prg->bind_frag("out_col", 0);
@@ -293,8 +294,11 @@ void init_environment(void)
     sun_prg->bind_frag("out_col", 0);
 
 
-    sub_atmo_fbo = new gl::framebuffer(1);
+    sub_atmo_fbo = new gl::framebuffer(2);
+    sub_atmo_fbo->color_format(0, GL_R11F_G11F_B10F);
+    sub_atmo_fbo->color_format(1, GL_R8);
     sub_atmo_fbo->depth().tmu() = 1;
+    (*sub_atmo_fbo)[1].tmu() = 2;
 
 
     register_resize_handler(resize);
@@ -749,11 +753,15 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     gl::framebuffer *main_fbo = gl::framebuffer::current();
 
+    sub_atmo_fbo->unmask(1);
     sub_atmo_fbo->bind();
     glClearDepth(0.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearDepth(1.f);
 
+
+    sub_atmo_fbo->mask(1);
+    sub_atmo_fbo->bind();
 
     glDepthFunc(GL_ALWAYS);
     glCullFace(GL_FRONT);
@@ -764,6 +772,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     earth->draw();
 
+
+    sub_atmo_fbo->unmask(1);
+    sub_atmo_fbo->bind();
 
     glDepthFunc(GL_LEQUAL);
     glCullFace(GL_BACK);
@@ -786,8 +797,10 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     earth->draw();
 
 
+    sub_atmo_fbo->mask(1);
+    sub_atmo_fbo->bind();
+
     glDepthMask(GL_FALSE);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
     cloud_prg->use();
     cloud_prg->uniform<mat4>("mat_mv") = cur_cloud_mv;
@@ -803,12 +816,12 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     earth->draw();
 
     glDepthMask(GL_TRUE);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 
     main_fbo->bind();
 
     (*sub_atmo_fbo)[0].bind();
+    (*sub_atmo_fbo)[1].bind();
     sub_atmo_fbo->depth().bind();
 
     atmof_prg->use();
@@ -821,6 +834,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     atmof_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
     atmof_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
     atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
+    atmof_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
     atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
 
     earth->draw();
