@@ -28,6 +28,7 @@ using namespace dake::math;
 
 static XSMD *earth;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
+static gl::texture *cloud_normal_map;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_array *sun_va;
@@ -248,6 +249,10 @@ void init_environment(void)
         cloud_tex->format(GL_RED, 2048, 2048, MAX_TEX_PER_TYPE);
     }
 
+    cloud_normal_map = new gl::texture("assets/cloud_normals.jpg");
+    cloud_normal_map->tmu() = 2;
+    cloud_normal_map->wrap(GL_REPEAT);
+
     sun_va = new gl::vertex_array;
     sun_va->set_elements(4);
 
@@ -266,10 +271,10 @@ void init_environment(void)
 
     if (gl::glext.has_bindless_textures()) {
         earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("assets/cloud_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
     } else {
         earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_nbl_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("assets/cloud_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
     }
     atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/atmob_frag.glsl")};
     atmof_prg = new gl::program {gl::shader::vert("assets/atmof_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
@@ -802,11 +807,14 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     glDepthMask(GL_FALSE);
 
+    cloud_normal_map->bind();
+
     cloud_prg->use();
     cloud_prg->uniform<mat4>("mat_mv") = cur_cloud_mv;
     cloud_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
     cloud_prg->uniform<mat3>("mat_nrm") = mat3(cur_cloud_mv).transposed_inverse();
     cloud_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
+    cloud_prg->uniform<gl::texture>("cloud_normal_map") = *cloud_normal_map;
 
     if (!gl::glext.has_bindless_textures()) {
         cloud_tex->bind();
