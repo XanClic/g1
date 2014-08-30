@@ -27,12 +27,13 @@ using namespace dake::math;
 
 
 static XSMD *earth;
-static gl::texture *day_tex, *night_tex, *cloud_tex;
+static gl::array_texture *day_tex, *night_tex, *cloud_tex;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_array *sun_va;
 static gl::vertex_attrib *earth_tex_va;
 static mat4 earth_mv, cloud_mv, atmo_mv;
+static int min_lod = 0, max_lod = 8;
 
 
 struct Tile {
@@ -64,8 +65,9 @@ struct LOD {
 };
 
 
-std::vector<LOD> day_lods, night_lods, cloud_lods;
-std::vector<std::vector<int>> tile_lods;
+static std::vector<LOD> day_lods, night_lods, cloud_lods;
+static std::vector<std::vector<int>> tile_lods;
+static std::vector<Tile *> day_tex_tiles(MAX_TEX_PER_TYPE), night_tex_tiles(MAX_TEX_PER_TYPE), cloud_tex_tiles(MAX_TEX_PER_TYPE);
 
 
 void Tile::load_source(const char *name, int lod, int si, int ti)
@@ -134,11 +136,19 @@ static void resize(unsigned w, unsigned h);
 
 static void init_lods(void)
 {
-    day_lods.resize(9);
-    night_lods.resize(9);
-    cloud_lods.resize(9);
+    if (!gl::glext.has_bindless_textures()) {
+        max_lod = 5;
+    }
 
-    for (int lod = 0; lod <= 8; lod++) {
+    memset(day_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
+    memset(night_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
+    memset(cloud_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
+
+    day_lods.resize(max_lod + 1);
+    night_lods.resize(max_lod + 1);
+    cloud_lods.resize(max_lod + 1);
+
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         cloud_lods[lod].total_width  = night_lods[lod].total_width  = day_lods[lod].total_width  = 65536 >> lod;
         cloud_lods[lod].total_height = night_lods[lod].total_height = day_lods[lod].total_height = 32768 >> lod;
 
@@ -217,28 +227,25 @@ void init_environment(void)
     earth = load_xsmd("assets/earth.xsmd");
     earth->make_vertex_array();
 
-    if (gl::glext.has_bindless_textures()) {
-        earth_tex_va = earth->va->attrib(3);
-        earth_tex_va->format(2, GL_INT);
-        earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
+    earth_tex_va = earth->va->attrib(3);
+    earth_tex_va->format(2, GL_INT);
+    earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
 
-        init_lods();
-    } else {
-        day_tex = new gl::texture("assets/earth/5-0-0.jpg");
-        day_tex->bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+    init_lods();
 
-        night_tex = new gl::texture("assets/night/5-0-0.jpg");
-        night_tex->set_tmu(1);
-        night_tex->bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+    if (!gl::glext.has_bindless_textures()) {
+        day_tex = new gl::array_texture;
+        day_tex->wrap(GL_MIRRORED_REPEAT);
+        day_tex->format(GL_RGB, 2048, 2048, MAX_TEX_PER_TYPE);
 
-        cloud_tex = new gl::texture("assets/clouds/5-0-0.jpg");
-        cloud_tex->bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+        night_tex = new gl::array_texture;
+        night_tex->tmu() = 1;
+        night_tex->wrap(GL_MIRRORED_REPEAT);
+        night_tex->format(GL_RG, 2048, 2048, MAX_TEX_PER_TYPE);
+
+        cloud_tex = new gl::array_texture;
+        cloud_tex->wrap(GL_MIRRORED_REPEAT);
+        cloud_tex->format(GL_RED, 2048, 2048, MAX_TEX_PER_TYPE);
     }
 
     sun_va = new gl::vertex_array;
@@ -261,8 +268,8 @@ void init_environment(void)
         earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
         cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
     } else {
-        earth_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/earth_nbl_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
+        earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_nbl_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
     }
     atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/atmob_frag.glsl")};
     atmof_prg = new gl::program {gl::shader::vert("assets/atmof_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
@@ -272,10 +279,8 @@ void init_environment(void)
     earth->bind_program_vertex_attribs(*atmob_prg);
     earth->bind_program_vertex_attribs(*atmof_prg);
 
-    if (gl::glext.has_bindless_textures()) {
-        earth_prg->bind_attrib("va_textures", 3);
-        cloud_prg->bind_attrib("va_textures", 3);
-    }
+    earth_prg->bind_attrib("va_textures", 3);
+    cloud_prg->bind_attrib("va_textures", 3);
 
     earth_prg->bind_frag("out_col", 0);
     cloud_prg->bind_frag("out_col", 0);
@@ -307,7 +312,7 @@ static void perform_lod_update(vec<2, int32_t> *indices)
     uint64_t vertex = 0;
     int uniform_indices[3] = {0};
 
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 day_lods[lod].tiles[x][y].refcount = 0;
@@ -355,11 +360,11 @@ static void perform_lod_update(vec<2, int32_t> *indices)
                     if (!tile.refcount++) {
                         if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
                             tile.refcount = 0;
-                            lods[type] = type == 1 ? 2 : 0;
+                            lods[type] = helper::maximum(type == 1 ? 2 : 0, min_lod);
                             continue;
                         } else if (retrying) {
                             tile.refcount = 0;
-                            if (++lods[type] >= 9) {
+                            if (++lods[type] >= max_lod + 1) {
                                 throw std::runtime_error("Could not determine appropriate texture");
                             }
                             continue;
@@ -392,7 +397,7 @@ static bool lod_loading_complete = false, lod_unloading_complete = false;
 
 static void lod_load_images(void)
 {
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (day_lods[lod].tiles[x][y].refcount) {
@@ -414,17 +419,49 @@ static void lod_load_images(void)
 
 static void lod_load_textures(void)
 {
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
-                if (day_lods[lod].tiles[x][y].refcount) {
-                    day_lods[lod].tiles[x][y].load_texture();
+                Tile &day_tile = day_lods[lod].tiles[x][y];
+                if (day_tile.refcount) {
+                    if (gl::glext.has_bindless_textures()) {
+                        day_tile.load_texture();
+                    } else if (day_tex_tiles[day_tile.index] != &day_tile) {
+                        day_tex->load_layer(day_tile.index, *day_tile.image);
+                        day_tex_tiles[day_tile.index] = &day_tile;
+                    }
                 }
-                if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
-                    night_lods[lod].tiles[x][y].load_texture();
+            }
+        }
+    }
+
+    for (int lod = helper::maximum(min_lod, 2); lod <= max_lod; lod++) {
+        for (int x = 0; x < night_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < night_lods[lod].vert_tiles; y++) {
+                Tile &night_tile = night_lods[lod].tiles[x][y];
+                if (night_tile.refcount) {
+                    if (gl::glext.has_bindless_textures()) {
+                        night_tile.load_texture();
+                    } else if (night_tex_tiles[night_tile.index] != &night_tile) {
+                        night_tex->load_layer(night_tile.index, *night_tile.image);
+                        night_tex_tiles[night_tile.index] = &night_tile;
+                    }
                 }
-                if (cloud_lods[lod].tiles[x][y].refcount) {
-                    cloud_lods[lod].tiles[x][y].load_texture();
+            }
+        }
+    }
+
+    for (int lod = min_lod; lod <= max_lod; lod++) {
+        for (int x = 0; x < cloud_lods[lod].horz_tiles; x++) {
+            for (int y = 0; y < cloud_lods[lod].vert_tiles; y++) {
+                Tile &cloud_tile = cloud_lods[lod].tiles[x][y];
+                if (cloud_tile.refcount) {
+                    if (gl::glext.has_bindless_textures()) {
+                        cloud_tile.load_texture();
+                    } else if (cloud_tex_tiles[cloud_tile.index] != &cloud_tile) {
+                        cloud_tex->load_layer(cloud_tile.index, *cloud_tile.image);
+                        cloud_tex_tiles[cloud_tile.index] = &cloud_tile;
+                    }
                 }
             }
         }
@@ -434,7 +471,7 @@ static void lod_load_textures(void)
 
 static void lod_unload_images(void)
 {
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (!day_lods[lod].tiles[x][y].refcount) {
@@ -456,7 +493,11 @@ static void lod_unload_images(void)
 
 static void lod_unload_textures(void)
 {
-    for (int lod = 0; lod <= 8; lod++) {
+    if (!gl::glext.has_bindless_textures()) {
+        return;
+    }
+
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (!day_lods[lod].tiles[x][y].refcount) {
@@ -478,14 +519,16 @@ static void lod_unload_textures(void)
 
 static void lod_set_uniforms(void)
 {
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (day_lods[lod].tiles[x][y].refcount) {
                     Tile &tile = day_lods[lod].tiles[x][y];
 
                     std::string si(std::to_string(tile.index));
-                    earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
+                    if (gl::glext.has_bindless_textures()) {
+                        earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
+                    }
                     earth_prg->uniform<vec4>("day_texture_params[" + si + "]") = vec4(static_cast<float>(day_lods[lod].horz_tiles), static_cast<float>(day_lods[lod].vert_tiles), tile.s, tile.t);
                 }
 
@@ -493,21 +536,25 @@ static void lod_set_uniforms(void)
                     Tile &tile = night_lods[lod].tiles[x][y];
 
                     std::string si(std::to_string(tile.index));
-                    earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
+                    if (gl::glext.has_bindless_textures()) {
+                        earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
+                    }
                     earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
                 }
             }
         }
     }
 
-    for (int lod = 0; lod <= 8; lod++) {
+    for (int lod = min_lod; lod <= max_lod; lod++) {
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (cloud_lods[lod].tiles[x][y].refcount) {
                     Tile &tile = cloud_lods[lod].tiles[x][y];
 
                     std::string si(std::to_string(tile.index));
-                    cloud_prg->uniform<gl::texture>("cloud_textures[" + si + "]") = *tile.texture;
+                    if (gl::glext.has_bindless_textures()) {
+                        cloud_prg->uniform<gl::texture>("cloud_textures[" + si + "]") = *tile.texture;
+                    }
                     cloud_prg->uniform<vec4>("cloud_texture_params[" + si + "]") = vec4(static_cast<float>(cloud_lods[lod].horz_tiles), static_cast<float>(cloud_lods[lod].vert_tiles), tile.s, tile.t);
                 }
             }
@@ -516,7 +563,7 @@ static void lod_set_uniforms(void)
 }
 
 
-static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
+static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, bool update)
 {
     static std::thread *loading_thread = nullptr, *unloading_thread = nullptr;
     static vec<2, int32_t> *indices;
@@ -552,6 +599,10 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
         lod_unload_textures();
     }
 
+    if (!update) {
+        return;
+    }
+
     mat3 norm_mat = mat3(cur_earth_mv).transposed_inverse();
     bool changed = false;
 
@@ -568,9 +619,9 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
 
             float pos_dot = nrm.dot(gstat.camera_position);
             if (pos_dot < 0.f) {
-                if (tile_lods[x][y] != 8) {
+                if (tile_lods[x][y] != max_lod) {
                     changed = true;
-                    tile_lods[x][y] = 8;
+                    tile_lods[x][y] = max_lod;
                 }
                 continue;
             }
@@ -584,10 +635,10 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
     float cam_ground_dist = gstat.camera_position.length() - 6357.f;
     int base_lod = log2f(cam_ground_dist * gstat.width) - 19.5f;
 
-    if (base_lod < 0) {
-        base_lod = 0;
-    } else if (base_lod > 8) {
-        base_lod = 8;
+    if (base_lod < min_lod) {
+        base_lod = min_lod;
+    } else if (base_lod > max_lod) {
+        base_lod = max_lod;
     }
 
     int lod_tiles, lod_tiles_i = 0;
@@ -613,7 +664,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv)
         if (++lod_tiles_i >= lod_tiles) {
             lod_tiles_i = 0;
 
-            if (base_lod < 8) {
+            if (base_lod < max_lod) {
                 base_lod++;
             }
 
@@ -657,9 +708,11 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6448.f / 6378.f, 6427.f / 6357.f, 6448.f / 6378.f));
 
 
-    if (gl::glext.has_bindless_textures()) {
-        update_lods(status, cur_earth_mv);
-    }
+    static float lod_update_timer;
+
+    lod_update_timer += world.interval;
+    update_lods(status, cur_earth_mv, lod_update_timer >= .2f);
+    lod_update_timer = fmodf(lod_update_timer, .2f);
 
 
     float sa_zn = (status.camera_position.length() - 6400.f) / 1.5f;
@@ -726,8 +779,8 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         day_tex->bind();
         night_tex->bind();
 
-        earth_prg->uniform<gl::texture>("day_texture") = *day_tex;
-        earth_prg->uniform<gl::texture>("night_texture") = *night_tex;
+        earth_prg->uniform<gl::array_texture>("day_texture") = *day_tex;
+        earth_prg->uniform<gl::array_texture>("night_texture") = *night_tex;
     }
 
     earth->draw();
@@ -744,7 +797,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     if (!gl::glext.has_bindless_textures()) {
         cloud_tex->bind();
-        cloud_prg->uniform<gl::texture>("cloud_texture") = *cloud_tex;
+        cloud_prg->uniform<gl::array_texture>("cloud_texture") = *cloud_tex;
     }
 
     earth->draw();
