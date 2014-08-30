@@ -5,7 +5,7 @@ in vec3 vf_pos, vf_nrm;
 
 out vec4 out_col;
 
-uniform sampler2D color, depth;
+uniform sampler2D color, depth, stencil;
 uniform vec2 sa_z_dim, screen_dim;
 uniform vec3 cam_pos, cam_fwd, light_dir;
 
@@ -18,10 +18,11 @@ void main(void)
     float zb_a = 2.0 * sa_z_dim.x * sa_z_dim.y / (sa_z_dim.y + sa_z_dim.x - zb * (sa_z_dim.y - sa_z_dim.x));
     float zf_a = dot(vf_pos - cam_pos, cam_fwd);
 
-    vec4 old_sample = texture(color, screen_pos);
+    vec3 old_sample = texture(color, screen_pos).rgb;
+    float stencil_val = texture(stencil, screen_pos).r;
 
-    float div = 1000 + (1.0 - old_sample.a) * (900.0 * (1.0 - length(gl_FragCoord.xy - 0.5 * screen_dim) / length(screen_dim)));
-    float exp = 3.0 - 2.7 * old_sample.a;
+    float div = 1000 + (1.0 - stencil_val) * (900.0 * (1.0 - length(gl_FragCoord.xy - 0.5 * screen_dim) / length(screen_dim)));
+    float exp = 3.0 - 2.7 * stencil_val;
 
     float strength = pow(min(1.0, max((zb_a - zf_a), 0.0) / div), exp);
 
@@ -37,5 +38,5 @@ void main(void)
                      smoothstep(-0.3, -0.2, diffuse) * to_viewer_strength);
 
     // Use alpha blending for background
-    out_col = vec4(mix(old_sample.rgb, brightness * color, min(strength + 1.0 - old_sample.a, 1.0)), min(old_sample.a + strength, 1.0));
+    out_col = vec4(mix(old_sample, brightness * color, min(strength + 1.0 - stencil_val, 1.0)), min(stencil_val + strength, 1.0));
 }
