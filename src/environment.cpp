@@ -12,6 +12,7 @@
 
 #include "environment.hpp"
 #include "graphics.hpp"
+#include "options.hpp"
 #include "xsmd.hpp"
 
 
@@ -22,9 +23,6 @@ using namespace dake::math;
 #define EARTH_HORZ 256
 #define EARTH_VERT 128
 
-// type \in \{ day, night, clouds \}
-#define MAX_TEX_PER_TYPE 20
-
 
 static XSMD *earth;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
@@ -34,6 +32,9 @@ static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_array *sun_va;
 static gl::vertex_attrib *earth_tex_va;
 static mat4 earth_mv, cloud_mv, atmo_mv;
+
+// type \in \{ day, night, clouds \}
+static int max_tex_per_type = 20;
 static int min_lod = 0, max_lod = 8;
 
 
@@ -68,7 +69,7 @@ struct LOD {
 
 static std::vector<LOD> day_lods, night_lods, cloud_lods;
 static std::vector<std::vector<int>> tile_lods;
-static std::vector<Tile *> day_tex_tiles(MAX_TEX_PER_TYPE), night_tex_tiles(MAX_TEX_PER_TYPE), cloud_tex_tiles(MAX_TEX_PER_TYPE);
+static std::vector<Tile *> day_tex_tiles(max_tex_per_type), night_tex_tiles(max_tex_per_type), cloud_tex_tiles(max_tex_per_type);
 
 
 void Tile::load_source(const char *name, int lod, int si, int ti)
@@ -137,13 +138,33 @@ static void resize(unsigned w, unsigned h);
 
 static void init_lods(void)
 {
-    if (!gl::glext.has_bindless_textures()) {
-        max_lod = 5;
+    if (!gl::glext.has_extension(gl::BINDLESS_TEXTURE) && (global_options.max_lod > 5)) {
+        if (global_options.min_lod > 5) {
+            throw std::runtime_error("Cannot use a min-lod > 5 without bindless texture support");
+        }
+
+        global_options.max_lod = 5;
     }
 
-    memset(day_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
-    memset(night_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
-    memset(cloud_tex_tiles.data(), 0, MAX_TEX_PER_TYPE * sizeof(Tile *));
+    min_lod = global_options.min_lod;
+    max_lod = global_options.max_lod;
+
+    if ((min_lod < 0) || (min_lod > 8) || (max_lod < 3) || (max_lod > 8) || (min_lod > max_lod)) {
+        throw std::runtime_error("Invalid values given for min-lod and/or max-lod");
+    }
+
+    switch (min_lod) {
+        case 0:  max_tex_per_type = 20; break;
+        case 1:  max_tex_per_type = 16; break;
+        case 2:  max_tex_per_type = 12; break;
+        case 3:  max_tex_per_type =  8; break;
+        case 4:  max_tex_per_type =  2; break;
+        default: max_tex_per_type =  1;
+    }
+
+    memset(day_tex_tiles.data(), 0, max_tex_per_type * sizeof(Tile *));
+    memset(night_tex_tiles.data(), 0, max_tex_per_type * sizeof(Tile *));
+    memset(cloud_tex_tiles.data(), 0, max_tex_per_type * sizeof(Tile *));
 
     day_lods.resize(max_lod + 1);
     night_lods.resize(max_lod + 1);
@@ -237,17 +258,17 @@ void init_environment(void)
     if (!gl::glext.has_bindless_textures()) {
         day_tex = new gl::array_texture;
         day_tex->wrap(GL_MIRRORED_REPEAT);
-        day_tex->format(GL_RGB, 2048, 2048, MAX_TEX_PER_TYPE);
+        day_tex->format(GL_RGB, 2048, 2048, max_tex_per_type);
 
         night_tex = new gl::array_texture;
         night_tex->tmu() = 1;
         night_tex->wrap(GL_MIRRORED_REPEAT);
-        night_tex->format(GL_RG, 2048, 2048, MAX_TEX_PER_TYPE);
+        night_tex->format(GL_RG, 2048, 2048, max_tex_per_type);
 
         cloud_tex = new gl::array_texture;
         cloud_tex->tmu() = 2;
         cloud_tex->wrap(GL_MIRRORED_REPEAT);
-        cloud_tex->format(GL_RED, 2048, 2048, MAX_TEX_PER_TYPE);
+        cloud_tex->format(GL_RED, 2048, 2048, max_tex_per_type);
     }
 
     cloud_normal_map = new gl::texture("assets/cloud_normals.jpg");
@@ -375,7 +396,7 @@ static void perform_lod_update(vec<2, int32_t> *indices)
                     Tile &tile = lod.tiles[xtex][ytex];
 
                     if (!tile.refcount++) {
-                        if (!retrying && (uniform_indices[type] >= MAX_TEX_PER_TYPE)) {
+                        if (!retrying && (uniform_indices[type] >= max_tex_per_type)) {
                             tile.refcount = 0;
                             lods[type] = helper::maximum(type == 1 ? 2 : 0, min_lod);
                             continue;
