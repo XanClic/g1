@@ -347,6 +347,13 @@ static void perform_lod_update(vec<2, int32_t> *indices)
                 ty = 15;
             }
 
+            if (tile_lods[tx][ty] < 0) {
+                indices[vertex][0] = 0;
+                indices[vertex][1] = 0;
+                vertex++;
+                continue;
+            }
+
             int lods[3] = {
                 tile_lods[tx][ty],
                 helper::maximum(tile_lods[tx][ty], 2),
@@ -639,9 +646,9 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
 
             float pos_dot = nrm.dot(gstat.camera_position);
             if (pos_dot < 0.f) {
-                if (tile_lods[x][y] != max_lod) {
+                if (tile_lods[x][y] != -1) {
                     changed = true;
-                    tile_lods[x][y] = max_lod;
+                    tile_lods[x][y] = -1;
                 }
                 continue;
             }
