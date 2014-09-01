@@ -70,7 +70,6 @@ void init_ui(void)
     }
 
     SDL_GL_SetSwapInterval(1);
-    SDL_SetRelativeMouseMode(SDL_TRUE);
 
     printf("OpenGL %i.%i Core initialized\n", maj, min);
 
@@ -82,6 +81,7 @@ void init_ui(void)
 
 void ui_process_events(WorldState &state)
 {
+    static bool capture_movement;
     SDL_Event event;
 
     state.right = 0.f;
@@ -103,8 +103,24 @@ void ui_process_events(WorldState &state)
                 break;
 
             case SDL_MOUSEMOTION:
-                state.right =  event.motion.xrel;
-                state.up    = -event.motion.yrel;
+                if (capture_movement) {
+                    state.right =  event.motion.xrel;
+                    state.up    = -event.motion.yrel;
+                }
+                break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    capture_movement = true;
+                }
+                break;
+
+            case SDL_MOUSEBUTTONUP:
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    SDL_SetRelativeMouseMode(SDL_FALSE);
+                    capture_movement = false;
+                }
                 break;
 
             case SDL_KEYDOWN:
