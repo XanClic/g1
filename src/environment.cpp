@@ -384,37 +384,25 @@ static void perform_lod_update(vec<2, int32_t> *indices)
             Tile *tiles[3] = {nullptr};
 
             for (int type = 0; type < 3; type++) {
-                for (bool retrying = false;; retrying = true) {
-                    LOD &lod = type == 0 ?   day_lods[lods[type]]
-                             : type == 1 ? night_lods[lods[type]]
-                             :             cloud_lods[lods[type]];
+                LOD &lod = type == 0 ?   day_lods[lods[type]]
+                         : type == 1 ? night_lods[lods[type]]
+                         :             cloud_lods[lods[type]];
 
-                    // I don't even myself
-                    int xtex = (31 - tx) * lod.horz_tiles / 32;
-                    int ytex =       ty  * lod.vert_tiles / 16;
+                // I don't even myself
+                int xtex = (31 - tx) * lod.horz_tiles / 32;
+                int ytex =       ty  * lod.vert_tiles / 16;
 
-                    Tile &tile = lod.tiles[xtex][ytex];
+                Tile &tile = lod.tiles[xtex][ytex];
 
-                    if (!tile.refcount++) {
-                        if (!retrying && (uniform_indices[type] >= max_tex_per_type)) {
-                            tile.refcount = 0;
-                            lods[type] = helper::maximum(type == 1 ? 2 : 0, min_lod);
-                            continue;
-                        } else if (retrying) {
-                            tile.refcount = 0;
-                            if (++lods[type] >= max_lod + 1) {
-                                throw std::runtime_error("Could not determine appropriate texture");
-                            }
-                            continue;
-                        }
-
-                        tile.index = uniform_indices[type]++;
+                if (!tile.refcount++) {
+                    if (uniform_indices[type] >= max_tex_per_type) {
+                        throw std::runtime_error("Texture buffer overrun");
                     }
 
-                    tiles[type] = &tile;
-
-                    break;
+                    tile.index = uniform_indices[type]++;
                 }
+
+                tiles[type] = &tile;
             }
 
             assert(tiles[0]->index == tiles[2]->index);
@@ -611,6 +599,63 @@ static void lod_set_uniforms(void)
 }
 
 
+static void covered_map_set(int *map, int x, int y, int lod)
+{
+    int w = helper::minimum(1 << lod, 32), h = helper::minimum(1 << lod, 16);
+    int xs = x & ~(w - 1), ys = y & ~(h - 1);
+
+    for (int ry = 0; ry < h; ry++) {
+        for (int rx = 0; rx < w; rx++) {
+            if (map[32 * (ry + ys) + rx + xs] == -1) {
+                map[32 * (ry + ys) + rx + xs] = lod;
+            }
+        }
+    }
+}
+
+
+static void covered_map_unset(int *map, int x, int y, int lod)
+{
+    int w = helper::minimum(1 << lod, 32), h = helper::minimum(1 << lod, 16);
+    int xs = x & ~(w - 1), ys = y & ~(h - 1);
+
+    for (int ry = 0; ry < h; ry++) {
+        for (int rx = 0; rx < w; rx++) {
+            if (map[32 * (ry + ys) + rx + xs] == lod) {
+                map[32 * (ry + ys) + rx + xs] = -1;
+            }
+        }
+    }
+}
+
+
+// full coverage requirement (number of slots required to cover the map
+// completely with the given LOD)
+static int covered_map_fcr(int *map, int lod)
+{
+    int w = helper::minimum(1 << lod, 32), h = helper::minimum(1 << lod, 16);
+    int count = 0;
+
+    for (int ys = 0; ys < 16; ys += h) {
+        for (int xs = 0; xs < 32; xs += w) {
+            bool found_uncovered = false;
+
+            for (int ry = 0; (ry < h) && !found_uncovered; ry++) {
+                for (int rx = 0; (rx < w) && !found_uncovered; rx++) {
+                    if (map[32 * (ry + ys) + rx + xs] == -1) {
+                        found_uncovered = true;
+                    }
+                }
+            }
+
+            count += found_uncovered;
+        }
+    }
+
+    return count;
+}
+
+
 static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, bool update)
 {
     static std::thread *loading_thread = nullptr, *unloading_thread = nullptr;
@@ -672,6 +717,11 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
                     tile_lods[x][y] = -1;
                 }
                 continue;
+            } else {
+                if (tile_lods[x][y] == -1) {
+                    changed = true;
+                    tile_lods[x][y] = max_lod; // will be fixed right away
+                }
             }
 
             lod_list.emplace_back(pos_dot, x, y);
@@ -689,52 +739,64 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
         base_lod = max_lod;
     }
 
-    int lod_tiles, lod_tiles_i = 0;
-
-    // highly technolaged algorithm
-    int lod_falloff = base_lod;
-
-    switch (lod_falloff) {
-        case 0:  lod_tiles = 2; break;
-        case 1:  lod_tiles = 16; break;
-        case 2:  lod_tiles = 64; break;
-        default: lod_tiles = 32 * 16;
+    int slots_to_keep;
+    switch (base_lod) {
+        case 0:  slots_to_keep = 11; break;
+        case 1:  slots_to_keep =  5; break;
+        default: slots_to_keep =  0; break;
     }
 
-    for (auto &tile: lod_list) {
+    int cover_lod = helper::maximum(base_lod, 3);
+
+    int covered[32 * 16], used_slots = 0;
+
+    for (int y = 0; y < 16; y++) {
+        for (int x = 0; x < 32; x++) {
+            if (tile_lods[x][y] < 0) {
+                covered[y * 32 + x] = -2;
+            } else {
+                covered[y * 32 + x] = -1;
+            }
+        }
+    }
+
+    for (auto it = lod_list.begin(); it != lod_list.end(); ++it) {
+        auto &tile = *it;
         int x = std::get<1>(tile), y = std::get<2>(tile);
 
-        if (tile_lods[x][y] != base_lod) {
-            changed = true;
-            tile_lods[x][y] = base_lod;
+        if (covered[32 * y + x] >= 0) {
+            int lod = covered[32 * y + x];
+
+            if (tile_lods[x][y] != lod) {
+                changed = true;
+                tile_lods[x][y] = lod;
+            }
+
+            continue;
         }
 
-        if (++lod_tiles_i >= lod_tiles) {
-            lod_tiles_i = 0;
+        covered_map_set(covered, x, y, base_lod);
+
+        // safe cover correction
+        int scc = base_lod < cover_lod ? covered_map_fcr(covered, cover_lod) : 0;
+        if (++used_slots + scc > max_tex_per_type - slots_to_keep) {
+            covered_map_unset(covered, x, y, base_lod);
+            --it;
+            used_slots--;
 
             if (base_lod < max_lod) {
                 base_lod++;
             }
 
-            switch (lod_falloff) {
-                case 0:
-                    switch (base_lod) {
-                        case 1:  lod_tiles = 10; break;
-                        case 2:  lod_tiles = 20; break;
-                        default: lod_tiles = 32 * 16; break;
-                    }
-                    break;
-
-                case 1:
-                    if (base_lod == 2) {
-                        lod_tiles = 40;
-                    } else {
-                        lod_tiles = 32 * 16;
-                    }
-                    break;
-
-                default:
-                    lod_tiles = 32 * 16;
+            if (base_lod == 1) {
+                slots_to_keep = 5;
+            } else {
+                slots_to_keep = 0;
+            }
+        } else {
+            if (tile_lods[x][y] != base_lod) {
+                changed = true;
+                tile_lods[x][y] = base_lod;
             }
         }
     }
