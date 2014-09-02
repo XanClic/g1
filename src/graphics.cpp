@@ -1,6 +1,7 @@
 #include <cmath>
 #include <dake/dake.hpp>
 
+#include "cockpit.hpp"
 #include "environment.hpp"
 #include "graphics.hpp"
 #include "physics.hpp"
@@ -103,6 +104,7 @@ void init_graphics(void)
 
 
     init_environment();
+    init_cockpit();
 }
 
 
@@ -173,12 +175,17 @@ void do_graphics(const WorldState &input)
 
 
     glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
 
 
     main_fb->bind();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     draw_environment(status, input);
+
+    glDisable(GL_DEPTH_TEST);
+
+    draw_cockpit(status, input);
 
 
     glDisable(GL_BLEND);
@@ -202,7 +209,6 @@ void do_graphics(const WorldState &input)
             gl::program *blur_prg = blur_prgs[(i == 7 ? 0 : 2) + cur_fb];
 
             bloom_fbs[!cur_fb]->bind();
-            glClear(GL_DEPTH_BUFFER_BIT);
 
             (*bloom_fbs[cur_fb])[0].bind();
 
@@ -216,7 +222,6 @@ void do_graphics(const WorldState &input)
 
 
     gl::framebuffer::unbind();
-    glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, status.width, status.height);
 
     (*main_fb)[0].bind();

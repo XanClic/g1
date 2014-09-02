@@ -27,7 +27,7 @@ ExternalProject_Get_Property(dake binary_dir)
 include_directories(include ${binary_dir}/include ${SDL2_INCLUDE})
 link_directories(${binary_dir})
 
-add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp src/physics.cpp src/environment.cpp src/xsmd.cpp)
+add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp src/physics.cpp src/environment.cpp src/cockpit.cpp src/xsmd.cpp)
 add_dependencies(g1 dake)
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES} libdake.a)
 
