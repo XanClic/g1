@@ -28,13 +28,29 @@ void do_physics(WorldState &output, const WorldState &input)
         output.player_position = input.player_position;
     }
 
-    output.player_right = mat3(mat4::identity().rotated(-output.right * output.interval, input.player_up    )) * input.player_right;
-    output.player_up    = mat3(mat4::identity().rotated(-output.up    * output.interval, output.player_right)) * input.player_up;
+    if (input.up < INFINITY) {
+        output.player_rot_accel    = vec3(output.up, -output.right, 0.f) / 50.f
+                                   + vec3(0.f, 0.f, output.roll) / 50.f;
+        output.player_rot_velocity = input.player_rot_velocity + input.player_rot_accel * output.interval;
+    } else {
+        output.player_rot_accel    = vec3::zero();
+        output.player_rot_velocity = vec3::zero();
+    }
 
+    output.player_forward = mat3(mat4::identity().rotated(input.player_rot_velocity.x(), input.player_right)
+                                                 .rotated(input.player_rot_velocity.y(), input.player_up))
+                          * input.player_forward;
+
+    output.player_up      = mat3(mat4::identity().rotated(input.player_rot_velocity.x(), input.player_right)
+                                                 .rotated(input.player_rot_velocity.z(), output.player_forward))
+                          * input.player_up;
+
+    output.player_right = output.player_forward.cross(output.player_up);
+    output.player_up    = output.player_right.cross(output.player_forward);
+
+    output.player_forward.normalize();
     output.player_right.normalize();
     output.player_up.normalize();
-
-    output.player_forward = output.player_right.cross(output.player_up);
 
 
     time_t time_t_now = std::chrono::system_clock::to_time_t(output.virtual_timestamp);
@@ -65,4 +81,6 @@ void WorldState::initialize(void)
     player_position = vec3(0.f, 1.f, 6450.f);
     player_velocity = vec3::zero();
     player_accel    = vec3::zero();
+
+    player_rot_velocity = vec3::zero();
 }
