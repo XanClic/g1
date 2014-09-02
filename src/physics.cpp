@@ -28,8 +28,8 @@ void do_physics(WorldState &output, const WorldState &input)
         output.player_position = input.player_position;
     }
 
-    output.player_right = mat3(mat4::identity().rotated(-output.right / 100.f, input.player_up)) * input.player_right;
-    output.player_up    = mat3(mat4::identity().rotated(-output.up / 100.f, output.player_right)) * input.player_up;
+    output.player_right = mat3(mat4::identity().rotated(-output.right * output.interval, input.player_up    )) * input.player_right;
+    output.player_up    = mat3(mat4::identity().rotated(-output.up    * output.interval, output.player_right)) * input.player_up;
 
     output.player_right.normalize();
     output.player_up.normalize();
