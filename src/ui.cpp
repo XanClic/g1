@@ -85,10 +85,11 @@ void init_ui(void)
 
 void ui_process_events(WorldState &state)
 {
-    static bool capture_movement, accel_fwd, accel_bwd;
+    static bool capture_movement, accel_fwd, accel_bwd, roll_left, roll_right;
 
     state.right = 0.f;
     state.up    = 0.f;
+    state.roll  = 0.f;
     state.player_thrusters = vec3::zero();
 
     if (capture_movement) {
@@ -104,6 +105,10 @@ void ui_process_events(WorldState &state)
 
     if (accel_fwd ^ accel_bwd) {
         state.player_thrusters = state.player_forward * (accel_fwd ? 100.f : -100.f);
+    }
+
+    if (roll_left ^ roll_right) {
+        state.roll = roll_left ? -1.f : 1.f;
     }
 
 
@@ -149,9 +154,22 @@ void ui_process_events(WorldState &state)
                         accel_bwd = true;
                         break;
 
+                    case SDLK_q:
+                        roll_left = true;
+                        break;
+
+                    case SDLK_e:
+                        roll_right = true;
+                        break;
+
                     case SDLK_BACKSPACE:
                         // top keki
                         state.player_thrusters = -vec3(INFINITY, INFINITY, INFINITY);
+                        break;
+
+                    case SDLK_SPACE:
+                        // more keki
+                        state.up = INFINITY;
                         break;
 
                     case SDLK_ESCAPE:
@@ -168,6 +186,14 @@ void ui_process_events(WorldState &state)
 
                     case SDLK_z:
                         accel_bwd = false;
+                        break;
+
+                    case SDLK_q:
+                        roll_left = false;
+                        break;
+
+                    case SDLK_e:
+                        roll_right = false;
                         break;
                 }
                 break;

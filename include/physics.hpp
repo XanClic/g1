@@ -14,8 +14,10 @@ struct WorldState {
     float interval;
 
     float right, up;
+    float roll;
 
     dake::math::vec3 player_position, player_velocity, player_accel;
+    dake::math::vec3 player_rot_velocity, player_rot_accel;
     dake::math::vec3 player_forward, player_up, player_right;
     dake::math::vec3 player_thrusters;
 
