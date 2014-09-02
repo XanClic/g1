@@ -16,7 +16,7 @@ static GraphicsStatus status;
 static std::vector<void (*)(unsigned w, unsigned h)> resize_handlers;
 
 static gl::framebuffer *main_fb, *bloom_fbs[2];
-static gl::vertex_array *fb_vertices;
+gl::vertex_array *quad_vertices;
 static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4];
 
 
@@ -54,16 +54,16 @@ void init_graphics(void)
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
     }
 
-    fb_vertices = new gl::vertex_array;
-    fb_vertices->set_elements(4);
+    quad_vertices = new gl::vertex_array;
+    quad_vertices->set_elements(4);
 
     vec2 fb_vertex_positions[] = {
         vec2(-1.f, 1.f), vec2(-1.f, -1.f), vec2(1.f, 1.f), vec2(1.f, -1.f)
     };
 
-    fb_vertices->attrib(0)->format(2);
-    fb_vertices->attrib(0)->data(fb_vertex_positions);
-    fb_vertices->attrib(0)->load();
+    quad_vertices->attrib(0)->format(2);
+    quad_vertices->attrib(0)->data(fb_vertex_positions);
+    quad_vertices->attrib(0)->load();
 
 
     gl::shader fb_vert_sh(gl::shader::VERTEX, "assets/fb_vert.glsl");
@@ -193,7 +193,7 @@ void do_graphics(const WorldState &input)
     high_pass_prg->use();
     high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
 
-    fb_vertices->draw(GL_TRIANGLE_STRIP);
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
 
     for (int i = 7; i >= 0; i--) {
         float mag = exp2f(i);
@@ -210,7 +210,7 @@ void do_graphics(const WorldState &input)
             blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 512.f : 512.f * status.width / status.height);
             blur_prg->uniform<gl::texture>("tex") = (*bloom_fbs[cur_fb])[0];
 
-            fb_vertices->draw(GL_TRIANGLE_STRIP);
+            quad_vertices->draw(GL_TRIANGLE_STRIP);
         }
     }
 
@@ -226,7 +226,7 @@ void do_graphics(const WorldState &input)
     fb_combine_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
-    fb_vertices->draw(GL_TRIANGLE_STRIP);
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
 
 
     ui_swap_buffers();

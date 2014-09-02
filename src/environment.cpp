@@ -29,7 +29,6 @@ static gl::array_texture *day_tex, *night_tex, *cloud_tex;
 static gl::texture *cloud_normal_map;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
 static gl::framebuffer *sub_atmo_fbo;
-static gl::vertex_array *sun_va;
 static gl::vertex_attrib *earth_tex_va;
 static mat4 earth_mv, cloud_mv, atmo_mv;
 
@@ -274,18 +273,6 @@ void init_environment(void)
     cloud_normal_map = new gl::texture("assets/cloud_normals.jpg");
     cloud_normal_map->tmu() = 3;
     cloud_normal_map->wrap(GL_REPEAT);
-
-    sun_va = new gl::vertex_array;
-    sun_va->set_elements(4);
-
-    vec2 sun_vertex_positions[] = {
-        vec2(-1.f, 1.f), vec2(-1.f, -1.f), vec2(1.f, 1.f), vec2(1.f, -1.f)
-    };
-
-    gl::vertex_attrib *sun_pos = sun_va->attrib(0);
-    sun_pos->format(2);
-    sun_pos->data(sun_vertex_positions);
-    sun_pos->load();
 
 
     earth_mv = mat4::identity().scaled(vec3(6378.f, 6357.f, 6378.f))
@@ -851,7 +838,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         sun_prg->uniform<vec2>("sun_position") = projected_sun;
         sun_prg->uniform<vec2>("sun_size") = vec2(sun_radius * status.height / status.width, sun_radius);
 
-        sun_va->draw(GL_TRIANGLE_STRIP);
+        quad_vertices->draw(GL_TRIANGLE_STRIP);
 
         glEnable(GL_DEPTH_TEST);
     }
