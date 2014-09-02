@@ -43,7 +43,7 @@ void main(void)
 
     ndotny_sqr *= ndotny_sqr;
 
-    float spec_co = 0.1 * (0.2 + 0.8 * pow(1.0 - xdotny, 5.0)) * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0) * night_tex.g * smoothstep(-0.2, 0.0, ndotx);
+    float spec_co = smoothstep(-0.03, -0.02, ndotx) * 0.1 * (0.2 + 0.8 * pow(1.0 - xdotny, 5.0)) * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0) * night_tex.g * smoothstep(-0.2, 0.0, ndotx);
 
     day *= smoothstep(-0.1, 0.5, ndotx);
 
