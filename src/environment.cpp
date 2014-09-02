@@ -731,7 +731,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
     std::sort(lod_list.begin(), lod_list.end(), [](const std::tuple<float, int, int> &x, const std::tuple<float, int, int> &y) { return std::get<0>(x) > std::get<0>(y); });
 
     float cam_ground_dist = gstat.camera_position.length() - 6357.f;
-    int base_lod = (log2f(cam_ground_dist * gstat.width) - 19.5f) * .8f;
+    int base_lod = log2f(cam_ground_dist / gstat.width) + 1.f;
 
     if (base_lod < min_lod) {
         base_lod = min_lod;
