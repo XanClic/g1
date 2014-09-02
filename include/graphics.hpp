@@ -2,6 +2,7 @@
 #define GRAPHICS_HPP
 
 #include <dake/math/matrix.hpp>
+#include <dake/gl/vertex_array.hpp>
 
 #include "physics.hpp"
 
@@ -23,5 +24,8 @@ void set_resolution(unsigned width, unsigned height);
 void register_resize_handler(void (*rh)(unsigned w, unsigned h));
 
 void do_graphics(const WorldState &input);
+
+
+extern dake::gl::vertex_array *quad_vertices;
 
 #endif
