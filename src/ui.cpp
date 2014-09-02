@@ -15,6 +15,7 @@ using namespace dake::math;
 
 
 static SDL_Window *wnd;
+static int wnd_width, wnd_height;
 
 
 static void create_context(int w, int h, int major = 0, int minor = 0)
@@ -76,17 +77,37 @@ void init_ui(void)
 
     init_graphics();
     set_resolution(1280, 720);
+
+    wnd_width = 1280;
+    wnd_height = 720;
 }
 
 
 void ui_process_events(WorldState &state)
 {
-    static bool capture_movement;
-    SDL_Event event;
+    static bool capture_movement, accel_fwd, accel_bwd;
 
     state.right = 0.f;
     state.up    = 0.f;
     state.player_thrusters = vec3::zero();
+
+    if (capture_movement) {
+        int abs_x, abs_y;
+        SDL_GetMouseState(&abs_x, &abs_y);
+
+        float rel_x = 2.f * abs_x / wnd_width - 1.f;
+        float rel_y = 1.f - 2.f * abs_y / wnd_height;
+
+        state.right = rel_x;
+        state.up    = rel_y;
+    }
+
+    if (accel_fwd ^ accel_bwd) {
+        state.player_thrusters = state.player_forward * (accel_fwd ? 100.f : -100.f);
+    }
+
+
+    SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -98,14 +119,9 @@ void ui_process_events(WorldState &state)
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_RESIZED:
                        set_resolution(event.window.data1, event.window.data2);
+                       wnd_width  = event.window.data1;
+                       wnd_height = event.window.data2;
                        break;
-                }
-                break;
-
-            case SDL_MOUSEMOTION:
-                if (capture_movement) {
-                    state.right =  event.motion.xrel;
-                    state.up    = -event.motion.yrel;
                 }
                 break;
 
@@ -126,11 +142,11 @@ void ui_process_events(WorldState &state)
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
                     case SDLK_x:
-                        state.player_thrusters =  state.player_forward * 420.f;
+                        accel_fwd = true;
                         break;
 
                     case SDLK_z:
-                        state.player_thrusters = -state.player_forward * 420.f;
+                        accel_bwd = true;
                         break;
 
                     case SDLK_BACKSPACE:
@@ -142,6 +158,19 @@ void ui_process_events(WorldState &state)
                         quit_main_loop();
                         break;
                 }
+                break;
+
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym) {
+                    case SDLK_x:
+                        accel_fwd = false;
+                        break;
+
+                    case SDLK_z:
+                        accel_bwd = false;
+                        break;
+                }
+                break;
         }
     }
 }
