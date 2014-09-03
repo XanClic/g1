@@ -20,7 +20,6 @@ gl::vertex_array *quad_vertices;
 
 static gl::framebuffer *main_fb, *bloom_fbs[2], *avg_fb;
 static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4], *avg_prg;
-static int avg_levels = 0;
 
 
 void init_graphics(void)
@@ -54,6 +53,9 @@ void init_graphics(void)
     }
 
     avg_fb = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
+    avg_fb->resize(256, 256);
+    (*avg_fb)[0].filter(GL_LINEAR);
+
 
 
     quad_vertices = new gl::vertex_array;
@@ -125,12 +127,6 @@ void set_resolution(unsigned width, unsigned height)
     status.height = height;
 
     main_fb->resize(width, height);
-
-    avg_levels = 0;
-    for (unsigned tw = width - 1; tw > 1; avg_levels++, tw >>= 1);
-
-    avg_fb->resize(1 << avg_levels, 1 << avg_levels);
-    (*avg_fb)[0].filter(GL_LINEAR);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
         bloom_fb->resize(width / 2, height / 2);
@@ -240,7 +236,7 @@ void do_graphics(const WorldState &input)
 
 
     avg_fb->bind();
-    glViewport(0, 0, 1 << avg_levels, 1 << avg_levels);
+    glViewport(0, 0, 256, 256);
     glClear(GL_COLOR_BUFFER_BIT);
 
     (*main_fb)[0].bind();
@@ -257,7 +253,7 @@ void do_graphics(const WorldState &input)
     glGenerateMipmap(GL_TEXTURE_2D);
 
     float *pre_avg = new float[256];
-    glGetTexImage(GL_TEXTURE_2D, avg_levels - 4, GL_RED, GL_FLOAT, pre_avg);
+    glGetTexImage(GL_TEXTURE_2D, 4, GL_RED, GL_FLOAT, pre_avg);
 
     float highest_avg = -HUGE_VALF;
     for (unsigned i = 0; i < 256; i++) {
