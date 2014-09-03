@@ -22,7 +22,7 @@ void main(void)
 
     vec2 cntxc = (vf_txc - night_texture_params[vf_tex.y].pq) * night_texture_params[vf_tex.y].st;
     vec2 night_tex = texture(night_textures[vf_tex.y], cntxc).rg;
-    vec3 night = mix(vec3(0.0, 0.01, 0.05), vec3(0.8, 0.8, 0.4), pow(night_tex.r, 2.0));
+    vec3 night = mix(vec3(0.005, 0.0075, 0.01), vec3(0.2, 0.2, 0.1), night_tex.r);
 
     vec2 cctxc = (vf_txc - cloud_texture_params[vf_tex.x].pq) * cloud_texture_params[vf_tex.x].st;
     float cloud = texture(cloud_textures[vf_tex.x], cctxc).r;
