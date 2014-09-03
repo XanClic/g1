@@ -16,9 +16,11 @@ static GraphicsStatus status;
 
 static std::vector<void (*)(unsigned w, unsigned h)> resize_handlers;
 
-static gl::framebuffer *main_fb, *bloom_fbs[2];
 gl::vertex_array *quad_vertices;
-static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4];
+
+static gl::framebuffer *main_fb, *bloom_fbs[2], *avg_fbs[12];
+static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4], *avg_prg, *copy_prg;
+static int avg_levels = 0;
 
 
 void init_graphics(void)
@@ -26,14 +28,10 @@ void init_graphics(void)
     gl::glext_init();
 
     glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
     glEnable(GL_DEPTH_CLAMP);
-    glEnable(GL_BLEND);
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClearDepthf(1.f);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
     main_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
@@ -55,6 +53,11 @@ void init_graphics(void)
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
     }
 
+    for (int i = 0; i < 12; i++) {
+        avg_fbs[i] = nullptr;
+    }
+
+
     quad_vertices = new gl::vertex_array;
     quad_vertices->set_elements(4);
 
@@ -64,7 +67,6 @@ void init_graphics(void)
 
     quad_vertices->attrib(0)->format(2);
     quad_vertices->attrib(0)->data(fb_vertex_positions);
-    quad_vertices->attrib(0)->load();
 
 
     gl::shader fb_vert_sh(gl::shader::VERTEX, "assets/fb_vert.glsl");
@@ -97,10 +99,25 @@ void init_graphics(void)
     }
 
 
+    avg_prg  = new gl::program {gl::shader::frag("assets/avg_frag.glsl")};
+    copy_prg = new gl::program {gl::shader::frag("assets/copy1_frag.glsl")};
+
+    *avg_prg  << fb_vert_sh;
+    *copy_prg << fb_vert_sh;
+
+    avg_prg ->bind_attrib("in_pos", 0);
+    copy_prg->bind_attrib("in_pos", 0);
+
+    avg_prg ->bind_frag("out_value", 0);
+    copy_prg->bind_frag("out_value", 0);
+
+
     status.z_near =  .01f;
     status.z_far  = 500.f;
 
     status.yfov   = static_cast<float>(M_PI) / 4.f;
+
+    status.luminance = 1.f;
 
 
     init_environment();
@@ -117,6 +134,25 @@ void set_resolution(unsigned width, unsigned height)
     status.height = height;
 
     main_fb->resize(width, height);
+
+    avg_levels = 0;
+    for (unsigned tw = width - 1; tw > 1; avg_levels++, tw >>= 1);
+
+    if (avg_levels > 16) {
+        throw std::runtime_error("Resolution too high for averaging");
+    }
+
+    unsigned cas = 1 << avg_levels;
+    for (int i = 0; i < avg_levels - 3; i++) {
+        if (!avg_fbs[i]) {
+            avg_fbs[i] = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
+        }
+
+        avg_fbs[i]->resize(cas, cas);
+        (*avg_fbs[i])[0].filter(GL_LINEAR);
+
+        cas /= 2;
+    }
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
         bloom_fb->resize(width / 2, height / 2);
@@ -177,6 +213,8 @@ void do_graphics(const WorldState &input)
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     main_fb->bind();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -192,12 +230,13 @@ void do_graphics(const WorldState &input)
 
 
     bloom_fbs[0]->bind();
-    glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, status.width / 2, status.height / 2);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     (*main_fb)[0].bind();
 
     high_pass_prg->use();
+    high_pass_prg->uniform<float>("factor") = .7f / status.luminance;
     high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
@@ -209,6 +248,7 @@ void do_graphics(const WorldState &input)
             gl::program *blur_prg = blur_prgs[(i == 7 ? 0 : 2) + cur_fb];
 
             bloom_fbs[!cur_fb]->bind();
+            glClear(GL_COLOR_BUFFER_BIT);
 
             (*bloom_fbs[cur_fb])[0].bind();
 
@@ -221,13 +261,54 @@ void do_graphics(const WorldState &input)
     }
 
 
+    unsigned cas = 1 << avg_levels;
+    for (int i = 0; i < avg_levels - 3; i++) {
+        avg_fbs[i]->bind();
+        glViewport(0, 0, cas, cas);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        gl::texture &tex = !i ? (*main_fb)[0] : (*avg_fbs[i - 1])[0];
+        tex.bind();
+
+        gl::program *prg = !i ? avg_prg : copy_prg;
+        prg->use();
+        prg->uniform<gl::texture>("tex") = tex;
+
+        if (!i) {
+            (*bloom_fbs[0])[0].bind();
+            prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
+        }
+
+        quad_vertices->draw(GL_TRIANGLE_STRIP);
+
+        cas /= 2;
+    }
+
+
+    (*avg_fbs[avg_levels - 4])[0].bind();
+
+    float *pre_avg = new float[256];
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, pre_avg);
+
+    float highest_avg = -HUGE_VALF;
+    for (unsigned i = 0; i < 256; i++) {
+        highest_avg = helper::maximum(highest_avg, pre_avg[i]);
+    }
+    highest_avg = expf(highest_avg);
+    delete[] pre_avg;
+
+    highest_avg = helper::maximum(highest_avg, .05f);
+
+
     gl::framebuffer::unbind();
     glViewport(0, 0, status.width, status.height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     (*main_fb)[0].bind();
     (*bloom_fbs[0])[0].bind();
 
     fb_combine_prg->use();
+    fb_combine_prg->uniform<float>("factor") = .7f / status.luminance;
     fb_combine_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
@@ -235,4 +316,7 @@ void do_graphics(const WorldState &input)
 
 
     ui_swap_buffers();
+
+
+    status.luminance += input.interval * (highest_avg - status.luminance);
 }

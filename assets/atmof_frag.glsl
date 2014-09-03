@@ -32,7 +32,7 @@ void main(void)
     float to_viewer_strength = pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 5.0);
 
     float diffuse = dot(normal, -light_dir);
-    float brightness = clamp(smoothstep(-0.3, 0.3, diffuse) * 1.5 + (to_viewer_strength - 1.0) * 0.5, 0.1, 1.0);
+    float brightness = clamp(smoothstep(-0.3, 0.3, diffuse) * 1.5 + (to_viewer_strength - 1.0) * 0.5, 0.03, 1.0);
 
     vec3 color = mix(vec3(0.51, 0.73, 1.0), vec3(1.0, 0.3, 0.0),
                      smoothstep(-0.2, -0.1, diffuse) * to_viewer_strength);
