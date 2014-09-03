@@ -55,7 +55,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     line_prg->use();
 
-    line_prg->uniform<vec4>("color") = vec4(.5f, 1.f, .5f, 1.f);
+    line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, 1.f);
     draw_line(vec2(-sxs, 0.f), vec2(sxs, 0.f));
     draw_line(vec2(0.f, -sys), vec2(0.f, sys));
 
@@ -77,7 +77,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
                 }
             }
 
-            line_prg->uniform<vec4>("color") = vec4(.5f, 1.f, .5f, fwd_visible ? 1.f : .3f);
+            line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, fwd_visible ? 1.f : .3f);
             draw_line(proj_fwd_vlcty + vec2(-sxs, -sys), proj_fwd_vlcty + vec2( sxs,  sys));
             draw_line(proj_fwd_vlcty + vec2( sxs, -sys), proj_fwd_vlcty + vec2(-sxs,  sys));
         }
@@ -92,7 +92,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
                 }
             }
 
-            line_prg->uniform<vec4>("color") = vec4(.5f, 1.f, .5f, bwd_visible ? 1.f : .3f);
+            line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, bwd_visible ? 1.f : .3f);
             draw_line(proj_bwd_vlcty + vec2(-sxs,  sys), proj_bwd_vlcty + vec2(-sxs, -sys));
             draw_line(proj_bwd_vlcty + vec2(-sxs, -sys), proj_bwd_vlcty + vec2( sxs, -sys));
             draw_line(proj_bwd_vlcty + vec2( sxs, -sys), proj_bwd_vlcty + vec2( sxs,  sys));
