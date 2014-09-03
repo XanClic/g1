@@ -31,10 +31,10 @@ void main(void)
     vec3 to_viewer = normalize(cam_pos - vf_pos);
 
     // Slick Schlick
-    float ndoty = dot(normal, to_viewer);
-    float ndotx = dot(normal, -light_dir);
+    float ndoty =  dot(normal, to_viewer);
+    float ndotx = -dot(normal, light_dir);
 
-    vec3 n_ny = normalize(-light_dir + to_viewer);
+    vec3 n_ny = normalize(to_viewer - light_dir);
     float ndotny_sqr = dot(normal, n_ny);
     float xdotny = dot(to_viewer, n_ny);
 
@@ -43,13 +43,15 @@ void main(void)
 
     ndotny_sqr *= ndotny_sqr;
 
-    float spec_co = smoothstep(-0.03, -0.02, ndotx) * 0.1 * (0.2 + 0.8 * pow(1.0 - xdotny, 5.0)) * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0) * night_tex.g * smoothstep(-0.2, 0.0, ndotx);
+    float spec_co = smoothstep(-0.1, 0.05, ndotx) * 0.1 * (0.4 + 0.6 * pow(max(1.0 - xdotny, 0.0), 5.0)) * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0);
 
-    day *= smoothstep(-0.1, 0.5, ndotx);
+    vec3 night_addition = smoothstep(0.1, -0.05, ndotx) * night;
 
-    vec3 diff_color = mix(night, day, smoothstep(-0.15, 0.0, ndotx));
     vec3 spec_color = mix(vec3(2.0, 2.0, 1.0), vec3(2.0, 2.0, 2.0), smoothstep(0.0, 0.2, dot(normal, to_viewer)));
+    spec_color = spec_co * mix(day, spec_color, smoothstep(0.5, 2.0, spec_co));
 
-    out_col = vec4((1.0 - cloud * 0.7) * (diff_color + spec_co * spec_color), 1.0);
+    vec3 diff_color = smoothstep(-0.1, 0.5, ndotx) * day;
+
+    out_col = vec4((1.0 - cloud * 0.7) * mix(diff_color, spec_color, night_tex.g) + night_addition, 1.0);
     out_stencil = 1.0;
 }
