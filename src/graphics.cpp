@@ -18,8 +18,8 @@ static std::vector<void (*)(unsigned w, unsigned h)> resize_handlers;
 
 gl::vertex_array *quad_vertices;
 
-static gl::framebuffer *main_fb, *bloom_fbs[2], *avg_fbs[12];
-static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4], *avg_prg, *copy_prg;
+static gl::framebuffer *main_fb, *bloom_fbs[2], *avg_fb;
+static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4], *avg_prg;
 static int avg_levels = 0;
 
 
@@ -53,9 +53,7 @@ void init_graphics(void)
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
     }
 
-    for (int i = 0; i < 12; i++) {
-        avg_fbs[i] = nullptr;
-    }
+    avg_fb = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
 
 
     quad_vertices = new gl::vertex_array;
@@ -100,16 +98,9 @@ void init_graphics(void)
 
 
     avg_prg  = new gl::program {gl::shader::frag("assets/avg_frag.glsl")};
-    copy_prg = new gl::program {gl::shader::frag("assets/copy1_frag.glsl")};
-
     *avg_prg  << fb_vert_sh;
-    *copy_prg << fb_vert_sh;
-
     avg_prg ->bind_attrib("in_pos", 0);
-    copy_prg->bind_attrib("in_pos", 0);
-
     avg_prg ->bind_frag("out_value", 0);
-    copy_prg->bind_frag("out_value", 0);
 
 
     status.z_near =  .01f;
@@ -138,21 +129,8 @@ void set_resolution(unsigned width, unsigned height)
     avg_levels = 0;
     for (unsigned tw = width - 1; tw > 1; avg_levels++, tw >>= 1);
 
-    if (avg_levels > 16) {
-        throw std::runtime_error("Resolution too high for averaging");
-    }
-
-    unsigned cas = 1 << avg_levels;
-    for (int i = 0; i < avg_levels - 3; i++) {
-        if (!avg_fbs[i]) {
-            avg_fbs[i] = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
-        }
-
-        avg_fbs[i]->resize(cas, cas);
-        (*avg_fbs[i])[0].filter(GL_LINEAR);
-
-        cas /= 2;
-    }
+    avg_fb->resize(1 << avg_levels, 1 << avg_levels);
+    (*avg_fb)[0].filter(GL_LINEAR);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
         bloom_fb->resize(width / 2, height / 2);
@@ -261,34 +239,25 @@ void do_graphics(const WorldState &input)
     }
 
 
-    unsigned cas = 1 << avg_levels;
-    for (int i = 0; i < avg_levels - 3; i++) {
-        avg_fbs[i]->bind();
-        glViewport(0, 0, cas, cas);
-        glClear(GL_COLOR_BUFFER_BIT);
+    avg_fb->bind();
+    glViewport(0, 0, 1 << avg_levels, 1 << avg_levels);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-        gl::texture &tex = !i ? (*main_fb)[0] : (*avg_fbs[i - 1])[0];
-        tex.bind();
+    (*main_fb)[0].bind();
+    (*bloom_fbs[0])[0].bind();
 
-        gl::program *prg = !i ? avg_prg : copy_prg;
-        prg->use();
-        prg->uniform<gl::texture>("tex") = tex;
+    avg_prg->use();
+    avg_prg->uniform<gl::texture>("tex") = (*main_fb)[0];
+    avg_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
-        if (!i) {
-            (*bloom_fbs[0])[0].bind();
-            prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
-        }
-
-        quad_vertices->draw(GL_TRIANGLE_STRIP);
-
-        cas /= 2;
-    }
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
 
 
-    (*avg_fbs[avg_levels - 4])[0].bind();
+    (*avg_fb)[0].bind();
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     float *pre_avg = new float[256];
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, pre_avg);
+    glGetTexImage(GL_TEXTURE_2D, avg_levels - 4, GL_RED, GL_FLOAT, pre_avg);
 
     float highest_avg = -HUGE_VALF;
     for (unsigned i = 0; i < 256; i++) {
