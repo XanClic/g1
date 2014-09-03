@@ -18,8 +18,8 @@ void do_physics(WorldState &output, const WorldState &input)
     output.virtual_timestamp = std::chrono::system_clock::now();
 
 
-    if (input.player_thrusters.length() < INFINITY) {
-        output.player_accel    = input.player_thrusters;
+    if (output.player_thrusters.length() < INFINITY) {
+        output.player_accel    = output.player_thrusters;
         output.player_velocity = input.player_velocity + input.player_accel    * output.interval;
         output.player_position = input.player_position + input.player_velocity * output.interval;
     } else {
@@ -28,29 +28,47 @@ void do_physics(WorldState &output, const WorldState &input)
         output.player_position = input.player_position;
     }
 
-    if (input.up < INFINITY) {
-        output.player_rot_accel    = vec3(output.up, -output.right, 0.f) / 50.f
-                                   + vec3(0.f, 0.f, output.roll) / 50.f;
-        output.player_rot_velocity = input.player_rot_velocity + input.player_rot_accel * output.interval;
+    if (output.up < INFINITY) {
+        vec3 front_y_force =  output.up * input.player_up;
+        vec3 back_y_force  = -output.up * input.player_up;
+        vec3 front_x_force =  output.right * input.player_right;
+        vec3 back_x_force  = -output.right * input.player_right;
+        vec3 right_y_force = -output.roll * input.player_up;
+        vec3 left_y_force  =  output.roll * input.player_up;
+
+        output.player_torque =   input.player_forward .cross(front_y_force)
+                             + (-input.player_forward).cross(back_y_force)
+                             +   input.player_forward .cross(front_x_force)
+                             + (-input.player_forward).cross(back_x_force)
+                             +   input.player_right   .cross(right_y_force)
+                             + (-input.player_right)  .cross(left_y_force);
+
+        output.player_ang_mom = input.player_ang_mom + output.player_torque * output.interval;
+
+        output.player_rot_velocity = output.player_ang_mom * .02f;
     } else {
-        output.player_rot_accel    = vec3::zero();
+        output.player_torque       = vec3::zero();
+        output.player_ang_mom      = vec3::zero();
         output.player_rot_velocity = vec3::zero();
     }
 
-    output.player_forward = mat3(mat4::identity().rotated(input.player_rot_velocity.x(), input.player_right)
-                                                 .rotated(input.player_rot_velocity.y(), input.player_up))
-                          * input.player_forward;
+    if (input.player_rot_velocity.length()) {
+        mat3 rot_mat(mat4::identity().rotated(input.player_rot_velocity.length(), input.player_rot_velocity));
+        output.player_forward = rot_mat * input.player_forward;
+        output.player_right   = rot_mat * input.player_right;
+        output.player_up      = rot_mat * input.player_up;
 
-    output.player_up      = mat3(mat4::identity().rotated(input.player_rot_velocity.x(), input.player_right)
-                                                 .rotated(input.player_rot_velocity.z(), output.player_forward))
-                          * input.player_up;
+        output.player_right = output.player_forward.cross(output.player_up);
+        output.player_up    = output.player_right.cross(output.player_forward);
 
-    output.player_right = output.player_forward.cross(output.player_up);
-    output.player_up    = output.player_right.cross(output.player_forward);
-
-    output.player_forward.normalize();
-    output.player_right.normalize();
-    output.player_up.normalize();
+        output.player_forward.normalize();
+        output.player_right.normalize();
+        output.player_up.normalize();
+    } else {
+        output.player_forward = input.player_forward;
+        output.player_right   = input.player_right;
+        output.player_up      = input.player_up;
+    }
 
 
     time_t time_t_now = std::chrono::system_clock::to_time_t(output.virtual_timestamp);
@@ -82,5 +100,7 @@ void WorldState::initialize(void)
     player_velocity = vec3::zero();
     player_accel    = vec3::zero();
 
+    player_torque       = vec3::zero();
+    player_ang_mom      = vec3::zero();
     player_rot_velocity = vec3::zero();
 }
