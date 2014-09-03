@@ -17,7 +17,7 @@ struct WorldState {
     float roll;
 
     dake::math::vec3 player_position, player_velocity, player_accel;
-    dake::math::vec3 player_rot_velocity, player_rot_accel;
+    dake::math::vec3 player_torque, player_ang_mom, player_rot_velocity;
     dake::math::vec3 player_forward, player_up, player_right;
     dake::math::vec3 player_thrusters;
 
