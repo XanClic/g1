@@ -59,13 +59,15 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     draw_line(vec2(-sxs, 0.f), vec2(sxs, 0.f));
     draw_line(vec2(0.f, -sys), vec2(0.f, sys));
 
-    if (world.player_velocity.length()) {
-        float fdp = world.player_forward.dot(world.player_velocity);
+    vec3 velocity = world.ships[world.player_ship].velocity;
 
-        vec2 proj_fwd_vlcty = project(status,  vec4(world.player_velocity.x(), world.player_velocity.y(), world.player_velocity.z(), 0.f));
+    if (velocity.length()) {
+        float fdp = status.camera_forward.dot(velocity);
+
+        vec2 proj_fwd_vlcty = project(status,  vec4(velocity.x(), velocity.y(), velocity.z(), 0.f));
         bool fwd_visible = (fdp > 0.f) && (fabsf(proj_fwd_vlcty.x()) <= sxb) && (fabsf(proj_fwd_vlcty.y()) <= syb);
 
-        vec2 proj_bwd_vlcty = project(status, -vec4(world.player_velocity.x(), world.player_velocity.y(), world.player_velocity.z(), 0.f));
+        vec2 proj_bwd_vlcty = project(status, -vec4(velocity.x(), velocity.y(), velocity.z(), 0.f));
         bool bwd_visible = (fdp < 0.f) && (fabsf(proj_bwd_vlcty.x()) <= sxb) && (fabsf(proj_bwd_vlcty.y()) <= syb);
 
         if (fwd_visible || !bwd_visible) {

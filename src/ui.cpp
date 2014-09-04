@@ -83,14 +83,20 @@ void init_ui(void)
 }
 
 
-void ui_process_events(WorldState &state)
+void ui_process_events(Input &input)
 {
     static bool capture_movement, accel_fwd, accel_bwd, roll_left, roll_right;
+    static bool strafe_left, strafe_right, strafe_up, strafe_down;;
 
-    state.right = 0.f;
-    state.up    = 0.f;
-    state.roll  = 0.f;
-    state.player_thrusters = vec3::zero();
+    input.yaw   = 0.f;
+    input.pitch = 0.f;
+    input.roll  = 0.f;
+
+    input.strafe_x = 0.f;
+    input.strafe_y = 0.f;
+    input.strafe_z = 0.f;
+
+    input.main_engine = 0.f;
 
     if (capture_movement) {
         int abs_x, abs_y;
@@ -99,16 +105,24 @@ void ui_process_events(WorldState &state)
         float rel_x = 2.f * abs_x / wnd_width - 1.f;
         float rel_y = 1.f - 2.f * abs_y / wnd_height;
 
-        state.right = rel_x;
-        state.up    = rel_y;
+        input.yaw   = rel_x;
+        input.pitch = rel_y;
     }
 
     if (accel_fwd ^ accel_bwd) {
-        state.player_thrusters = state.player_forward * (accel_fwd ? 100.f : -100.f);
+        input.main_engine = accel_fwd ? 1.f : -1.f;
     }
 
     if (roll_left ^ roll_right) {
-        state.roll = roll_left ? -1.f : 1.f;
+        input.roll = roll_right ? 1.f : -1.f;
+    }
+
+    if (strafe_left ^ strafe_right) {
+        input.strafe_x = strafe_right ? 1.f : -1.f;
+    }
+
+    if (strafe_up ^ strafe_down) {
+        input.strafe_y = strafe_up ? 1.f : -1.f;
     }
 
 
@@ -162,14 +176,20 @@ void ui_process_events(WorldState &state)
                         roll_right = true;
                         break;
 
-                    case SDLK_BACKSPACE:
-                        // top keki
-                        state.player_thrusters = -vec3(INFINITY, INFINITY, INFINITY);
+                    case SDLK_w:
+                        strafe_up = true;
                         break;
 
-                    case SDLK_SPACE:
-                        // more keki
-                        state.up = INFINITY;
+                    case SDLK_s:
+                        strafe_down = true;
+                        break;
+
+                    case SDLK_a:
+                        strafe_left = true;
+                        break;
+
+                    case SDLK_d:
+                        strafe_right = true;
                         break;
 
                     case SDLK_ESCAPE:
@@ -194,6 +214,22 @@ void ui_process_events(WorldState &state)
 
                     case SDLK_e:
                         roll_right = false;
+                        break;
+
+                    case SDLK_w:
+                        strafe_up = false;
+                        break;
+
+                    case SDLK_s:
+                        strafe_down = false;
+                        break;
+
+                    case SDLK_a:
+                        strafe_left = false;
+                        break;
+
+                    case SDLK_d:
+                        strafe_right = false;
                         break;
                 }
                 break;

@@ -178,10 +178,10 @@ static void calculate_camera(mat4 &mat, const vec3 &pos, const vec3 &forward, co
 
 void do_graphics(const WorldState &input)
 {
-    status.camera_position = input.player_position;
-    status.camera_forward  = input.player_forward;
+    status.camera_position = input.ships[input.player_ship].position;
+    status.camera_forward  = input.ships[input.player_ship].forward;
 
-    calculate_camera(status.world_to_camera, status.camera_position, input.player_forward, input.player_up);
+    calculate_camera(status.world_to_camera, status.camera_position, status.camera_forward, input.ships[input.player_ship].up);
 
 
     glEnable(GL_BLEND);

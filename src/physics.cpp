@@ -10,7 +10,7 @@
 using namespace dake::math;
 
 
-void do_physics(WorldState &output, const WorldState &input)
+void do_physics(WorldState &output, const WorldState &input, const Input &user_input)
 {
     output.timestamp = std::chrono::steady_clock::now();
     output.interval  = std::chrono::duration_cast<std::chrono::duration<float>>(output.timestamp - input.timestamp).count();
@@ -18,56 +18,117 @@ void do_physics(WorldState &output, const WorldState &input)
     output.virtual_timestamp = std::chrono::system_clock::now();
 
 
-    if (output.player_thrusters.length() < INFINITY) {
-        output.player_accel    = output.player_thrusters;
-        output.player_velocity = input.player_velocity + input.player_accel    * output.interval;
-        output.player_position = input.player_position + input.player_velocity * output.interval;
-    } else {
-        output.player_accel    = vec3::zero();
-        output.player_velocity = vec3::zero();
-        output.player_position = input.player_position;
+    bool ship_list_changed = input.ships.size() != output.ships.size();
+    for (size_t i = 0; !ship_list_changed && (i < input.ships.size()); i++) {
+        // FIXME
+        ship_list_changed = input.ships[i].ship != output.ships[i].ship;
     }
 
-    if (output.up < INFINITY) {
-        vec3 front_y_force =  output.up * input.player_up;
-        vec3 back_y_force  = -output.up * input.player_up;
-        vec3 front_x_force =  output.right * input.player_right;
-        vec3 back_x_force  = -output.right * input.player_right;
-        vec3 right_y_force = -output.roll * input.player_up;
-        vec3 left_y_force  =  output.roll * input.player_up;
-
-        output.player_torque =   input.player_forward .cross(front_y_force)
-                             + (-input.player_forward).cross(back_y_force)
-                             +   input.player_forward .cross(front_x_force)
-                             + (-input.player_forward).cross(back_x_force)
-                             +   input.player_right   .cross(right_y_force)
-                             + (-input.player_right)  .cross(left_y_force);
-
-        output.player_ang_mom = input.player_ang_mom + output.player_torque * output.interval;
-
-        output.player_rot_velocity = output.player_ang_mom * .02f;
-    } else {
-        output.player_torque       = vec3::zero();
-        output.player_ang_mom      = vec3::zero();
-        output.player_rot_velocity = vec3::zero();
+    if (ship_list_changed) {
+        output.ships = input.ships;
+        output.player_ship = input.player_ship;
     }
 
-    if (input.player_rot_velocity.length()) {
-        mat3 rot_mat(mat4::identity().rotated(input.player_rot_velocity.length(), input.player_rot_velocity));
-        output.player_forward = rot_mat * input.player_forward;
-        output.player_right   = rot_mat * input.player_right;
-        output.player_up      = rot_mat * input.player_up;
+    ShipState &player = output.ships[output.player_ship];
+    for (size_t i = 0; i < player.ship->thrusters.size(); i++) {
+        Thruster &thruster = player.ship->thrusters[i];
+        float &state = player.thruster_states[i];
 
-        output.player_right = output.player_forward.cross(output.player_up);
-        output.player_up    = output.player_right.cross(output.player_forward);
+        state = 0.f;
 
-        output.player_forward.normalize();
-        output.player_right.normalize();
-        output.player_up.normalize();
-    } else {
-        output.player_forward = input.player_forward;
-        output.player_right   = input.player_right;
-        output.player_up      = input.player_up;
+        if (thruster.type == Thruster::MAIN) {
+            if (thruster.general_direction == Thruster::BACKWARD) {
+                state = -user_input.main_engine;
+            } else if (thruster.general_direction == Thruster::FORWARD) {
+                state = user_input.main_engine;
+            }
+        } else if (thruster.type == Thruster::RCS) {
+            if ((thruster.general_direction == Thruster::RIGHT) || (thruster.general_direction == Thruster::LEFT)) {
+                float sign = thruster.general_direction == Thruster::RIGHT ? 1.f : -1.f;
+
+                state = sign * user_input.strafe_x;
+                if (thruster.general_position == Thruster::TOP) {
+                    state +=  sign * user_input.roll;
+                } else if (thruster.general_position == Thruster::BOTTOM) {
+                    state += -sign * user_input.roll;
+                } else if (thruster.general_position == Thruster::FRONT) {
+                    state +=  sign * user_input.yaw;
+                } else if (thruster.general_position == Thruster::BACK) {
+                    state += -sign * user_input.yaw;
+                }
+            } else if ((thruster.general_direction == Thruster::UP) || (thruster.general_direction == Thruster::DOWN)) {
+                float sign = thruster.general_direction == Thruster::UP ? 1.f : -1.f;
+
+                state = sign * user_input.strafe_y;
+                if (thruster.general_position == Thruster::RIGHT) {
+                    state += -sign * user_input.roll;
+                } else if (thruster.general_position == Thruster::LEFT) {
+                    state +=  sign * user_input.roll;
+                } else if (thruster.general_position == Thruster::FRONT) {
+                    state +=  sign * user_input.pitch;
+                } else if (thruster.general_position == Thruster::BACK) {
+                    state += -sign * user_input.pitch;
+                }
+            } else if ((thruster.general_direction == Thruster::FORWARD) || (thruster.general_direction == Thruster::BACKWARD)) {
+                float sign = thruster.general_direction == Thruster::FORWARD ? 1.f : -1.f;
+
+                state = sign * user_input.strafe_z;
+                if (thruster.general_position == Thruster::RIGHT) {
+                    state += -sign * user_input.yaw;
+                } else if (thruster.general_position == Thruster::LEFT) {
+                    state +=  sign * user_input.yaw;
+                } else if (thruster.general_position == Thruster::TOP) {
+                    state += -sign * user_input.pitch;
+                } else if (thruster.general_position == Thruster::BOTTOM) {
+                    state +=  sign * user_input.pitch;
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < input.ships.size(); i++) {
+        const ShipState &in = input.ships[i];
+        ShipState &out = output.ships[i];
+
+        // Positive Z is backwards
+        mat3 local_mat(in.right, in.up, -in.forward);
+
+        vec3 forces = vec3::zero(), torque = vec3::zero();
+        for (size_t j = 0; j < in.ship->thrusters.size(); j++) {
+            vec3 force = in.thruster_states[j] * (local_mat * in.ship->thrusters[j].force);
+
+            forces += force;
+            torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);
+        }
+
+        forces += 6.67384e-11f * in.total_mass * 5.974e24f / powf(1e3f * in.position.length(), 2.f) * -in.position.normalized();
+
+        out.acceleration = forces / in.total_mass;
+        out.torque       = torque;
+
+        out.velocity = in.velocity + in.acceleration * output.interval;
+        out.position = in.position + in.velocity * 1e-3f * output.interval;
+
+        out.angular_momentum    = in.angular_momentum + out.torque * output.interval;
+        out.rotational_velocity = out.angular_momentum / in.total_mass;
+
+        if (in.rotational_velocity.length()) {
+            mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length(), in.rotational_velocity));
+            out.right   = rot_mat * in.right;
+            out.up      = rot_mat * in.up;
+            out.forward = rot_mat * in.forward;
+
+            out.right = out.forward.cross(out.up);
+            out.up    = out.right.cross(out.forward);
+
+            out.right.normalize();
+            out.up.normalize();
+            out.forward.normalize();
+        } else {
+            out.right   = in.right;
+            out.up      = in.up;
+            out.forward = in.forward;
+        }
     }
 
 
@@ -92,15 +153,41 @@ void WorldState::initialize(void)
     timestamp = std::chrono::steady_clock::now();
     interval  = 1.f / 60.f;
 
-    player_forward = vec3( 0.f, 0.f,  1.f);
-    player_up      = vec3( 0.f, 1.f,  0.f);
-    player_right   = vec3(-1.f, 0.f,  0.f);
+    ships.resize(1);
+    player_ship = 0;
 
-    player_position = vec3(0.f, 1.f, 6450.f);
-    player_velocity = vec3::zero();
-    player_accel    = vec3::zero();
+    ships[0].ship = new Ship;
+    ships[0].ship->empty_mass = 500.f;
 
-    player_torque       = vec3::zero();
-    player_ang_mom      = vec3::zero();
-    player_rot_velocity = vec3::zero();
+    ships[0].ship->thrusters.resize(13);
+    ships[0].ship->thrusters[ 0] = Thruster(Thruster::MAIN, Thruster::BACK,  Thruster::FORWARD, vec3( 0.f, 0.f,  2.f), vec3( 0.f,  0.f, -1e7f));
+    ships[0].ship->thrusters[ 1] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::UP,      vec3( 0.f, 0.f, -2.f), vec3( 0.f,  1.f, 0.f));
+    ships[0].ship->thrusters[ 2] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::DOWN,    vec3( 0.f, 0.f, -2.f), vec3( 0.f, -1.f, 0.f));
+    ships[0].ship->thrusters[ 3] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::RIGHT,   vec3( 0.f, 0.f, -2.f), vec3( 1.f,  0.f, 0.f));
+    ships[0].ship->thrusters[ 4] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::LEFT,    vec3( 0.f, 0.f, -2.f), vec3(-1.f,  0.f, 0.f));
+    ships[0].ship->thrusters[ 5] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::UP,      vec3( 0.f, 0.f,  2.f), vec3( 0.f,  1.f, 0.f));
+    ships[0].ship->thrusters[ 6] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::DOWN,    vec3( 0.f, 0.f,  2.f), vec3( 0.f, -1.f, 0.f));
+    ships[0].ship->thrusters[ 7] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::RIGHT,   vec3( 0.f, 0.f,  2.f), vec3( 1.f,  0.f, 0.f));
+    ships[0].ship->thrusters[ 8] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::LEFT,    vec3( 0.f, 0.f,  2.f), vec3(-1.f,  0.f, 0.f));
+    ships[0].ship->thrusters[ 9] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::UP,      vec3( 2.f, 0.f,  0.f), vec3( 0.f,  1.f, 0.f));
+    ships[0].ship->thrusters[10] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::DOWN,    vec3( 2.f, 0.f,  0.f), vec3( 0.f, -1.f, 0.f));
+    ships[0].ship->thrusters[11] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::UP,      vec3(-2.f, 0.f,  0.f), vec3( 0.f,  1.f, 0.f));
+    ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,    vec3(-2.f, 0.f,  0.f), vec3( 0.f, -1.f, 0.f));
+
+    ships[0].position     = vec3(0.f, 1.f, 6450.f);
+    ships[0].velocity     = vec3(-1e4f, 0.f, 0.f);
+    ships[0].acceleration = vec3::zero();
+
+    ships[0].rotational_velocity = vec3::zero();
+    ships[0].angular_momentum    = vec3::zero();
+    ships[0].torque              = vec3::zero();
+
+    ships[0].right   = vec3( 0.f, 0.f, -1.f);
+    ships[0].up      = vec3( 0.f, 1.f,  0.f);
+    ships[0].forward = vec3(-1.f, 0.f,  0.f);
+
+    ships[0].total_mass = ships[0].ship->empty_mass;
+
+    ships[0].thruster_states.resize(13);
+    memset(ships[0].thruster_states.data(), 0, 13 * sizeof(float));
 }
