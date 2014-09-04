@@ -4,6 +4,10 @@
 #include <dake/math/matrix.hpp>
 
 #include <chrono>
+#include <vector>
+
+#include "ship.hpp"
+#include "ui.hpp"
 
 
 struct WorldState {
@@ -13,19 +17,14 @@ struct WorldState {
     std::chrono::system_clock::time_point virtual_timestamp;
     float interval;
 
-    float right, up;
-    float roll;
-
-    dake::math::vec3 player_position, player_velocity, player_accel;
-    dake::math::vec3 player_torque, player_ang_mom, player_rot_velocity;
-    dake::math::vec3 player_forward, player_up, player_right;
-    dake::math::vec3 player_thrusters;
-
     dake::math::vec3 sun_light_dir;
     float earth_angle;
+
+    std::vector<ShipState> ships;
+    int player_ship;
 };
 
 
-void do_physics(WorldState &output, const WorldState &input);
+void do_physics(WorldState &output, const WorldState &input, const Input &user_input);
 
 #endif
