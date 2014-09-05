@@ -5,6 +5,7 @@
 #include <dake/math.hpp>
 
 #include "physics.hpp"
+#include "software.hpp"
 
 
 using namespace dake::math;
@@ -29,62 +30,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         output.player_ship = input.player_ship;
     }
 
+
     ShipState &player = output.ships[output.player_ship];
-    for (size_t i = 0; i < player.ship->thrusters.size(); i++) {
-        Thruster &thruster = player.ship->thrusters[i];
-        float &state = player.thruster_states[i];
+    execute_software(player, user_input);
 
-        state = 0.f;
-
-        if (thruster.type == Thruster::MAIN) {
-            if (thruster.general_direction == Thruster::BACKWARD) {
-                state = -user_input.main_engine;
-            } else if (thruster.general_direction == Thruster::FORWARD) {
-                state = user_input.main_engine;
-            }
-        } else if (thruster.type == Thruster::RCS) {
-            if ((thruster.general_direction == Thruster::RIGHT) || (thruster.general_direction == Thruster::LEFT)) {
-                float sign = thruster.general_direction == Thruster::RIGHT ? 1.f : -1.f;
-
-                state = sign * user_input.strafe_x;
-                if (thruster.general_position == Thruster::TOP) {
-                    state +=  sign * user_input.roll;
-                } else if (thruster.general_position == Thruster::BOTTOM) {
-                    state += -sign * user_input.roll;
-                } else if (thruster.general_position == Thruster::FRONT) {
-                    state +=  sign * user_input.yaw;
-                } else if (thruster.general_position == Thruster::BACK) {
-                    state += -sign * user_input.yaw;
-                }
-            } else if ((thruster.general_direction == Thruster::UP) || (thruster.general_direction == Thruster::DOWN)) {
-                float sign = thruster.general_direction == Thruster::UP ? 1.f : -1.f;
-
-                state = sign * user_input.strafe_y;
-                if (thruster.general_position == Thruster::RIGHT) {
-                    state += -sign * user_input.roll;
-                } else if (thruster.general_position == Thruster::LEFT) {
-                    state +=  sign * user_input.roll;
-                } else if (thruster.general_position == Thruster::FRONT) {
-                    state +=  sign * user_input.pitch;
-                } else if (thruster.general_position == Thruster::BACK) {
-                    state += -sign * user_input.pitch;
-                }
-            } else if ((thruster.general_direction == Thruster::FORWARD) || (thruster.general_direction == Thruster::BACKWARD)) {
-                float sign = thruster.general_direction == Thruster::FORWARD ? 1.f : -1.f;
-
-                state = sign * user_input.strafe_z;
-                if (thruster.general_position == Thruster::RIGHT) {
-                    state += -sign * user_input.yaw;
-                } else if (thruster.general_position == Thruster::LEFT) {
-                    state +=  sign * user_input.yaw;
-                } else if (thruster.general_position == Thruster::TOP) {
-                    state += -sign * user_input.pitch;
-                } else if (thruster.general_position == Thruster::BOTTOM) {
-                    state +=  sign * user_input.pitch;
-                }
-            }
-        }
-    }
 
     for (size_t i = 0; i < input.ships.size(); i++) {
         const ShipState &in = input.ships[i];
@@ -95,7 +44,14 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         vec3 forces = vec3::zero(), torque = vec3::zero();
         for (size_t j = 0; j < in.ship->thrusters.size(); j++) {
-            vec3 force = in.thruster_states[j] * (local_mat * in.ship->thrusters[j].force);
+            float state = in.thruster_states[j];
+            if (state < 0.f) {
+                state = 0.f;
+            } else if (state > 1.f) {
+                state = 1.f;
+            }
+
+            vec3 force = state * (local_mat * in.ship->thrusters[j].force);
 
             forces += force;
             torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);

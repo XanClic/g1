@@ -11,6 +11,7 @@
 
 #include "main_loop.hpp"
 #include "options.hpp"
+#include "software.hpp"
 #include "ui.hpp"
 
 
@@ -74,9 +75,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+
     init_ui();
 
+    load_software();
+
     main_loop();
+
 
     return 0;
 }
