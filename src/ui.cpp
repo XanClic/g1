@@ -6,6 +6,7 @@
 #include <SDL2/SDL.h>
 
 #include "graphics.hpp"
+#include "localize.hpp"
 #include "main_loop.hpp"
 #include "physics.hpp"
 #include "ui.hpp"
@@ -193,6 +194,9 @@ void ui_process_events(Input &input)
                     case SDLK_ESCAPE:
                         quit_main_loop();
                         break;
+
+                    case SDLK_F12:
+                        olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
                 }
                 break;
 
