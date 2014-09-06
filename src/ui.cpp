@@ -146,14 +146,12 @@ void ui_process_events(Input &input)
 
             case SDL_MOUSEBUTTONDOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
                     capture_movement = true;
                 }
                 break;
 
             case SDL_MOUSEBUTTONUP:
                 if (event.button.button == SDL_BUTTON_LEFT) {
-                    SDL_SetRelativeMouseMode(SDL_FALSE);
                     capture_movement = false;
                 }
                 break;
