@@ -275,7 +275,7 @@ void init_environment(void)
     cloud_normal_map->wrap(GL_REPEAT);
 
 
-    earth_mv = mat4::identity().scaled(vec3(6378.f, 6357.f, 6378.f))
+    earth_mv = mat4::identity().scaled(vec3(6371.f, 6371.f, 6371.f))
                                .rotated(.41f, vec3(1.f, 0.f, 0.f)); // axial tilt
 
     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
@@ -801,8 +801,8 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
 void draw_environment(const GraphicsStatus &status, const WorldState &world)
 {
     mat4 cur_earth_mv = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
-    mat4 cur_cloud_mv = cur_earth_mv.scaled(vec3(6388.f / 6378.f, 6367.f / 6357.f, 6388.f / 6378.f));
-    mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6448.f / 6378.f, 6427.f / 6357.f, 6448.f / 6378.f));
+    mat4 cur_cloud_mv = cur_earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
+    mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
 
 
     static float lod_update_timer;
