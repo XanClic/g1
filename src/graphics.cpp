@@ -4,7 +4,9 @@
 #include "cockpit.hpp"
 #include "environment.hpp"
 #include "graphics.hpp"
+#include "menu.hpp"
 #include "physics.hpp"
+#include "text.hpp"
 #include "ui.hpp"
 
 
@@ -13,6 +15,7 @@ using namespace dake::math;
 
 
 static GraphicsStatus status;
+static unsigned change_width, change_height;
 
 static std::vector<void (*)(unsigned w, unsigned h)> resize_handlers;
 
@@ -20,6 +23,8 @@ gl::vertex_array *quad_vertices;
 
 static gl::framebuffer *main_fb, *bloom_fbs[2], *avg_fb;
 static gl::program *fb_combine_prg, *high_pass_prg, *blur_prgs[4], *avg_prg;
+
+static bool in_menu;
 
 
 void init_graphics(void)
@@ -31,6 +36,22 @@ void init_graphics(void)
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClearDepthf(1.f);
+
+
+    init_text();
+
+
+    in_menu = true;
+}
+
+
+void init_game_graphics(void)
+{
+    init_environment();
+    init_cockpit();
+
+
+    in_menu = false;
 
 
     main_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
@@ -111,30 +132,39 @@ void init_graphics(void)
     status.yfov   = static_cast<float>(M_PI) / 4.f;
 
     status.luminance = 1.f;
-
-
-    init_environment();
-    init_cockpit();
 }
 
 
 void set_resolution(unsigned width, unsigned height)
 {
-    status.projection = mat4::projection(status.yfov, static_cast<float>(width) / height, status.z_near, status.z_far);
-    glViewport(0, 0, width, height);
+    change_width  = width;
+    change_height = height;
 
-    status.width  = width;
-    status.height = height;
+    if (in_menu) {
+        menu_set_resolution(width, height);
+    }
+}
 
-    main_fb->resize(width, height);
+
+void update_resolution(void)
+{
+    status.projection = mat4::projection(status.yfov, static_cast<float>(change_width) / change_height, status.z_near, status.z_far);
+    glViewport(0, 0, change_width, change_height);
+
+    status.width  = change_width;
+    status.height = change_height;
+
+    main_fb->resize(change_width, change_height);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb->resize(width / 2, height / 2);
+        bloom_fb->resize(change_width / 2, change_height / 2);
     }
 
     for (void (*rh)(unsigned w, unsigned h): resize_handlers) {
-        rh(width, height);
+        rh(change_width, change_height);
     }
+
+    change_width = change_height = 0;
 }
 
 
@@ -178,6 +208,11 @@ static void calculate_camera(mat4 &mat, const vec3 &pos, const vec3 &forward, co
 
 void do_graphics(const WorldState &input)
 {
+    if (change_width && change_height) {
+        update_resolution();
+    }
+
+
     status.camera_position = input.ships[input.player_ship].position;
     status.camera_forward  = input.ships[input.player_ship].forward;
 

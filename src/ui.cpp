@@ -87,7 +87,7 @@ void init_ui(void)
 void ui_process_events(Input &input)
 {
     static bool capture_movement, accel_fwd, accel_bwd, roll_left, roll_right;
-    static bool strafe_left, strafe_right, strafe_up, strafe_down;;
+    static bool strafe_left, strafe_right, strafe_up, strafe_down;
 
     input.yaw   = 0.f;
     input.pitch = 0.f;
@@ -233,6 +233,49 @@ void ui_process_events(Input &input)
                     case SDLK_d:
                         strafe_right = false;
                         break;
+                }
+                break;
+        }
+    }
+}
+
+
+void ui_process_menu_events(bool &quit, bool &mouse_down, dake::math::vec2 &mouse_pos)
+{
+    int abs_x, abs_y;
+    mouse_down = SDL_GetMouseState(&abs_x, &abs_y) & SDL_BUTTON(SDL_BUTTON_LEFT);
+
+    mouse_pos.x() = 2.f * abs_x / wnd_width - 1.f;
+    mouse_pos.y() = 1.f - 2.f * abs_y / wnd_height;
+
+
+    SDL_Event event;
+    quit = false;
+
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                quit = true;
+                break;
+
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                    case SDL_WINDOWEVENT_RESIZED:
+                        set_resolution(event.window.data1, event.window.data2);
+                        wnd_width  = event.window.data1;
+                        wnd_height = event.window.data2;
+                        break;
+                }
+                break;
+
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+
+                    case SDLK_F12:
+                        olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
                 }
                 break;
         }

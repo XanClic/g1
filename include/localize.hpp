@@ -15,6 +15,8 @@ enum Localization {
 enum LocalizedStrings {
     LS_ORBITAL_VELOCITY,
     LS_HEIGHT_OVER_GROUND,
+    LS_TEST_ENVIRONMENT,
+    LS_LOADING,
 };
 
 
