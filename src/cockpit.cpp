@@ -257,4 +257,33 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
             }
         }
     }
+
+
+    vec3 earth_upward = ship.position.normalized();
+    vec3 horizont = (status.camera_forward - status.camera_forward.dot(earth_upward) * earth_upward).normalized();
+    vec3 rvec = horizont.cross(earth_upward);
+    for (int angle = -90; angle <= 90; angle += 5) {
+        float ra = M_PIf * angle / 180.f;
+
+        vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * horizont;
+        vec2 proj_vec = project(status, vec);
+
+        if ((status.camera_forward.dot(vec) > 0.f) &&
+            (fabsf(proj_vec.x()) < 1.f) && (fabsf(proj_vec.y()) < 1.f))
+        {
+            vec2 dvec = project(status, mat3(mat4::identity().rotated(ra + .01f, rvec)) * horizont);
+
+            dvec = ((angle % 10) ? 1.5f : 10.f) * vec2(-dvec.y(), dvec.x() * aspect).normalized();
+            vec2 pos[2] = {
+                proj_vec - vec2(dvec.x() * sxs, dvec.y() * sys),
+                proj_vec + vec2(dvec.x() * sxs, dvec.y() * sys)
+            };
+
+            draw_line(pos[0], pos[1]);
+
+            if (!(angle % 10)) {
+                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys), localize(angle));
+            }
+        }
+    }
 }
