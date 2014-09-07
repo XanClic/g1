@@ -21,6 +21,20 @@ static const char *translations[][3] = {
     //   hö  he  _   ü   be  r       _   g       ru  n       t
         "\x5e\x5b\x0f\x27\x6b\xc3\xaa\x0f\xc3\xb6\x42\xc3\xab\xc3\xa8",
     },
+
+    {
+        "Testumgebung",
+        "Testumgebung",
+    //  te   s       t       u   m       ge      bu  ng
+        "\x31\xc3\xb2\xc3\xa8\x2a\xc3\xb1\xc2\xbb\x6a\xc3\xb0",
+    },
+
+    {
+        "Lädt...",
+        "Lädt...",
+    //  SOH  lä       t      EOF
+        "\x02\xc2\xa5\xc3\xa8\x03",
+    },
 };
 
 

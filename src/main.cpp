@@ -9,7 +9,9 @@
 #include <cstdlib>
 #include <getopt.h>
 
+#include "graphics.hpp"
 #include "main_loop.hpp"
+#include "menu.hpp"
 #include "options.hpp"
 #include "software.hpp"
 #include "ui.hpp"
@@ -78,6 +80,9 @@ int main(int argc, char *argv[])
 
     init_ui();
 
+    menu_loop();
+
+    init_game_graphics();
     load_software();
 
     main_loop();

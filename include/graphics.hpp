@@ -21,6 +21,7 @@ struct GraphicsStatus {
 
 
 void init_graphics(void);
+void init_game_graphics(void);
 
 void set_resolution(unsigned width, unsigned height);
 void register_resize_handler(void (*rh)(unsigned w, unsigned h));
