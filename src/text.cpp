@@ -42,7 +42,7 @@ void init_text(void)
     char_va = new gl::vertex_array;
 
     char_va->attrib(0)->format(2);
-    char_va->attrib(0)->data(cvad, 320 * sizeof(CharVAElement), GL_STREAM_DRAW, false);
+    char_va->attrib(0)->data(cvad, 320 * sizeof(CharVAElement), GL_DYNAMIC_DRAW, false);
     char_va->attrib(0)->load(sizeof(CharVAElement), offsetof(CharVAElement, pos));
 
     char_va->attrib(1)->format(1, GL_UNSIGNED_INT);
