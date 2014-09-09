@@ -26,7 +26,7 @@ static const char *translations[][3] = {
         "Testumgebung",
         "Testumgebung",
     //  te   s       t       u   m       ge      bu  ng
-        "\x31\xc3\xb2\xc3\xa8\x2a\xc3\xb1\xc2\xbb\x6a\xc3\xb0",
+        "\x33\xc3\xb2\xc3\xa8\x2a\xc3\xb1\xc2\xbb\x6a\xc3\xb0",
     },
 
     {
