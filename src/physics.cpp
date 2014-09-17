@@ -88,6 +88,8 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     }
 
 
+    // note that this program's timezone is UTC
+
     time_t time_t_now = std::chrono::system_clock::to_time_t(output.virtual_timestamp);
     // 0 == vernal point (spring)
     float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * static_cast<float>(M_PI);

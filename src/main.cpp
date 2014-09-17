@@ -78,6 +78,11 @@ int main(int argc, char *argv[])
     }
 
 
+    // timezones sure are awesome
+    setenv("TZ", "", 1);
+    tzset();
+
+
     init_ui();
 
     menu_loop();
