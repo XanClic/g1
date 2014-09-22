@@ -56,21 +56,15 @@ void init_game_graphics(void)
 
     main_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
     (*main_fb)[0].filter(GL_LINEAR);
-
-    (*main_fb)[0].bind();
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
+    (*main_fb)[0].wrap(GL_CLAMP_TO_BORDER);
+    (*main_fb)[0].set_border_color(vec4::zero());
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
         bloom_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
         (*bloom_fb)[0].set_tmu(1);
         (*bloom_fb)[0].filter(GL_LINEAR);
-
-        (*bloom_fb)[0].bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, vec4::zero());
+        (*bloom_fb)[0].wrap(GL_CLAMP_TO_BORDER);
+        (*bloom_fb)[0].set_border_color(vec4::zero());
     }
 
     avg_fb = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
@@ -238,15 +232,21 @@ void do_graphics(const WorldState &input)
     glDisable(GL_BLEND);
 
 
+    // FIXME: Here we allow draw_cockpit() to exchange the main FB, but we
+    // should get this information differently than like this (or even better,
+    // draw_cockpit() should draw to the main FB)
+    gl::framebuffer *cockpit_fb = gl::framebuffer::current();
+
+
     bloom_fbs[0]->bind();
     glViewport(0, 0, status.width / 2, status.height / 2);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    (*main_fb)[0].bind();
+    (*cockpit_fb)[0].bind();
 
     high_pass_prg->use();
     high_pass_prg->uniform<float>("factor") = .7f / status.luminance;
-    high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
+    high_pass_prg->uniform<gl::texture>("fb") = (*cockpit_fb)[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
@@ -274,11 +274,11 @@ void do_graphics(const WorldState &input)
     glViewport(0, 0, 256, 256);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    (*main_fb)[0].bind();
+    (*cockpit_fb)[0].bind();
     (*bloom_fbs[0])[0].bind();
 
     avg_prg->use();
-    avg_prg->uniform<gl::texture>("tex") = (*main_fb)[0];
+    avg_prg->uniform<gl::texture>("tex") = (*cockpit_fb)[0];
     avg_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
@@ -304,12 +304,12 @@ void do_graphics(const WorldState &input)
     glViewport(0, 0, status.width, status.height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    (*main_fb)[0].bind();
+    (*cockpit_fb)[0].bind();
     (*bloom_fbs[0])[0].bind();
 
     fb_combine_prg->use();
     fb_combine_prg->uniform<float>("factor") = .7f / status.luminance;
-    fb_combine_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
+    fb_combine_prg->uniform<gl::texture>("fb") = (*cockpit_fb)[0];
     fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
