@@ -13,7 +13,12 @@ using namespace dake::math;
 
 
 static gl::vertex_array *line_va;
-static gl::program *line_prg;
+static gl::program *line_prg, *scratch_prg;
+static gl::texture *scratch_tex;
+static gl::framebuffer *cockpit_fb;
+
+
+static void resize(unsigned w, unsigned h);
 
 
 void init_cockpit(void)
@@ -30,6 +35,29 @@ void init_cockpit(void)
     line_prg = new gl::program {gl::shader::vert("assets/line_vert.glsl"), gl::shader::frag("assets/line_frag.glsl")};
     line_prg->bind_attrib("va_segment", 0);
     line_prg->bind_frag("out_col", 0);
+
+    scratch_prg = new gl::program {gl::shader::vert("assets/scratch_vert.glsl"), gl::shader::frag("assets/scratch_frag.glsl")};
+    scratch_prg->bind_attrib("va_pos", 0);
+    scratch_prg->bind_frag("out_col", 0);
+
+
+    scratch_tex = new gl::texture("assets/scratches.png");
+    scratch_tex->set_tmu(1);
+    scratch_tex->filter(GL_LINEAR);
+
+    cockpit_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
+    (*cockpit_fb)[0].filter(GL_LINEAR);
+    (*cockpit_fb)[0].wrap(GL_CLAMP_TO_BORDER);
+    (*cockpit_fb)[0].set_border_color(vec4::zero());
+
+
+    register_resize_handler(resize);
+}
+
+
+static void resize(unsigned w, unsigned h)
+{
+    cockpit_fb->resize(w, h);
 }
 
 
@@ -56,8 +84,48 @@ static vec2 project(const GraphicsStatus &status, const vec3 &vector)
 }
 
 
+static float smoothstep(float edge0, float edge1, float x)
+{
+    x = helper::maximum(0.f, helper::minimum(1.f, (x - edge0) / (edge1 - edge0)));
+    return x * x * (3.f - 2.f * x);
+}
+
+
 void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 {
+    const ShipState &ship = world.ships[world.player_ship];
+
+
+    gl::framebuffer *main_fb = gl::framebuffer::current();
+
+    cockpit_fb->bind();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    (*main_fb)[0].bind();
+    scratch_tex->bind();
+
+    glDepthMask(GL_FALSE);
+
+    float earth_sun_angle = acosf(ship.position.normalized().dot(world.sun_light_dir));
+    float earth_dim_angle = asinf(6371.f / ship.position.length());
+
+    float sun_strength = smoothstep(1.f, 1.1f, earth_sun_angle / earth_dim_angle);
+
+    scratch_prg->use();
+    scratch_prg->uniform<vec3>("sun_dir") = world.sun_light_dir * sun_strength;
+    scratch_prg->uniform<vec3>("forward") = ship.forward;
+    scratch_prg->uniform<vec3>("right")   = ship.right;
+    scratch_prg->uniform<vec3>("up")      = ship.up;
+    scratch_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
+    scratch_prg->uniform<float>("yhfov") = status.yfov / 2.f;
+    scratch_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
+    scratch_prg->uniform<gl::texture>("scratches") = *scratch_tex;
+
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
+
+    glDepthMask(GL_TRUE);
+
+
     float aspect = static_cast<float>(status.width) / status.height;
     static float blink_time = 0.f;
     float sxs = .01f, sys = .01f * aspect;
@@ -73,7 +141,6 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     draw_line(vec2(-sxs, 0.f), vec2(sxs, 0.f));
     draw_line(vec2(0.f, -sys), vec2(0.f, sys));
 
-    const ShipState &ship = world.ships[world.player_ship];
     const vec3 &velocity = ship.velocity;
 
 
