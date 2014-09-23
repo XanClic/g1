@@ -11,7 +11,7 @@ uniform vec3 sun_dir;
 
 void main(void)
 {
-    float sun_strength = pow(max(0.7 + length(sun_dir) * 0.15, dot(-sun_dir, normalize(vf_dir))), 20.0);
+    float sun_strength = pow(max(0.73 + length(sun_dir) * 0.12, dot(-sun_dir, normalize(vf_dir))), 20.0);
 
     out_col = texture(fb, vf_pos) + texture(scratches, vf_pos).rrra * sun_strength;
 }
