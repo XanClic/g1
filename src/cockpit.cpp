@@ -17,6 +17,8 @@ static gl::program *line_prg, *scratch_prg;
 static gl::texture *scratch_tex;
 static gl::framebuffer *cockpit_fb;
 
+static unsigned width, height;
+
 
 static void resize(unsigned w, unsigned h);
 
@@ -58,11 +60,16 @@ void init_cockpit(void)
 static void resize(unsigned w, unsigned h)
 {
     cockpit_fb->resize(w, h);
+
+    width = w;
+    height = h;
 }
 
 
 static void draw_line(const vec2 &start, const vec2 &end)
 {
+    line_prg->use();
+
     line_prg->uniform<vec2>("start") = start;
     line_prg->uniform<vec2>("end")   = end;
 
@@ -80,7 +87,7 @@ static vec2 project(const GraphicsStatus &status, const vec4 &vector)
 
 static vec2 project(const GraphicsStatus &status, const vec3 &vector)
 {
-    return project(status, vec4(vector));
+    return project(status, vec4::direction(vector));
 }
 
 
@@ -88,6 +95,45 @@ static float smoothstep(float edge0, float edge1, float x)
 {
     x = helper::maximum(0.f, helper::minimum(1.f, (x - edge0) / (edge1 - edge0)));
     return x * x * (3.f - 2.f * x);
+}
+
+
+static bool in_bounds(const vec2 &proj, const vec2 &bx, const vec2 &by)
+{
+    return (proj.x() >= bx[0]) && (proj.x() <= bx[1]) &&
+           (proj.y() >= by[0]) && (proj.y() <= by[1]);
+}
+
+
+static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec4 &vector, const vec2 &bx, const vec2 &by, float sxs, float sys, bool *visible = nullptr)
+{
+    float dp = status.camera_forward.dot(vec3(vector));
+
+    vec2 proj = project(status, vector);
+
+    if ((dp > 0.f) && in_bounds(proj, bx, by)) {
+        if (visible) {
+            *visible = true;
+        }
+    } else {
+        if (visible) {
+            *visible = false;
+        }
+
+        if (dp > 0.f) {
+            proj =  proj * helper::minimum((fabsf(bx[proj.x() > 0.f]) - 1.5f * sxs) / fabsf(proj.x()), (fabsf(by[proj.y() > 0.f]) - 1.5f * sys) / fabsf(proj.y()));
+        } else {
+            proj = -proj * helper::minimum((fabsf(bx[proj.x() < 0.f]) - 1.5f * sxs) / fabsf(proj.x()), (fabsf(by[proj.y() < 0.f]) - 1.5f * sys) / fabsf(proj.y()));
+        }
+    }
+
+    return proj;
+}
+
+
+static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &vector, const vec2 &bx, const vec2 &by, float sxs, float sys, bool *visible = nullptr)
+{
+    return project_clamp_to_border(status, vec4::direction(vector), bx, by, sxs, sys, visible);
 }
 
 
@@ -129,17 +175,10 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     float aspect = static_cast<float>(status.width) / status.height;
     static float blink_time = 0.f;
     float sxs = .01f, sys = .01f * aspect;
-    float sxb = 1.f - 3.f * sxs, syb = 1.f - 3.f * sys;
 
     blink_time = fmodf(blink_time + world.interval, 1.f);
 
     set_text_color(vec4(0.f, 1.f, 0.f, 1.f));
-
-    line_prg->use();
-
-    line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, 1.f);
-    draw_line(vec2(-sxs, 0.f), vec2(sxs, 0.f));
-    draw_line(vec2(0.f, -sys), vec2(0.f, sys));
 
     const vec3 &velocity = ship.velocity;
 
@@ -151,24 +190,31 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys), localize(ship.position.length() - 6371.f));
 
 
+    unsigned hud_height = height * 3 / 4;
+
+    glEnable(GL_SCISSOR_TEST);
+    glScissor((width - hud_height) / 2, height - hud_height, hud_height, hud_height);
+
+    vec2 hbx, hby;
+    hbx[0] = -.75f * status.height / status.width;
+    hbx[1] = -hbx[0];
+    hby[0] = -.5f;
+    hby[1] = 1.f;
+
+
+    line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, 1.f);
+
+    vec2 fwd_proj = project(status, ship.forward);
+    draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
+    draw_line(fwd_proj + vec2(0.f, -sys), fwd_proj + vec2(0.f, sys));
+
+
     if (velocity.length()) {
-        float fdp = status.camera_forward.dot(velocity);
-
-        vec2 proj_fwd_vlcty = project(status,  velocity);
-        bool fwd_visible = (fdp > 0.f) && (fabsf(proj_fwd_vlcty.x()) <= sxb) && (fabsf(proj_fwd_vlcty.y()) <= syb);
-
-        vec2 proj_bwd_vlcty = project(status, -velocity);
-        bool bwd_visible = (fdp < 0.f) && (fabsf(proj_bwd_vlcty.x()) <= sxb) && (fabsf(proj_bwd_vlcty.y()) <= syb);
+        bool fwd_visible, bwd_visible;
+        vec2 proj_fwd_vlcty = project_clamp_to_border(status,  velocity, hbx, hby, sxs, sys, &fwd_visible);
+        vec2 proj_bwd_vlcty = project_clamp_to_border(status, -velocity, hbx, hby, sxs, sys, &bwd_visible);
 
         if (fwd_visible || !bwd_visible) {
-            if (!fwd_visible) {
-                if (fdp > 0.f) {
-                    proj_fwd_vlcty =  proj_fwd_vlcty * helper::minimum(sxb / fabsf(proj_fwd_vlcty.x()), syb / fabsf(proj_fwd_vlcty.y()));
-                } else {
-                    proj_fwd_vlcty = -proj_fwd_vlcty * helper::minimum(sxb / fabsf(proj_fwd_vlcty.x()), syb / fabsf(proj_fwd_vlcty.y()));
-                }
-            }
-
             line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, fwd_visible ? 1.f : .3f);
             draw_line(proj_fwd_vlcty + vec2(-sxs, -sys), proj_fwd_vlcty + vec2( sxs,  sys));
             draw_line(proj_fwd_vlcty + vec2( sxs, -sys), proj_fwd_vlcty + vec2(-sxs,  sys));
@@ -176,14 +222,6 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
 
         if (bwd_visible || !fwd_visible) {
-            if (!bwd_visible) {
-                if (fdp < 0.f) {
-                    proj_bwd_vlcty =  proj_bwd_vlcty * helper::minimum(sxb / fabsf(proj_bwd_vlcty.x()), syb / fabsf(proj_bwd_vlcty.y()));
-                } else {
-                    proj_bwd_vlcty = -proj_bwd_vlcty * helper::minimum(sxb / fabsf(proj_bwd_vlcty.x()), syb / fabsf(proj_bwd_vlcty.y()));
-                }
-            }
-
             line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, bwd_visible ? 1.f : .3f);
             draw_line(proj_bwd_vlcty + vec2(-sxs,  sys), proj_bwd_vlcty + vec2(-sxs, -sys));
             draw_line(proj_bwd_vlcty + vec2(-sxs, -sys), proj_bwd_vlcty + vec2( sxs, -sys));
@@ -206,7 +244,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
             vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * zero;
             vec2 proj_vec = project(status, vec);
 
-            if ((status.camera_forward.dot(vec) > 0.f) && (fabsf(proj_vec.x()) < 1.f) && (fabsf(proj_vec.y()) < 1.f)) {
+            if ((status.camera_forward.dot(vec) > 0.f) && in_bounds(proj_vec, hbx, hby)) {
                 vec2 dvec = project(status, mat3(mat4::identity().rotated(ra + .01f, rvec)) * zero);
 
                 dvec = ((angle % 10) ? .5f : 2.f) * vec2(-dvec.y(), dvec.x() * aspect).normalized();
@@ -234,9 +272,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
         vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * horizont;
         vec2 proj_vec = project(status, vec);
 
-        if ((status.camera_forward.dot(vec) > 0.f) &&
-            (fabsf(proj_vec.x()) < 1.f) && (fabsf(proj_vec.y()) < 1.f))
-        {
+        if ((status.camera_forward.dot(vec) > 0.f) && in_bounds(proj_vec, hbx, hby)) {
             vec2 dvec = project(status, mat3(mat4::identity().rotated(ra + .01f, rvec)) * horizont);
 
             dvec = ((angle % 10) ? 1.5f : 10.f) * vec2(-dvec.y(), dvec.x() * aspect).normalized();
@@ -252,4 +288,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
             }
         }
     }
+
+
+    glDisable(GL_SCISSOR_TEST);
 }
