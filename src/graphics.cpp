@@ -151,7 +151,7 @@ void update_resolution(void)
     main_fb->resize(change_width, change_height);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb->resize(change_width / 2, change_height / 2);
+        bloom_fb->resize(change_width, change_height);
     }
 
     for (void (*rh)(unsigned w, unsigned h): resize_handlers) {
@@ -239,7 +239,7 @@ void do_graphics(const WorldState &input)
 
 
     bloom_fbs[0]->bind();
-    glViewport(0, 0, status.width / 2, status.height / 2);
+    glViewport(0, 0, status.width, status.height);
     glClear(GL_COLOR_BUFFER_BIT);
 
     (*cockpit_fb)[0].bind();
@@ -250,11 +250,11 @@ void do_graphics(const WorldState &input)
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
-    for (int i = 7; i >= 0; i--) {
+    for (int i = 5; i >= 0; i--) {
         float mag = exp2f(i);
 
         for (int cur_fb: {0, 1}) {
-            gl::program *blur_prg = blur_prgs[(i == 7 ? 0 : 2) + cur_fb];
+            gl::program *blur_prg = blur_prgs[(i == 5 ? 0 : 2) + cur_fb];
 
             bloom_fbs[!cur_fb]->bind();
             glClear(GL_COLOR_BUFFER_BIT);
@@ -262,7 +262,7 @@ void do_graphics(const WorldState &input)
             (*bloom_fbs[cur_fb])[0].bind();
 
             blur_prg->use();
-            blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 512.f : 512.f * status.width / status.height);
+            blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 1024.f : 1024.f * status.width / status.height);
             blur_prg->uniform<gl::texture>("tex") = (*bloom_fbs[cur_fb])[0];
 
             quad_vertices->draw(GL_TRIANGLE_STRIP);
@@ -319,4 +319,8 @@ void do_graphics(const WorldState &input)
 
 
     status.luminance += input.interval * (highest_avg - status.luminance);
+
+    if (status.luminance > 2.f) {
+        status.luminance = 2.f;
+    }
 }
