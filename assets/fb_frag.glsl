@@ -1,6 +1,7 @@
 #version 150 core
 
 in vec2 vf_pos;
+in vec3 vf_dir;
 
 out vec4 out_col;
 

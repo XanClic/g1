@@ -155,10 +155,12 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     float earth_sun_angle = acosf(ship.position.normalized().dot(world.sun_light_dir));
     float earth_dim_angle = asinf(6371.f / ship.position.length());
 
-    float sun_strength = smoothstep(.9f, 1.1f, earth_sun_angle / earth_dim_angle);
+    float sun_strength       = smoothstep(.9f, 1.10f, earth_sun_angle / earth_dim_angle);
+    float sun_bloom_strength = smoothstep(.9f, 1.03f, earth_sun_angle / earth_dim_angle) * 1.03f;
 
     scratch_prg->use();
-    scratch_prg->uniform<vec3>("sun_dir") = world.sun_light_dir * sun_strength;
+    scratch_prg->uniform<vec3>("sun_dir")       = world.sun_light_dir * sun_strength;
+    scratch_prg->uniform<vec3>("sun_bloom_dir") = world.sun_light_dir * sun_bloom_strength;
     scratch_prg->uniform<vec3>("forward") = ship.forward;
     scratch_prg->uniform<vec3>("right")   = ship.right;
     scratch_prg->uniform<vec3>("up")      = ship.up;

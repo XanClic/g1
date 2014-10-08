@@ -828,9 +828,6 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     if (sun_pos.z() < 0.f) {
         float sun_radius = atanf(696.e3f / sun_pos.length()) * 2.f / status.yfov;
 
-        // artificial correction (pre-blur)
-        sun_radius *= 2.f;
-
         // everything is in front of the sun
         glDisable(GL_DEPTH_TEST);
 

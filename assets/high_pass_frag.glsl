@@ -10,5 +10,5 @@ uniform float factor;
 
 void main(void)
 {
-    out_col = vec4(max((factor * texture(fb, vf_pos).rgb - vec3(0.8)), 0.0), 1.0);
+    out_col = vec4(max((factor * texture(fb, vf_pos).rgb - vec3(0.5)), 0.0), 1.0);
 }
