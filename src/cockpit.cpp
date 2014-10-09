@@ -139,6 +139,14 @@ static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &ve
 
 void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 {
+    // FIXME
+    static float cockpit_brightness = 1.f;
+    cockpit_brightness += .4f * world.interval * (status.luminance - cockpit_brightness);
+
+    if (cockpit_brightness < .2f) {
+        cockpit_brightness = .2f;
+    }
+
     const ShipState &ship = world.ships[world.player_ship];
 
 
@@ -155,12 +163,21 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     float earth_sun_angle = acosf(ship.position.normalized().dot(world.sun_light_dir));
     float earth_dim_angle = asinf(6371.f / ship.position.length());
 
-    float sun_strength       = smoothstep(.9f, 1.10f, earth_sun_angle / earth_dim_angle);
-    float sun_bloom_strength = smoothstep(.9f, 1.03f, earth_sun_angle / earth_dim_angle) * 1.03f;
+    float sun_strength       = smoothstep(.94f, 1.07f, earth_sun_angle / earth_dim_angle);
+    float sun_bloom_strength = smoothstep(.93f, 1.03f, earth_sun_angle / earth_dim_angle);
+
+    // TODO: Could reuse from draw_environment()
+    vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
+    sun_pos.w() = 1.f;
+    sun_pos = status.world_to_camera * sun_pos;
+
+    vec4 projected_sun = status.projection * sun_pos;
+    projected_sun /= projected_sun.w();
 
     scratch_prg->use();
     scratch_prg->uniform<vec3>("sun_dir")       = world.sun_light_dir * sun_strength;
     scratch_prg->uniform<vec3>("sun_bloom_dir") = world.sun_light_dir * sun_bloom_strength;
+    scratch_prg->uniform<vec2>("sun_position")  = projected_sun;
     scratch_prg->uniform<vec3>("forward") = ship.forward;
     scratch_prg->uniform<vec3>("right")   = ship.right;
     scratch_prg->uniform<vec3>("up")      = ship.up;
@@ -180,7 +197,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     blink_time = fmodf(blink_time + world.interval, 1.f);
 
-    set_text_color(vec4(0.f, 1.f, 0.f, 1.f));
+    set_text_color(vec4(0.f, cockpit_brightness, 0.f, 1.f));
 
     const vec3 &velocity = ship.velocity;
 
@@ -204,7 +221,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     hby[1] = 1.f;
 
 
-    line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, 1.f);
+    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
 
     vec2 fwd_proj = project(status, ship.forward);
     draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
@@ -217,14 +234,14 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
         vec2 proj_bwd_vlcty = project_clamp_to_border(status, -velocity, hbx, hby, sxs, sys, &bwd_visible);
 
         if (fwd_visible || !bwd_visible) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, fwd_visible ? 1.f : .3f);
+            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, fwd_visible ? 1.f : .3f);
             draw_line(proj_fwd_vlcty + vec2(-sxs, -sys), proj_fwd_vlcty + vec2( sxs,  sys));
             draw_line(proj_fwd_vlcty + vec2( sxs, -sys), proj_fwd_vlcty + vec2(-sxs,  sys));
         }
 
 
         if (bwd_visible || !fwd_visible) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, bwd_visible ? 1.f : .3f);
+            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, bwd_visible ? 1.f : .3f);
             draw_line(proj_bwd_vlcty + vec2(-sxs,  sys), proj_bwd_vlcty + vec2(-sxs, -sys));
             draw_line(proj_bwd_vlcty + vec2(-sxs, -sys), proj_bwd_vlcty + vec2( sxs, -sys));
             draw_line(proj_bwd_vlcty + vec2( sxs, -sys), proj_bwd_vlcty + vec2( sxs,  sys));
@@ -236,7 +253,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
         vec3 orbit_inward  = -ship.position.normalized();
         vec3 orbit_upward  = orbit_forward.cross(orbit_inward).normalized();
 
-        line_prg->uniform<vec4>("color") = vec4(0.f, 1.f, 0.f, 1.f);
+        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
 
         vec3 zero = (status.camera_forward - status.camera_forward.dot(orbit_upward) * orbit_upward).normalized();
         vec3 rvec = zero.cross(orbit_upward);

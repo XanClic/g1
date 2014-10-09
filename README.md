@@ -66,7 +66,7 @@ though.
 TODO
 ====
 
-- Get cockpit scratches right (need a normal map for the cockpit glass)
+- ~~Get cockpit scratches right (need a normal map for the cockpit glass)~~
 - Border for the HUD
 - Cockpit instruments
 - In-atmospheric graphical display; physics doesn’t matter so far, it just needs
