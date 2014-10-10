@@ -33,6 +33,7 @@ void init_graphics(void)
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_CLAMP);
+    glEnable(GL_LINE_SMOOTH);
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClearDepthf(1.f);
@@ -158,6 +159,8 @@ void update_resolution(void)
         rh(change_width, change_height);
     }
 
+    glLineWidth(change_height / 500.f);
+
     change_width = change_height = 0;
 }
 
@@ -232,21 +235,15 @@ void do_graphics(const WorldState &input)
     glDisable(GL_BLEND);
 
 
-    // FIXME: Here we allow draw_cockpit() to exchange the main FB, but we
-    // should get this information differently than like this (or even better,
-    // draw_cockpit() should draw to the main FB)
-    gl::framebuffer *cockpit_fb = gl::framebuffer::current();
-
-
     bloom_fbs[0]->bind();
     glViewport(0, 0, status.width, status.height);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    (*cockpit_fb)[0].bind();
+    (*main_fb)[0].bind();
 
     high_pass_prg->use();
     high_pass_prg->uniform<float>("factor") = .7f / status.luminance;
-    high_pass_prg->uniform<gl::texture>("fb") = (*cockpit_fb)[0];
+    high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
@@ -274,11 +271,11 @@ void do_graphics(const WorldState &input)
     glViewport(0, 0, 256, 256);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    (*cockpit_fb)[0].bind();
+    (*main_fb)[0].bind();
     (*bloom_fbs[0])[0].bind();
 
     avg_prg->use();
-    avg_prg->uniform<gl::texture>("tex") = (*cockpit_fb)[0];
+    avg_prg->uniform<gl::texture>("tex") = (*main_fb)[0];
     avg_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
@@ -304,12 +301,12 @@ void do_graphics(const WorldState &input)
     glViewport(0, 0, status.width, status.height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    (*cockpit_fb)[0].bind();
+    (*main_fb)[0].bind();
     (*bloom_fbs[0])[0].bind();
 
     fb_combine_prg->use();
     fb_combine_prg->uniform<float>("factor") = .7f / status.luminance;
-    fb_combine_prg->uniform<gl::texture>("fb") = (*cockpit_fb)[0];
+    fb_combine_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
