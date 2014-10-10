@@ -8,6 +8,9 @@
 #include "text.hpp"
 
 
+// #define COCKPIT_SUPERSAMPLING
+
+
 using namespace dake;
 using namespace dake::math;
 
@@ -16,6 +19,9 @@ static gl::vertex_array *line_va;
 static gl::program *line_prg, *scratch_prg;
 static gl::texture *scratch_tex;
 static gl::framebuffer *cockpit_fb;
+#ifdef COCKPIT_SUPERSAMPLING
+static gl::framebuffer *cockpit_ms_fb;
+#endif
 
 static unsigned width, height;
 
@@ -47,11 +53,10 @@ void init_cockpit(void)
     scratch_tex->set_tmu(1);
     scratch_tex->filter(GL_LINEAR);
 
-    cockpit_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F);
-    (*cockpit_fb)[0].filter(GL_LINEAR);
-    (*cockpit_fb)[0].wrap(GL_CLAMP_TO_BORDER);
-    (*cockpit_fb)[0].set_border_color(vec4::zero());
-
+    cockpit_fb    = new gl::framebuffer(1, GL_R11F_G11F_B10F);
+#ifdef COCKPIT_SUPERSAMPLING
+    cockpit_ms_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F, gl::framebuffer::DEPTH_ONLY, 4);
+#endif
 
     register_resize_handler(resize);
 }
@@ -60,6 +65,9 @@ void init_cockpit(void)
 static void resize(unsigned w, unsigned h)
 {
     cockpit_fb->resize(w, h);
+#ifdef COCKPIT_SUPERSAMPLING
+    cockpit_ms_fb->resize(w, h);
+#endif
 
     width = w;
     height = h;
@@ -191,6 +199,13 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     glDepthMask(GL_TRUE);
 
 
+#ifdef COCKPIT_SUPERSAMPLING
+    cockpit_ms_fb->bind();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    cockpit_fb->blit();
+#endif
+
+
     float aspect = static_cast<float>(status.width) / status.height;
     static float blink_time = 0.f;
     float sxs = .01f, sys = .01f * aspect;
@@ -310,4 +325,12 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
 
     glDisable(GL_SCISSOR_TEST);
+
+
+    main_fb->bind();
+#ifdef COCKPIT_SUPERSAMPLING
+    cockpit_ms_fb->blit();
+#else
+    cockpit_fb->blit();
+#endif
 }
