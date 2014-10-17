@@ -38,29 +38,34 @@ The least which is missing is linking GLEW in.
 Running
 -------
 
-Now that’s the hard part. I have included some binary assets in this repo (font,
-menu background, ...), but the bulk of the data is (and will probably always be)
-images of earth. To give you an idea:
+First, you need to download the binary assets. There is a script to do this for
+you, so you should be using it:
 
-    $ du -hc assets/earth assets/night assets/clouds
-    260M    assets/earth
-    30M     assets/night
-    320M    assets/clouds
-    608M    total
+    $ cd tools
+    $ ./fetch-assets.rb
+    Fetching content file...
+    Comparing files, fetching if necessary...
+    1425/1425 100% [==============================================================]
 
-(Don’t ask me why the grayscale cloud images take up more space than the colored
-images of earth)
+Just for trying it out, you can give a minimum LOD to the script which specifies
+the minimal LOD (the lower the LOD, the higher the resolution) to fetch, for
+instance `./fetch-assets.rb 4`. You may also specify the target directory
+(default: `../assets`), like in `tools/fetch-assets.rb 4 assets`.
 
-I cannot upload this data to github and I currently do not have an own server,
-so that will be hard as well. In the future I will either have a server or just
-add a script which automatically downloads the assets from NASA and processes
-them as needed.
+If you have not used 0 as the minimum LOD make sure to run the g1 binary with
+the appropriate `--min-lod` value, for instance:
 
-Oh, and if, in whichever way, you achieved to get access to that data, you need
-OpenGL 3.3+ (currently, there is no actualy reason for that; but I will probably
-have geometry shaders sooner or later) and preferably a card and driver which
-support bindless textures (hint: Mesa does not). It will work without, too,
-though.
+    $ tools/fetch-assets.rb 4 assets
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
+    $ ./g1 --min-lod=4
+
+Also, you need OpenGL 3.3+ (currently, there is no actualy reason for that; but
+I will probably have geometry shaders sooner or later) and preferably a card and
+driver which support bindless textures (hint: Mesa does not). It will work
+without, too, though.
 
 
 TODO
@@ -75,8 +80,8 @@ TODO
     - And rain! (god that would be awesome)
 - Aurora
 - Specify bytecode for in-game software (IGS)
-- Write script for automatically downloading and building the assets from NASA
-  or get a server
+- ~~Write script for automatically downloading and building the assets from NASA
+  or get a server~~
 - English translation (although I’d rather recommend you learn German)
 - Allow IGS to exhibit arbitrary commands which can be bound to key strokes
   (probably with the IGS defining a default)
