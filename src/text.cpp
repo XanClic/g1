@@ -49,7 +49,7 @@ void init_text(void)
     char_va->attrib(1)->reuse_buffer(char_va->attrib(0));
 
 
-    char_prg = new gl::program {gl::shader::vert("assets/char_vert.glsl"), gl::shader::frag("assets/char_frag.glsl")};
+    char_prg = new gl::program {gl::shader::vert("shaders/char_vert.glsl"), gl::shader::frag("shaders/char_frag.glsl")};
     char_prg->bind_attrib("va_pos", 0);
     char_prg->bind_attrib("va_char", 1);
     char_prg->bind_frag("out_col", 0);

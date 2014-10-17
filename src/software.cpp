@@ -208,7 +208,7 @@ void Software::execute(ShipState &ship, const Input &input)
 
 void load_software(void)
 {
-    std::string base = gl::find_resource_filename("assets/software/");
+    std::string base = gl::find_resource_filename("software/");
 
     DIR *d = opendir(base.c_str());
     if (!d) {
