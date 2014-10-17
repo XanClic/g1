@@ -40,11 +40,11 @@ void init_cockpit(void)
     line_va->attrib(0)->data(boole);
 
 
-    line_prg = new gl::program {gl::shader::vert("assets/line_vert.glsl"), gl::shader::frag("assets/line_frag.glsl")};
+    line_prg = new gl::program {gl::shader::vert("shaders/line_vert.glsl"), gl::shader::frag("shaders/line_frag.glsl")};
     line_prg->bind_attrib("va_segment", 0);
     line_prg->bind_frag("out_col", 0);
 
-    scratch_prg = new gl::program {gl::shader::vert("assets/scratch_vert.glsl"), gl::shader::frag("assets/scratch_frag.glsl")};
+    scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"), gl::shader::frag("shaders/scratch_frag.glsl")};
     scratch_prg->bind_attrib("va_pos", 0);
     scratch_prg->bind_frag("out_col", 0);
 

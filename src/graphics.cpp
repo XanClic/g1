@@ -85,10 +85,10 @@ void init_game_graphics(void)
     quad_vertices->attrib(0)->data(fb_vertex_positions);
 
 
-    gl::shader fb_vert_sh(gl::shader::VERTEX, "assets/fb_vert.glsl");
+    gl::shader fb_vert_sh(gl::shader::VERTEX, "shaders/fb_vert.glsl");
 
-    fb_combine_prg = new gl::program {gl::shader::frag("assets/fb_frag.glsl")};
-    high_pass_prg  = new gl::program {gl::shader::frag("assets/high_pass_frag.glsl")};
+    fb_combine_prg = new gl::program {gl::shader::frag("shaders/fb_frag.glsl")};
+    high_pass_prg  = new gl::program {gl::shader::frag("shaders/high_pass_frag.glsl")};
 
     *fb_combine_prg << fb_vert_sh;
     *high_pass_prg  << fb_vert_sh;
@@ -104,10 +104,10 @@ void init_game_graphics(void)
         *blur_prgs[i] << fb_vert_sh;
 
         switch (i) {
-            case 0: *blur_prgs[i] << gl::shader::frag("assets/blur0_x_frag.glsl"); break;
-            case 1: *blur_prgs[i] << gl::shader::frag("assets/blur0_y_frag.glsl"); break;
-            case 2: *blur_prgs[i] << gl::shader::frag("assets/blurn_x_frag.glsl"); break;
-            case 3: *blur_prgs[i] << gl::shader::frag("assets/blurn_y_frag.glsl"); break;
+            case 0: *blur_prgs[i] << gl::shader::frag("shaders/blur0_x_frag.glsl"); break;
+            case 1: *blur_prgs[i] << gl::shader::frag("shaders/blur0_y_frag.glsl"); break;
+            case 2: *blur_prgs[i] << gl::shader::frag("shaders/blurn_x_frag.glsl"); break;
+            case 3: *blur_prgs[i] << gl::shader::frag("shaders/blurn_y_frag.glsl"); break;
         }
 
         blur_prgs[i]->bind_attrib("in_pos", 0);
@@ -115,7 +115,7 @@ void init_game_graphics(void)
     }
 
 
-    avg_prg  = new gl::program {gl::shader::frag("assets/avg_frag.glsl")};
+    avg_prg  = new gl::program {gl::shader::frag("shaders/avg_frag.glsl")};
     *avg_prg  << fb_vert_sh;
     avg_prg ->bind_attrib("in_pos", 0);
     avg_prg ->bind_frag("out_value", 0);

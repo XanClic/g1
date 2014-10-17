@@ -39,7 +39,7 @@ void menu_loop(void)
     menu_bg_aspect = static_cast<float>(menu_bg_img.width()) / menu_bg_img.height();
     menu_bg = new gl::texture(menu_bg_img);
 
-    menu_prg = new gl::program {gl::shader::vert("assets/menu_vert.glsl"), gl::shader::frag("assets/menu_frag.glsl")};
+    menu_prg = new gl::program {gl::shader::vert("shaders/menu_vert.glsl"), gl::shader::frag("shaders/menu_frag.glsl")};
     menu_prg->bind_attrib("va_pos", 0);
     menu_prg->bind_frag("out_col", 0);
 

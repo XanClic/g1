@@ -279,14 +279,14 @@ void init_environment(void)
                                .rotated(.41f, vec3(1.f, 0.f, 0.f)); // axial tilt
 
     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
-        earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("assets/cloud_vert.glsl"), gl::shader::frag("assets/cloud_frag.glsl")};
+        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"), gl::shader::frag("shaders/earth_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"), gl::shader::frag("shaders/cloud_frag.glsl")};
     } else {
-        earth_prg = new gl::program {gl::shader::vert("assets/earth_vert.glsl"), gl::shader::frag("assets/earth_nbl_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("assets/cloud_vert.glsl"), gl::shader::frag("assets/cloud_nbl_frag.glsl")};
+        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"), gl::shader::frag("shaders/earth_nbl_frag.glsl")};
+        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"), gl::shader::frag("shaders/cloud_nbl_frag.glsl")};
     }
-    atmob_prg = new gl::program {gl::shader::vert("assets/ptn_vert.glsl"),   gl::shader::frag("assets/atmob_frag.glsl")};
-    atmof_prg = new gl::program {gl::shader::vert("assets/atmof_vert.glsl"), gl::shader::frag("assets/atmof_frag.glsl")};
+    atmob_prg = new gl::program {gl::shader::vert("shaders/ptn_vert.glsl"),   gl::shader::frag("shaders/atmob_frag.glsl")};
+    atmof_prg = new gl::program {gl::shader::vert("shaders/atmof_vert.glsl"), gl::shader::frag("shaders/atmof_frag.glsl")};
 
     earth->bind_program_vertex_attribs(*earth_prg);
     earth->bind_program_vertex_attribs(*cloud_prg);
@@ -303,7 +303,7 @@ void init_environment(void)
     atmof_prg->bind_frag("out_col", 0);
 
 
-    sun_prg = new gl::program {gl::shader::vert("assets/sun_vert.glsl"), gl::shader::frag("assets/sun_frag.glsl")};
+    sun_prg = new gl::program {gl::shader::vert("shaders/sun_vert.glsl"), gl::shader::frag("shaders/sun_frag.glsl")};
     sun_prg->bind_attrib("va_position", 0);
     sun_prg->bind_frag("out_col", 0);
 

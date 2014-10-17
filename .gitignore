@@ -4,3 +4,5 @@ assets/earth/
 assets/night/
 assets/clouds/
 assets/earth.xsmd
+assets/*.png
+assets/*.jpg
