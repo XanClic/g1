@@ -17,7 +17,7 @@ using namespace dake::math;
 
 static gl::vertex_array *line_va;
 static gl::program *line_prg, *scratch_prg;
-static gl::texture *scratch_tex;
+static gl::texture *scratch_tex, *normals_tex;
 static gl::framebuffer *cockpit_fb;
 #ifdef COCKPIT_SUPERSAMPLING
 static gl::framebuffer *cockpit_ms_fb;
@@ -52,6 +52,11 @@ void init_cockpit(void)
     scratch_tex = new gl::texture("assets/scratches.png");
     scratch_tex->set_tmu(1);
     scratch_tex->filter(GL_LINEAR);
+
+    normals_tex = new gl::texture("assets/cockpit_normals.png");
+    normals_tex->set_tmu(2);
+    normals_tex->filter(GL_LINEAR);
+    normals_tex->wrap(GL_CLAMP);
 
     cockpit_fb    = new gl::framebuffer(1, GL_R11F_G11F_B10F);
 #ifdef COCKPIT_SUPERSAMPLING
@@ -165,6 +170,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     (*main_fb)[0].bind();
     scratch_tex->bind();
+    normals_tex->bind();
 
     glDepthMask(GL_FALSE);
 
@@ -189,10 +195,13 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     scratch_prg->uniform<vec3>("forward") = ship.forward;
     scratch_prg->uniform<vec3>("right")   = ship.right;
     scratch_prg->uniform<vec3>("up")      = ship.up;
+    scratch_prg->uniform<mat3>("normal_mat") = mat3(ship.right, ship.up, ship.forward);
+    scratch_prg->uniform<float>("aspect") = static_cast<float>(status.width) / status.height / (16.f / 9.f);
     scratch_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
     scratch_prg->uniform<float>("yhfov") = status.yfov / 2.f;
     scratch_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     scratch_prg->uniform<gl::texture>("scratches") = *scratch_tex;
+    scratch_prg->uniform<gl::texture>("normals") = *normals_tex;
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
