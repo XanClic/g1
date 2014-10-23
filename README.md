@@ -72,7 +72,7 @@ TODO
 ====
 
 - ~~Get cockpit scratches right (need a normal map for the cockpit glass)~~
-- Border for the HUD
+- ~~Border for the HUD~~
 - Cockpit instruments
 - In-atmospheric graphical display; physics doesn’t matter so far, it just needs
   to support live-rendered scripted cinematics
@@ -80,6 +80,7 @@ TODO
     - And rain! (god that would be awesome)
 - Aurora
 - Specify bytecode for in-game software (IGS)
+- Stars and moon
 - ~~Write script for automatically downloading and building the assets from NASA
   or get a server~~
 - English translation (although I’d rather recommend you learn German)
