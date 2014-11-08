@@ -23,13 +23,16 @@ using namespace dake::math;
 #define EARTH_HORZ 256
 #define EARTH_VERT 128
 
+#define AURORA_SAMPLES 128
+
 
 static XSMD *earth;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
-static gl::texture *cloud_normal_map;
-static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg;
+static gl::texture *cloud_normal_map, *aurora_bands;
+static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *aurora_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_attrib *earth_tex_va;
+static gl::vertex_array *aurora_va;
 static mat4 earth_mv, cloud_mv, atmo_mv;
 
 // type \in \{ day, night, clouds \}
@@ -313,6 +316,19 @@ void init_environment(void)
     sub_atmo_fbo->color_format(1, GL_R8);
     sub_atmo_fbo->depth().tmu() = 1;
     (*sub_atmo_fbo)[1].tmu() = 2;
+
+
+    aurora_va = new gl::vertex_array;
+    aurora_va->set_elements(AURORA_SAMPLES);
+    aurora_va->attrib(0)->format(2);
+    aurora_va->attrib(0)->data(nullptr, AURORA_SAMPLES * 2 * sizeof(float), GL_DYNAMIC_DRAW);
+
+    aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"), gl::shader::geom("shaders/aurora_geom.glsl"), gl::shader::frag("shaders/aurora_frag.glsl")};
+    aurora_prg->bind_attrib("va_position", 0);
+    aurora_prg->bind_frag("out_col", 0);
+
+    aurora_bands = new gl::texture("assets/aurora-bands.png");
+    aurora_bands->wrap(GL_REPEAT);
 
 
     register_resize_handler(resize);
@@ -933,4 +949,38 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
 
     earth->draw();
+
+
+    vec2 *aurora_positions = static_cast<vec2 *>(aurora_va->attrib(0)->map());
+
+    for (int i = 0; i < AURORA_SAMPLES; i++) {
+        aurora_positions[i].x() = 2.f * M_PIf * i / AURORA_SAMPLES;
+        aurora_positions[i].y() = 20.f / 180.f * M_PIf;
+    }
+
+    aurora_va->attrib(0)->unmap();
+
+    aurora_bands->bind();
+    (*sub_atmo_fbo)[1].bind();
+    sub_atmo_fbo->depth().bind();
+
+    aurora_prg->use();
+    aurora_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
+    aurora_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+    aurora_prg->uniform<vec3>("cam_pos") = status.camera_position;
+    aurora_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
+    aurora_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
+    aurora_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
+    aurora_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
+    aurora_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
+    aurora_prg->uniform<gl::texture>("bands") = *aurora_bands;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    aurora_va->draw(GL_LINE_LOOP);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 }
