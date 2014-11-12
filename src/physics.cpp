@@ -142,7 +142,7 @@ void WorldState::initialize(void)
     ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,    vec3(-2.f, 0.f,  0.f), vec3( 0.f, -1.f, 0.f));
 
     ships[0].position     = vec3(0.f, 1.f, 6450.f);
-    ships[0].velocity     = vec3(1e4f, 0.f, 0.f);
+    ships[0].velocity     = vec3(7862.f, 0.f, 0.f);
     ships[0].acceleration = vec3::zero();
 
     ships[0].rotational_velocity = vec3::zero();
