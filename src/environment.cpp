@@ -23,8 +23,6 @@ using namespace dake::math;
 #define EARTH_HORZ 256
 #define EARTH_VERT 128
 
-#define AURORA_SAMPLES 128
-
 
 static XSMD *earth;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
@@ -32,7 +30,7 @@ static gl::texture *cloud_normal_map, *aurora_bands;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *aurora_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_attrib *earth_tex_va;
-static gl::vertex_array *aurora_va;
+static std::vector<gl::vertex_array *> aurora_vas;
 static mat4 earth_mv, cloud_mv, atmo_mv;
 
 // type \in \{ day, night, clouds \}
@@ -317,11 +315,6 @@ void init_environment(void)
     sub_atmo_fbo->depth().tmu() = 1;
     (*sub_atmo_fbo)[1].tmu() = 2;
 
-
-    aurora_va = new gl::vertex_array;
-    aurora_va->set_elements(AURORA_SAMPLES);
-    aurora_va->attrib(0)->format(2);
-    aurora_va->attrib(0)->data(nullptr, AURORA_SAMPLES * 2 * sizeof(float), GL_DYNAMIC_DRAW);
 
     aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"), gl::shader::geom("shaders/aurora_geom.glsl"), gl::shader::frag("shaders/aurora_frag.glsl")};
     aurora_prg->bind_attrib("va_position", 0);
@@ -816,6 +809,27 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
 
 void draw_environment(const GraphicsStatus &status, const WorldState &world)
 {
+    // Load dynamic data first, so it can be copied over the course of the function
+    if (aurora_vas.empty()) {
+        for (size_t i = 0; i < world.auroras.size(); i++) {
+            gl::vertex_array *aurora_va = new gl::vertex_array;
+            aurora_va->set_elements(world.auroras[i].samples().size());
+            aurora_va->attrib(0)->format(2);
+            aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec2), GL_DYNAMIC_DRAW);
+
+            aurora_vas.push_back(aurora_va);
+        }
+    }
+
+    for (size_t i = 0; i < aurora_vas.size(); i++) {
+        memcpy(aurora_vas[i]->attrib(0)->map(),
+               world.auroras[i].samples().data(),
+               world.auroras[i].samples().size() * sizeof(vec2));
+
+        aurora_vas[i]->attrib(0)->unmap();
+    }
+
+
     mat4 cur_earth_mv = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
     mat4 cur_cloud_mv = cur_earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
     mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
@@ -951,15 +965,6 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     earth->draw();
 
 
-    vec2 *aurora_positions = static_cast<vec2 *>(aurora_va->attrib(0)->map());
-
-    for (int i = 0; i < AURORA_SAMPLES; i++) {
-        aurora_positions[i].x() = 2.f * M_PIf * i / AURORA_SAMPLES;
-        aurora_positions[i].y() = 20.f / 180.f * M_PIf;
-    }
-
-    aurora_va->attrib(0)->unmap();
-
     aurora_bands->bind();
     (*sub_atmo_fbo)[1].bind();
     sub_atmo_fbo->depth().bind();
@@ -980,7 +985,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
-    aurora_va->draw(GL_LINE_LOOP);
+    for (gl::vertex_array *va: aurora_vas) {
+        va->draw(GL_LINE_LOOP);
+    }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 }

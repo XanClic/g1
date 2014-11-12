@@ -103,6 +103,15 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
     output.earth_angle  = second_of_day / 86400.f * 2.f * static_cast<float>(M_PI);
     output.earth_angle -= year_angle;
+
+
+    if (!output.auroras.size()) {
+        output.auroras.resize(input.auroras.size());
+    }
+
+    for (size_t i = 0; i < output.auroras.size(); i++) {
+        output.auroras[i].step(input.auroras[i], output);
+    }
 }
 
 
@@ -148,4 +157,6 @@ void WorldState::initialize(void)
 
     ships[0].thruster_states.resize(13);
     memset(ships[0].thruster_states.data(), 0, 13 * sizeof(float));
+
+    auroras.resize(3);
 }

@@ -6,6 +6,7 @@
 #include <chrono>
 #include <vector>
 
+#include "aurora.hpp"
 #include "ship.hpp"
 #include "ui.hpp"
 
@@ -22,6 +23,8 @@ struct WorldState {
 
     std::vector<ShipState> ships;
     int player_ship;
+
+    std::vector<Aurora> auroras;
 };
 
 
