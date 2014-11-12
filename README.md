@@ -76,7 +76,7 @@ TODO
   to support live-rendered scripted cinematics
     - Preferably sub-clouds
     - And rain! (god that would be awesome)
-- Aurora
+- ~~Aurora~~
 - Specify bytecode for in-game software (IGS)
 - Stars and moon
 - ~~Write script for automatically downloading and building the assets from NASA
