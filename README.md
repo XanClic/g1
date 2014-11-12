@@ -62,10 +62,8 @@ the appropriate `--min-lod` value, for instance:
     $ make
     $ ./g1 --min-lod=4
 
-Also, you need OpenGL 3.3+ (currently, there is no actualy reason for that; but
-I will probably have geometry shaders sooner or later) and preferably a card and
-driver which support bindless textures (hint: Mesa does not). It will work
-without, too, though.
+Also, you need OpenGL 3.3+ and preferably a card and driver which support
+bindless textures (hint: Mesa does not). It will work without, too, though.
 
 
 TODO
