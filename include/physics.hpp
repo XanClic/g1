@@ -19,7 +19,9 @@ struct WorldState {
     float interval;
 
     dake::math::vec3 sun_light_dir;
+    dake::math::vec3 moon_pos;
     float earth_angle;
+    float moon_angle_to_sun;
 
     std::vector<ShipState> ships;
     int player_ship;

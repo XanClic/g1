@@ -78,7 +78,7 @@ TODO
     - And rain! (god that would be awesome)
 - ~~Aurora~~
 - Specify bytecode for in-game software (IGS)
-- ~~Stars and~~ moon
+- ~~Stars and moon~~
 - ~~Write script for automatically downloading and building the assets from NASA
   or get a server~~
 - English translation (although I’d rather recommend you learn German)

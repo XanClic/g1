@@ -96,6 +96,15 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
     output.sun_light_dir = -vec3(cosf(year_angle), 0.f, sinf(year_angle));
 
+    // 2015-04-18 18:56:56: New Moon
+    float moon_phase_time = std::chrono::duration_cast<std::chrono::duration<float>>(output.virtual_timestamp - std::chrono::system_clock::from_time_t(1429379816)).count();
+
+    float moon_phase_angle = fmodf(moon_phase_time / 2551442.9f, 1.f) * 2.f * M_PIf;
+
+    // FIXME: Perigee, apogee and vertical angle (against ecliptic)
+    output.moon_pos = vec3(cosf(year_angle + moon_phase_angle), 0.f, sinf(year_angle + moon_phase_angle)) * 383397.7916f;
+    output.moon_angle_to_sun = moon_phase_angle;
+
     tm last_midnight = *gmtime(&time_t_now);
     last_midnight.tm_hour = last_midnight.tm_min = last_midnight.tm_sec = 0;
 
