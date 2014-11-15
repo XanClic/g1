@@ -24,10 +24,11 @@ using namespace dake::math;
 #define EARTH_VERT 128
 
 
-static XSMD *earth;
+static XSMD *earth, *skybox;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
 static gl::texture *cloud_normal_map, *aurora_bands;
-static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *aurora_prg;
+static gl::cubemap *skybox_tex;
+static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *aurora_prg, *skybox_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_attrib *earth_tex_va;
 static std::vector<gl::vertex_array *> aurora_vas;
@@ -322,6 +323,24 @@ void init_environment(void)
 
     aurora_bands = new gl::texture("assets/aurora-bands.png");
     aurora_bands->wrap(GL_REPEAT);
+
+
+    skybox = load_xsmd("assets/skybox.xsmd");
+    skybox->make_vertex_array();
+
+    gl::image skybox_templ("assets/skybox-top.png");
+    skybox_tex = new gl::cubemap;
+    skybox_tex->format(GL_RGB, skybox_templ.width(), skybox_templ.height());
+    skybox_tex->load_layer(gl::cubemap::TOP,    gl::image("assets/skybox-top.png"   ));
+    skybox_tex->load_layer(gl::cubemap::BOTTOM, gl::image("assets/skybox-bottom.png"));
+    skybox_tex->load_layer(gl::cubemap::RIGHT,  gl::image("assets/skybox-right.png" ));
+    skybox_tex->load_layer(gl::cubemap::LEFT,   gl::image("assets/skybox-left.png"  ));
+    skybox_tex->load_layer(gl::cubemap::FRONT,  gl::image("assets/skybox-front.png" ));
+    skybox_tex->load_layer(gl::cubemap::BACK,   gl::image("assets/skybox-back.png"  ));
+
+    skybox_prg = new gl::program {gl::shader::vert("shaders/skybox_vert.glsl"), gl::shader::frag("shaders/skybox_frag.glsl")};
+    skybox_prg->bind_attrib("va_position", 0);
+    skybox_prg->bind_frag("out_col", 0);
 
 
     register_resize_handler(resize);
@@ -848,6 +867,23 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     mat4 sa_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, sa_zn, sa_zf);
 
 
+    // everything is in front of the skybox
+    glDisable(GL_DEPTH_TEST);
+
+
+    skybox_tex->bind();
+
+    mat4 skybox_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, 1000.f, 1500.f);
+    mat4 skybox_mv   = mat3(status.world_to_camera);
+    skybox_mv[3][3] = 1.f;
+
+    skybox_prg->use();
+    skybox_prg->uniform<mat4>("mat_mvp") = skybox_proj * skybox_mv;
+    skybox_prg->uniform<gl::cubemap>("skybox") = *skybox_tex;
+
+    skybox->draw();
+
+
     vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
     sun_pos.w() = 1.f;
     sun_pos = status.world_to_camera * sun_pos;
@@ -858,17 +894,15 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     if (sun_pos.z() < 0.f) {
         float sun_radius = atanf(696.e3f / sun_pos.length()) * 2.f / status.yfov;
 
-        // everything is in front of the sun
-        glDisable(GL_DEPTH_TEST);
-
         sun_prg->use();
         sun_prg->uniform<vec2>("sun_position") = projected_sun;
         sun_prg->uniform<vec2>("sun_size") = vec2(sun_radius * status.height / status.width, sun_radius);
 
         quad_vertices->draw(GL_TRIANGLE_STRIP);
-
-        glEnable(GL_DEPTH_TEST);
     }
+
+
+    glEnable(GL_DEPTH_TEST);
 
 
     gl::framebuffer *main_fbo = gl::framebuffer::current();

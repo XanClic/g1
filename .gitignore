@@ -3,6 +3,6 @@ assets/from
 assets/earth/
 assets/night/
 assets/clouds/
-assets/earth.xsmd
+assets/*.xsmd
 assets/*.png
 assets/*.jpg
