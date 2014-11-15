@@ -16,39 +16,51 @@ using namespace dake::math;
 
 int main(int argc, char *argv[])
 {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: polar-to-cube <side> <out_resolution> <input> <output.ppm>\n");
+    if (argc != 6) {
+        fprintf(stderr, "Usage: polar-to-cube <side> <xofs> <out_resolution> <input> <output.ppm>\n");
         fprintf(stderr, "side \\in { right, left, top, bottom, front, back }\n");
         return 1;
     }
 
     float x = 0.f, y = 0.f, z = 0.f;
-    float *h, *v;
+    float *h, *v, hd, vd;
 
     if (!strcmp(argv[1], "right")) {
         x = 1.f;
         h = &z;
         v = &y;
+        hd = -1.f;
+        vd =  1.f;
     } else if (!strcmp(argv[1], "left")) {
         x = -1.f;
         h = &z;
         v = &y;
+        hd =  1.f;
+        vd =  1.f;
     } else if (!strcmp(argv[1], "top")) {
-        y = 1.f;
-        h = &x;
-        v = &z;
-    } else if (!strcmp(argv[1], "bottom")) {
         y = -1.f;
         h = &x;
         v = &z;
+        hd =  1.f;
+        vd =  1.f;
+    } else if (!strcmp(argv[1], "bottom")) {
+        y = 1.f;
+        h = &x;
+        v = &z;
+        hd =  1.f;
+        vd = -1.f;
     } else if (!strcmp(argv[1], "front")) {
         z = 1.f;
         h = &x;
         v = &y;
+        hd =  1.f;
+        vd =  1.f;
     } else if (!strcmp(argv[1], "back")) {
         z = -1.f;
         h = &x;
         v = &y;
+        hd = -1.f;
+        vd =  1.f;
     } else {
         fprintf(stderr, "Invalid side given\n");
         return 1;
@@ -57,25 +69,33 @@ int main(int argc, char *argv[])
     char *endptr;
     errno = 0;
 
-    long outres = strtol(argv[2], &endptr, 0);
+    float xofs = strtof(argv[2], &endptr);
+    if (*endptr || errno) {
+        fprintf(stderr, "Invalid x offset given\n");
+        return 1;
+    }
+
+    xofs = fmodf(xofs, 360.f) / 180.f * M_PIf;
+
+    long outres = strtol(argv[3], &endptr, 0);
     if ((outres <= 0) || (outres >= LONG_MAX / outres) || *endptr || errno) {
         fprintf(stderr, "Invalid output resolution given\n");
         return 1;
     }
 
-    image in(argv[3]);
+    image in(argv[4]);
 
     vec<3, uint8_t> *out = new vec<3, uint8_t>[outres * outres];
 
     for (long vi = 0; vi < outres; vi++) {
-        *v = (static_cast<float>(vi) / (outres - 1) - .5f) * 2.f;
+        *v = vd * (static_cast<float>(vi) / (outres - 1) - .5f) * 2.f;
 
         for (long hi = 0; hi < outres; hi++) {
-            *h = (static_cast<float>(hi) / (outres - 1) - .5f) * 2.f;
+            *h = hd * (static_cast<float>(hi) / (outres - 1) - .5f) * 2.f;
 
             float radius = vec3(x, y, z).length();
             float vangle = asinf(y / radius) + M_PIf / 2.f;
-            float hangle = M_PIf - atan2f(z, x);
+            float hangle = fmodf(atan2f(z, x) + xofs + 3.f * M_PIf, 2.f * M_PIf);
 
             float in_x = hangle / (2.f * M_PIf) * in.width();
             float in_y = vangle / M_PIf         * in.height();
@@ -128,7 +148,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    FILE *fp = fopen(argv[4], "w");
+    FILE *fp = fopen(argv[5], "w");
     if (!fp) {
         perror("Failed to open output file");
         return 1;
