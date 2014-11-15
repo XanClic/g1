@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 
             float radius = vec3(x, y, z).length();
             float vangle = asinf(y / radius) + M_PIf / 2.f;
-            float hangle = atan2f(z, x) + M_PIf;
+            float hangle = M_PIf - atan2f(z, x);
 
             float in_x = hangle / (2.f * M_PIf) * in.width();
             float in_y = vangle / M_PIf         * in.height();
