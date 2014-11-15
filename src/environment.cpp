@@ -26,9 +26,9 @@ using namespace dake::math;
 
 static XSMD *earth, *skybox;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
-static gl::texture *cloud_normal_map, *aurora_bands;
+static gl::texture *cloud_normal_map, *aurora_bands, *moon_tex;
 static gl::cubemap *skybox_tex;
-static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *aurora_prg, *skybox_prg;
+static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *moon_prg, *aurora_prg, *skybox_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_attrib *earth_tex_va;
 static std::vector<gl::vertex_array *> aurora_vas;
@@ -308,6 +308,12 @@ void init_environment(void)
     sun_prg = new gl::program {gl::shader::vert("shaders/sun_vert.glsl"), gl::shader::frag("shaders/sun_frag.glsl")};
     sun_prg->bind_attrib("va_position", 0);
     sun_prg->bind_frag("out_col", 0);
+
+    moon_prg = new gl::program {gl::shader::vert("shaders/moon_vert.glsl"), gl::shader::frag("shaders/moon_frag.glsl")};
+    moon_prg->bind_attrib("va_position", 0);
+    moon_prg->bind_frag("out_col", 0);
+
+    moon_tex = new gl::texture("assets/moon.png");
 
 
     sub_atmo_fbo = new gl::framebuffer(2);
@@ -897,6 +903,22 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
         quad_vertices->draw(GL_TRIANGLE_STRIP);
     }
+
+
+    vec3 moon_right = (status.camera_forward.cross(vec3(0.f, 1.f, 0.f))).normalized();
+    vec3 moon_up = moon_right.cross(status.camera_forward);
+
+    moon_tex->bind();
+
+    moon_prg->use();
+    moon_prg->uniform<vec3>("moon_position") = world.moon_pos;
+    moon_prg->uniform<vec3>("right") = moon_right;
+    moon_prg->uniform<vec3>("up") = moon_up;
+    moon_prg->uniform<mat3>("mat_nrm") = mat3(mat4::identity().rotated(-world.moon_angle_to_sun, vec3(0.f, 1.f, 0.f)));
+    moon_prg->uniform<mat4>("mat_mvp") = status.projection * status.world_to_camera;
+    moon_prg->uniform<gl::texture>("moon_tex") = *moon_tex;
+
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
 
 
     glEnable(GL_DEPTH_TEST);
