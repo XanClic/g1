@@ -10,5 +10,5 @@ uniform samplerCube skybox;
 
 void main(void)
 {
-    out_col = vec4(pow(texture(skybox, vf_pos).rgb * 0.5, vec3(2.0)), 1.0);
+    out_col = vec4(pow(texture(skybox, vf_pos).rgb * 0.4, vec3(1.5)), 1.0);
 }
