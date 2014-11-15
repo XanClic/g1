@@ -34,6 +34,7 @@ void init_graphics(void)
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     glClearColor(0.f, 0.f, 0.f, 0.f);
     glClearDepthf(1.f);

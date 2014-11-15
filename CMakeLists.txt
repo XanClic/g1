@@ -36,4 +36,8 @@ add_executable(create-sphere tools/create-sphere.cpp)
 add_dependencies(create-sphere dake)
 target_link_libraries(create-sphere libdake.a)
 
+add_executable(polar-to-cube tools/polar-to-cube.cpp)
+add_dependencies(polar-to-cube dake)
+target_link_libraries(polar-to-cube ${PNG_LIBRARIES} ${JPEG_LIBRARIES} libdake.a)
+
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow")
