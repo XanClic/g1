@@ -864,7 +864,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     float sa_zn = (status.camera_position.length() - 6400.f) / 1.5f;
     float sa_zf =  status.camera_position.length() + 7000.f;
 
-    mat4 sa_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, sa_zn, sa_zf);
+    mat4 sa_proj = mat4::projection(status.yfov, status.aspect, sa_zn, sa_zf);
 
 
     // everything is in front of the skybox
@@ -873,7 +873,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     skybox_tex->bind();
 
-    mat4 skybox_proj = mat4::projection(status.yfov, static_cast<float>(status.width) / status.height, 1000.f, 1500.f);
+    mat4 skybox_proj = mat4::projection(status.yfov, status.aspect, 1000.f, 1500.f);
     mat4 skybox_mv   = mat3(status.world_to_camera);
     skybox_mv[3][3] = 1.f;
 
@@ -884,10 +884,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     skybox->draw();
 
 
-    vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
-    sun_pos.w() = 1.f;
-    sun_pos = status.world_to_camera * sun_pos;
-
+    vec4 sun_pos = status.world_to_camera * vec4::position(149.6e6f * -world.sun_light_dir);
     vec4 projected_sun = status.projection * sun_pos;
     projected_sun /= projected_sun.w();
 

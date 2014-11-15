@@ -144,11 +144,13 @@ void set_resolution(unsigned width, unsigned height)
 
 void update_resolution(void)
 {
-    status.projection = mat4::projection(status.yfov, static_cast<float>(change_width) / change_height, status.z_near, status.z_far);
-    glViewport(0, 0, change_width, change_height);
-
     status.width  = change_width;
     status.height = change_height;
+
+    status.aspect = static_cast<float>(change_width) / change_height;
+
+    status.projection = mat4::projection(status.yfov, status.aspect, status.z_near, status.z_far);
+    glViewport(0, 0, change_width, change_height);
 
     main_fb->resize(change_width, change_height);
 

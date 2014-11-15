@@ -196,7 +196,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     scratch_prg->uniform<vec3>("right")   = ship.right;
     scratch_prg->uniform<vec3>("up")      = ship.up;
     scratch_prg->uniform<mat3>("normal_mat") = mat3(ship.right, ship.up, ship.forward);
-    scratch_prg->uniform<float>("aspect") = static_cast<float>(status.width) / status.height / (16.f / 9.f);
+    scratch_prg->uniform<float>("aspect") = status.aspect / (16.f / 9.f);
     scratch_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
     scratch_prg->uniform<float>("yhfov") = status.yfov / 2.f;
     scratch_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
