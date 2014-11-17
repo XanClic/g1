@@ -8,7 +8,7 @@ project(g1)
 find_package(OpenGL REQUIRED)
 find_package(PNG REQUIRED)
 find_package(JPEG REQUIRED)
-find_package(Lua REQUIRED)
+find_package(Lua51 REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
 
