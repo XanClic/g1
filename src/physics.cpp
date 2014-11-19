@@ -69,7 +69,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         out.rotational_velocity = out.angular_momentum / in.total_mass;
 
         if (in.rotational_velocity.length()) {
-            mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length(), in.rotational_velocity));
+            mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length() * output.interval, in.rotational_velocity));
             out.right   = rot_mat * in.right;
             out.up      = rot_mat * in.up;
             out.forward = rot_mat * in.forward;
@@ -138,19 +138,19 @@ void WorldState::initialize(void)
     ships[0].ship->empty_mass = 500.f;
 
     ships[0].ship->thrusters.resize(13);
-    ships[0].ship->thrusters[ 0] = Thruster(Thruster::MAIN, Thruster::BACK,  Thruster::FORWARD, vec3( 0.f, 0.f,  2.f), vec3( 0.f,  0.f, -1e7f));
-    ships[0].ship->thrusters[ 1] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::UP,      vec3( 0.f, 0.f, -2.f), vec3( 0.f,  1.f, 0.f));
-    ships[0].ship->thrusters[ 2] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::DOWN,    vec3( 0.f, 0.f, -2.f), vec3( 0.f, -1.f, 0.f));
-    ships[0].ship->thrusters[ 3] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::RIGHT,   vec3( 0.f, 0.f, -2.f), vec3( 1.f,  0.f, 0.f));
-    ships[0].ship->thrusters[ 4] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::LEFT,    vec3( 0.f, 0.f, -2.f), vec3(-1.f,  0.f, 0.f));
-    ships[0].ship->thrusters[ 5] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::UP,      vec3( 0.f, 0.f,  2.f), vec3( 0.f,  1.f, 0.f));
-    ships[0].ship->thrusters[ 6] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::DOWN,    vec3( 0.f, 0.f,  2.f), vec3( 0.f, -1.f, 0.f));
-    ships[0].ship->thrusters[ 7] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::RIGHT,   vec3( 0.f, 0.f,  2.f), vec3( 1.f,  0.f, 0.f));
-    ships[0].ship->thrusters[ 8] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::LEFT,    vec3( 0.f, 0.f,  2.f), vec3(-1.f,  0.f, 0.f));
-    ships[0].ship->thrusters[ 9] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::UP,      vec3( 2.f, 0.f,  0.f), vec3( 0.f,  1.f, 0.f));
-    ships[0].ship->thrusters[10] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::DOWN,    vec3( 2.f, 0.f,  0.f), vec3( 0.f, -1.f, 0.f));
-    ships[0].ship->thrusters[11] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::UP,      vec3(-2.f, 0.f,  0.f), vec3( 0.f,  1.f, 0.f));
-    ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,    vec3(-2.f, 0.f,  0.f), vec3( 0.f, -1.f, 0.f));
+    ships[0].ship->thrusters[ 0] = Thruster(Thruster::MAIN, Thruster::BACK,  Thruster::FORWARD, vec3( 0.f, 0.f,  2.f), vec3(  0.f,   0.f, -1e7f));
+    ships[0].ship->thrusters[ 1] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::UP,      vec3( 0.f, 0.f, -2.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[ 2] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::DOWN,    vec3( 0.f, 0.f, -2.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[ 3] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::RIGHT,   vec3( 0.f, 0.f, -2.f), vec3( 50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 4] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::LEFT,    vec3( 0.f, 0.f, -2.f), vec3(-50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 5] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::UP,      vec3( 0.f, 0.f,  2.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[ 6] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::DOWN,    vec3( 0.f, 0.f,  2.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[ 7] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::RIGHT,   vec3( 0.f, 0.f,  2.f), vec3( 50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 8] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::LEFT,    vec3( 0.f, 0.f,  2.f), vec3(-50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 9] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::UP,      vec3( 2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[10] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::DOWN,    vec3( 2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[11] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::UP,      vec3(-2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,    vec3(-2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
 
     ships[0].position     = vec3(0.f, 1.f, 6450.f);
     ships[0].velocity     = vec3(7862.f, 0.f, 0.f);
