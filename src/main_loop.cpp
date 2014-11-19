@@ -1,4 +1,9 @@
+#include <cassert>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #include "graphics.hpp"
 #include "main_loop.hpp"
@@ -9,23 +14,66 @@
 static bool quit = false;
 
 
-void main_loop(void)
-{
-    std::shared_ptr<WorldState> states[2] = { std::make_shared<WorldState>(), std::make_shared<WorldState>() };
-    std::shared_ptr<Input> input(new Input);
-    int source = 0;
+struct SharedInfo {
+    std::vector<std::shared_ptr<WorldState>> world_states;
+    std::shared_ptr<Input> input;
+    volatile int current_graphics_state, current_physics_state;
+    std::condition_variable cgs_change;
+    std::mutex cgs_change_mtx;
+};
 
-    states[0]->initialize();
+
+static void physics_worker(SharedInfo &info)
+{
+    std::unique_lock<std::mutex> lock(info.cgs_change_mtx);
+
+    assert(info.world_states.size() == 2);
 
     while (!quit) {
-        int next_source = (source + 1) % 2;
+        while (info.current_physics_state != info.current_graphics_state) {
+            info.cgs_change.wait(lock);
+        }
 
-        ui_process_events(*input);
-        do_physics(*states[next_source], *states[source], *input);
-        do_graphics(*states[source]);
+        int next_state = (info.current_physics_state + 1) % 2;
 
-        source = next_source;
+        ui_process_events(*info.input);
+        do_physics(*info.world_states[next_state], *info.world_states[info.current_physics_state], *info.input);
+
+        info.current_physics_state = next_state;
     }
+}
+
+
+void main_loop(void)
+{
+    SharedInfo info;
+
+    std::unique_lock<std::mutex> lock(info.cgs_change_mtx);
+    lock.unlock();
+
+    info.current_graphics_state = 0;
+    info.current_physics_state  = 0;
+
+    info.input = std::make_shared<Input>();
+    info.world_states.emplace_back(new WorldState);
+    info.world_states.emplace_back(new WorldState);
+
+    info.world_states[0]->initialize();
+
+    std::thread physics_thr(physics_worker, std::ref(info));
+
+    while (!quit) {
+        do_graphics(*info.world_states[info.current_graphics_state]);
+
+        lock.lock();
+
+        info.current_graphics_state = (info.current_graphics_state + 1) % 2;
+        info.cgs_change.notify_all();
+
+        lock.unlock();
+    }
+
+    physics_thr.join();
 }
 
 
