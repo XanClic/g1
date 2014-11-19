@@ -26,7 +26,7 @@ using namespace dake::math;
 
 static XSMD *earth, *skybox;
 static gl::array_texture *day_tex, *night_tex, *cloud_tex;
-static gl::texture *cloud_normal_map, *aurora_bands, *moon_tex;
+static gl::texture *cloud_normal_map, *aurora_bands, *moon_tex, *atmo_map;
 static gl::cubemap *skybox_tex;
 static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *moon_prg, *aurora_prg, *skybox_prg;
 static gl::framebuffer *sub_atmo_fbo;
@@ -303,6 +303,11 @@ void init_environment(void)
     cloud_prg->bind_frag("out_col", 0);
     atmob_prg->bind_frag("out_col", 0);
     atmof_prg->bind_frag("out_col", 0);
+
+
+    atmo_map = new gl::texture("assets/atmosphere.png");
+    atmo_map->wrap(GL_CLAMP_TO_EDGE);
+    atmo_map->tmu() = 3;
 
 
     sun_prg = new gl::program {gl::shader::vert("shaders/sun_vert.glsl"), gl::shader::frag("shaders/sun_frag.glsl")};
@@ -1001,6 +1006,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     (*sub_atmo_fbo)[0].bind();
     (*sub_atmo_fbo)[1].bind();
     sub_atmo_fbo->depth().bind();
+    atmo_map->bind();
 
     atmof_prg->use();
     atmof_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
@@ -1014,6 +1020,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
     atmof_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
     atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
+    atmof_prg->uniform<gl::texture>("atmo_map") = *atmo_map;
 
     earth->draw();
 
