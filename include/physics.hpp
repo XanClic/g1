@@ -27,6 +27,7 @@ struct WorldState {
     int player_ship;
 
     std::vector<Aurora> auroras;
+    Aurora::HotspotList aurora_hotspots;
 };
 
 

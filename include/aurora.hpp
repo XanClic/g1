@@ -10,11 +10,27 @@ class WorldState;
 
 class Aurora {
     public:
+        struct Hotspot {
+            dake::math::vec2 center;
+            float radius, strength;
+        };
+
+        class HotspotList {
+            public:
+                HotspotList(void);
+                void step(const HotspotList &input, const WorldState &out_state);
+
+                friend class Aurora;
+
+            private:
+                std::vector<Hotspot> hotspots;
+        };
+
         Aurora(void);
 
-        void step(const Aurora &input, const WorldState &out_state);
+        void step(const Aurora &input, const HotspotList &hotspots, const WorldState &out_state);
 
-        const std::vector<dake::math::vec2> &samples(void) const
+        const std::vector<dake::math::vec4> &samples(void) const
         { return spls; }
 
 
@@ -24,7 +40,8 @@ class Aurora {
             float radius, strength, duration, age;
         };
 
-        std::vector<dake::math::vec2> spls, forces;
+        std::vector<dake::math::vec4> spls;
+        std::vector<dake::math::vec2> forces;
         std::vector<CircularForce> circulars;
 };
 
