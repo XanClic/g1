@@ -119,8 +119,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     }
 
     for (size_t i = 0; i < output.auroras.size(); i++) {
-        output.auroras[i].step(input.auroras[i], output);
+        output.auroras[i].step(input.auroras[i], input.aurora_hotspots, output);
     }
+
+    output.aurora_hotspots.step(input.aurora_hotspots, output);
 }
 
 

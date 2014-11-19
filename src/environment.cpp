@@ -844,8 +844,8 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         for (size_t i = 0; i < world.auroras.size(); i++) {
             gl::vertex_array *aurora_va = new gl::vertex_array;
             aurora_va->set_elements(world.auroras[i].samples().size());
-            aurora_va->attrib(0)->format(2);
-            aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec2), GL_DYNAMIC_DRAW);
+            aurora_va->attrib(0)->format(4);
+            aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec4), GL_DYNAMIC_DRAW);
 
             aurora_vas.push_back(aurora_va);
         }
@@ -854,15 +854,16 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     for (size_t i = 0; i < aurora_vas.size(); i++) {
         memcpy(aurora_vas[i]->attrib(0)->map(),
                world.auroras[i].samples().data(),
-               world.auroras[i].samples().size() * sizeof(vec2));
+               world.auroras[i].samples().size() * sizeof(vec4));
 
         aurora_vas[i]->attrib(0)->unmap();
     }
 
 
-    mat4 cur_earth_mv = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
-    mat4 cur_cloud_mv = cur_earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
-    mat4 cur_atmo_mv  = cur_earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
+    mat4 cur_earth_mv  = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
+    mat4 cur_cloud_mv  = cur_earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
+    mat4 cur_atmo_mv   = cur_earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
+    mat4 cur_aurora_mv = cur_earth_mv.scaled(vec3(6421.f / 6371.f, 6421.f / 6371.f, 6421.f / 6371.f));
 
 
     static float lod_update_timer;
@@ -1030,7 +1031,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     sub_atmo_fbo->depth().bind();
 
     aurora_prg->use();
-    aurora_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
+    aurora_prg->uniform<mat4>("mat_mv") = cur_aurora_mv;
     aurora_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
     aurora_prg->uniform<vec3>("cam_pos") = status.camera_position;
     aurora_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
