@@ -8,8 +8,8 @@ flat in ivec2 vf_tex;
 
 out vec4 out_col;
 
-layout(bindless_sampler) uniform sampler2D cloud_textures[20];
-uniform vec4 cloud_texture_params[20];
+layout(bindless_sampler) uniform sampler2D day_textures[20];
+uniform vec4 day_texture_params[20];
 
 uniform sampler2D cloud_normal_map;
 
@@ -19,8 +19,8 @@ uniform mat3 mat_nrm;
 
 void main(void)
 {
-    vec2 ctxc = (vf_txc - cloud_texture_params[vf_tex.x].pq) * cloud_texture_params[vf_tex.x].st;
-    float density = texture(cloud_textures[vf_tex.x], ctxc).r;
+    vec2 ctxc = (vf_txc - day_texture_params[vf_tex.x].pq) * day_texture_params[vf_tex.x].st;
+    float density = texture(day_textures[vf_tex.x], ctxc).a;
 
     vec3 local_z = normalize(vf_nrm);
     vec3 local_x = vec3(local_z.z, 0.0, -local_z.x); // cross(vec3(0.0, 1.0, 0.0), local_z);
