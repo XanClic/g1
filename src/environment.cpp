@@ -45,7 +45,8 @@ struct Tile {
     void *source = nullptr, *alpha_source = nullptr;
     size_t source_size = 0, alpha_source_size = 0;
 
-    gl::image *rgb_image = nullptr, *alpha_image = nullptr, *image = nullptr;
+    gl::image *rgb_image = nullptr, *alpha_image = nullptr;
+    gl::image *uncompressed_image = nullptr, *image = nullptr;
     gl::texture *texture = nullptr;
 
     int refcount = 0;
@@ -134,9 +135,18 @@ void Tile::load_image(void)
             throw std::runtime_error("Images have invalid channel count");
         }
 
-        image = new gl::image(*rgb_image, *alpha_image);
+        uncompressed_image = new gl::image(*rgb_image, *alpha_image);
     } else {
-        image = new gl::image(source, source_size);
+        uncompressed_image = new gl::image(source, source_size);
+    }
+
+    image = new gl::image(*uncompressed_image, uncompressed_image->format());
+    return;
+
+    if (uncompressed_image->channels() == 4) {
+        image = new gl::image(*uncompressed_image, gl::image::COMPRESSED_S3TC_DXT5);
+    } else {
+        image = new gl::image(*uncompressed_image, gl::image::COMPRESSED_S3TC_DXT1);
     }
 }
 
@@ -159,6 +169,9 @@ void Tile::unload_image(void)
 {
     delete image;
     image = nullptr;
+
+    delete uncompressed_image;
+    uncompressed_image = nullptr;
 
     if (alpha_source) {
         delete rgb_image;
@@ -375,13 +388,13 @@ void init_environment(void)
 
     gl::image skybox_templ("assets/skybox-top.png");
     skybox_tex = new gl::cubemap;
-    skybox_tex->format(GL_RGB, skybox_templ.width(), skybox_templ.height());
-    skybox_tex->load_layer(gl::cubemap::TOP,    gl::image("assets/skybox-top.png"   ));
-    skybox_tex->load_layer(gl::cubemap::BOTTOM, gl::image("assets/skybox-bottom.png"));
-    skybox_tex->load_layer(gl::cubemap::RIGHT,  gl::image("assets/skybox-right.png" ));
-    skybox_tex->load_layer(gl::cubemap::LEFT,   gl::image("assets/skybox-left.png"  ));
-    skybox_tex->load_layer(gl::cubemap::FRONT,  gl::image("assets/skybox-front.png" ));
-    skybox_tex->load_layer(gl::cubemap::BACK,   gl::image("assets/skybox-back.png"  ));
+    skybox_tex->format(GL_COMPRESSED_RGB_S3TC_DXT1_EXT, skybox_templ.width(), skybox_templ.height());
+    skybox_tex->load_layer(gl::cubemap::TOP,    gl::image(gl::image("assets/skybox-top.png"   ), gl::image::COMPRESSED_S3TC_DXT1));
+    skybox_tex->load_layer(gl::cubemap::BOTTOM, gl::image(gl::image("assets/skybox-bottom.png"), gl::image::COMPRESSED_S3TC_DXT1));
+    skybox_tex->load_layer(gl::cubemap::RIGHT,  gl::image(gl::image("assets/skybox-right.png" ), gl::image::COMPRESSED_S3TC_DXT1));
+    skybox_tex->load_layer(gl::cubemap::LEFT,   gl::image(gl::image("assets/skybox-left.png"  ), gl::image::COMPRESSED_S3TC_DXT1));
+    skybox_tex->load_layer(gl::cubemap::FRONT,  gl::image(gl::image("assets/skybox-front.png" ), gl::image::COMPRESSED_S3TC_DXT1));
+    skybox_tex->load_layer(gl::cubemap::BACK,   gl::image(gl::image("assets/skybox-back.png"  ), gl::image::COMPRESSED_S3TC_DXT1));
 
     skybox_prg = new gl::program {gl::shader::vert("shaders/skybox_vert.glsl"), gl::shader::frag("shaders/skybox_frag.glsl")};
     skybox_prg->bind_attrib("va_position", 0);
