@@ -156,6 +156,7 @@ void Aurora::HotspotList::step(const HotspotList &input, const WorldState &out_s
 
     for (size_t i = 0; i < input.hotspots.size(); i++) {
         hotspots[i] = input.hotspots[i];
-        hotspots[i].center.x() = fmodf(input.hotspots[i].center.x() + .1f * out_state.interval * (rng_dist(rng) - .5f), 2.f * M_PIf);
+        hotspots[i].center.x() = smallest_angle(input.hotspots[i].center.x() +
+                                                .1f * out_state.interval * (rng_dist(rng) - .5f));
     }
 }

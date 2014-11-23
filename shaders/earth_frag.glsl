@@ -40,7 +40,10 @@ void main(void)
 
     ndotny_sqr *= ndotny_sqr;
 
-    float spec_co = smoothstep(-0.1, 0.05, ndotx) * 0.1 * (0.4 + 0.6 * pow(max(1.0 - xdotny, 0.0), 5.0)) * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0);
+    float spec_co = smoothstep(-0.1, 0.05, ndotx)
+                  * 0.1
+                  * (0.4 + 0.6 * pow(max(1.0 - xdotny, 0.0), 5.0))
+                  * pow(1.0 + 0.2 * ndotny_sqr - ndotny_sqr, -2.0);
 
     vec3 night_addition = smoothstep(0.1, -0.05, ndotx) * night;
 

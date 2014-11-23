@@ -12,10 +12,16 @@
 using namespace dake::math;
 
 
+static inline float time_interval(std::chrono::system_clock::duration d)
+{
+    return std::chrono::duration_cast<std::chrono::duration<float>>(d).count();
+}
+
+
 void do_physics(WorldState &output, const WorldState &input, const Input &user_input)
 {
     output.timestamp = std::chrono::steady_clock::now();
-    output.interval  = std::chrono::duration_cast<std::chrono::duration<float>>(output.timestamp - input.timestamp).count();
+    output.interval  = time_interval(output.timestamp - input.timestamp);
 
     output.virtual_timestamp = std::chrono::system_clock::now();
 
@@ -58,7 +64,9 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);
         }
 
-        forces += 6.67384e-11f * in.total_mass * 5.974e24f / powf(1e3f * in.position.length(), 2.f) * -in.position.normalized();
+        forces += -in.position.normalized() *
+                  6.67384e-11f * in.total_mass * 5.974e24f
+                  / powf(1e3f * in.position.length(), 2.f);
 
         out.acceleration = forces / in.total_mass;
         out.torque       = torque;
@@ -70,7 +78,8 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         out.rotational_velocity = out.angular_momentum / in.total_mass;
 
         if (in.rotational_velocity.length()) {
-            mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length() * output.interval, in.rotational_velocity));
+            mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length() * output.interval,
+                                                  in.rotational_velocity));
             out.right   = rot_mat * in.right;
             out.up      = rot_mat * in.up;
             out.forward = rot_mat * in.forward;
@@ -93,25 +102,30 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
     time_t time_t_now = std::chrono::system_clock::to_time_t(output.virtual_timestamp);
     // 0 == vernal point (spring)
-    float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * static_cast<float>(M_PI);
+    float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * M_PIf;
 
     output.sun_light_dir = -vec3(cosf(year_angle), 0.f, sinf(year_angle));
 
-    // 2015-04-18 18:56:56: New Moon
-    float moon_phase_time = std::chrono::duration_cast<std::chrono::duration<float>>(output.virtual_timestamp - std::chrono::system_clock::from_time_t(1429379816)).count();
+    // 2015-04-18 18:56:56
+    auto new_moon = std::chrono::system_clock::from_time_t(1429379816);
+    float moon_phase_time = time_interval(output.virtual_timestamp - new_moon);
 
     float moon_phase_angle = fmodf(moon_phase_time / 2551442.9f, 1.f) * 2.f * M_PIf;
 
     // FIXME: Perigee, apogee and vertical angle (against ecliptic)
-    output.moon_pos = vec3(cosf(year_angle + moon_phase_angle), 0.f, sinf(year_angle + moon_phase_angle)) * 383397.7916f;
+    output.moon_pos = 383397.7916f * vec3(cosf(year_angle + moon_phase_angle),
+                                          0.f,
+                                          sinf(year_angle + moon_phase_angle));
+
     output.moon_angle_to_sun = moon_phase_angle;
 
-    tm last_midnight = *gmtime(&time_t_now);
-    last_midnight.tm_hour = last_midnight.tm_min = last_midnight.tm_sec = 0;
+    tm last_midnight_tm = *gmtime(&time_t_now);
+    last_midnight_tm.tm_hour = last_midnight_tm.tm_min = last_midnight_tm.tm_sec = 0;
 
-    float second_of_day = std::chrono::duration_cast<std::chrono::duration<float>>(output.virtual_timestamp - std::chrono::system_clock::from_time_t(mktime(&last_midnight))).count();
+    auto last_midnight = std::chrono::system_clock::from_time_t(mktime(&last_midnight_tm));
+    float second_of_day = time_interval(output.virtual_timestamp - last_midnight);
 
-    output.earth_angle  = second_of_day / 86400.f * 2.f * static_cast<float>(M_PI);
+    output.earth_angle  = second_of_day / 86400.f * 2.f * M_PIf;
     output.earth_angle -= year_angle;
 
 
@@ -141,19 +155,32 @@ void WorldState::initialize(void)
     ships[0].ship->empty_mass = 500.f;
 
     ships[0].ship->thrusters.resize(13);
-    ships[0].ship->thrusters[ 0] = Thruster(Thruster::MAIN, Thruster::BACK,  Thruster::FORWARD, vec3( 0.f, 0.f,  2.f), vec3(  0.f,   0.f, -1e7f));
-    ships[0].ship->thrusters[ 1] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::UP,      vec3( 0.f, 0.f, -2.f), vec3(  0.f,  50.f,   0.f));
-    ships[0].ship->thrusters[ 2] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::DOWN,    vec3( 0.f, 0.f, -2.f), vec3(  0.f, -50.f,   0.f));
-    ships[0].ship->thrusters[ 3] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::RIGHT,   vec3( 0.f, 0.f, -2.f), vec3( 50.f,   0.f,   0.f));
-    ships[0].ship->thrusters[ 4] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::LEFT,    vec3( 0.f, 0.f, -2.f), vec3(-50.f,   0.f,   0.f));
-    ships[0].ship->thrusters[ 5] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::UP,      vec3( 0.f, 0.f,  2.f), vec3(  0.f,  50.f,   0.f));
-    ships[0].ship->thrusters[ 6] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::DOWN,    vec3( 0.f, 0.f,  2.f), vec3(  0.f, -50.f,   0.f));
-    ships[0].ship->thrusters[ 7] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::RIGHT,   vec3( 0.f, 0.f,  2.f), vec3( 50.f,   0.f,   0.f));
-    ships[0].ship->thrusters[ 8] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::LEFT,    vec3( 0.f, 0.f,  2.f), vec3(-50.f,   0.f,   0.f));
-    ships[0].ship->thrusters[ 9] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::UP,      vec3( 2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
-    ships[0].ship->thrusters[10] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::DOWN,    vec3( 2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
-    ships[0].ship->thrusters[11] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::UP,      vec3(-2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
-    ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,    vec3(-2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[ 0] = Thruster(Thruster::MAIN, Thruster::BACK,  Thruster::FORWARD,
+                                            vec3( 0.f, 0.f,  2.f), vec3(  0.f,   0.f, -1e7f));
+    ships[0].ship->thrusters[ 1] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::UP,
+                                            vec3( 0.f, 0.f, -2.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[ 2] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::DOWN,
+                                            vec3( 0.f, 0.f, -2.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[ 3] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::RIGHT,
+                                            vec3( 0.f, 0.f, -2.f), vec3( 50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 4] = Thruster(Thruster::RCS,  Thruster::FRONT, Thruster::LEFT,
+                                            vec3( 0.f, 0.f, -2.f), vec3(-50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 5] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::UP,
+                                            vec3( 0.f, 0.f,  2.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[ 6] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::DOWN,
+                                            vec3( 0.f, 0.f,  2.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[ 7] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::RIGHT,
+                                            vec3( 0.f, 0.f,  2.f), vec3( 50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 8] = Thruster(Thruster::RCS,  Thruster::BACK,  Thruster::LEFT,
+                                            vec3( 0.f, 0.f,  2.f), vec3(-50.f,   0.f,   0.f));
+    ships[0].ship->thrusters[ 9] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::UP,
+                                            vec3( 2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[10] = Thruster(Thruster::RCS,  Thruster::RIGHT, Thruster::DOWN,
+                                            vec3( 2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
+    ships[0].ship->thrusters[11] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::UP,
+                                            vec3(-2.f, 0.f,  0.f), vec3(  0.f,  50.f,   0.f));
+    ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,
+                                            vec3(-2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
 
     ships[0].position     = vec3(0.f, 1.f, 6450.f);
     ships[0].velocity     = vec3(7862.f, 0.f, 0.f);

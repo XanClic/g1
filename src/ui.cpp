@@ -31,7 +31,8 @@ static void create_context(int w, int h, int major = 0, int minor = 0)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    wnd = SDL_CreateWindow("g1", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    wnd = SDL_CreateWindow("g1", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h,
+                           SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     if (!SDL_GL_CreateContext(wnd)) {
         SDL_DestroyWindow(wnd);
@@ -56,7 +57,8 @@ void init_ui(void)
         SDL_DestroyWindow(wnd);
         wnd = nullptr;
 
-        fprintf(stderr, "Received OpenGL %i.%i Core, 3.3 Core required; retrying with forced 3.3 Core (thank you based Mesa)\n", maj, min);
+        fprintf(stderr, "Received OpenGL %i.%i Core, 3.3 Core required; "
+                "retrying with forced 3.3 Core (thank you based Mesa)\n", maj, min);
 
         create_context(1280, 720, 3, 3);
 
@@ -67,7 +69,8 @@ void init_ui(void)
             SDL_DestroyWindow(wnd);
             wnd = nullptr;
 
-            throw std::runtime_error("OpenGL version too old (has " + std::to_string(maj) + "." + std::to_string(min) + " Core; 3.3 Core is required");
+            throw std::runtime_error("OpenGL version too old (has " + std::to_string(maj) + "." + std::to_string(min) +
+                                     " Core; 3.3 Core is required");
         }
     }
 
