@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
             {"help", no_argument, nullptr, 'h'},
             {"min-lod", required_argument, nullptr, 256},
             {"max-lod", required_argument, nullptr, 257},
+            {"disable-aurora", no_argument, nullptr, 258},
         };
 
         int option = getopt_long(argc, argv, "h", options, nullptr);
@@ -69,6 +70,10 @@ int main(int argc, char *argv[])
                 global_options.max_lod = max_lod;
                 break;
             }
+
+            case 258:
+                global_options.aurora = false;
+                break;
         }
     }
 

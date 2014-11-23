@@ -375,12 +375,14 @@ void init_environment(void)
     (*sub_atmo_fbo)[1].tmu() = 2;
 
 
-    aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"), gl::shader::geom("shaders/aurora_geom.glsl"), gl::shader::frag("shaders/aurora_frag.glsl")};
-    aurora_prg->bind_attrib("va_position", 0);
-    aurora_prg->bind_frag("out_col", 0);
+    if (global_options.aurora) {
+        aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"), gl::shader::geom("shaders/aurora_geom.glsl"), gl::shader::frag("shaders/aurora_frag.glsl")};
+        aurora_prg->bind_attrib("va_position", 0);
+        aurora_prg->bind_frag("out_col", 0);
 
-    aurora_bands = new gl::texture("assets/aurora-bands.png");
-    aurora_bands->wrap(GL_REPEAT);
+        aurora_bands = new gl::texture("assets/aurora-bands.png");
+        aurora_bands->wrap(GL_REPEAT);
+    }
 
 
     skybox = load_xsmd("assets/skybox.xsmd");
@@ -846,24 +848,26 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
 
 void draw_environment(const GraphicsStatus &status, const WorldState &world)
 {
-    // Load dynamic data first, so it can be copied over the course of the function
-    if (aurora_vas.empty()) {
-        for (size_t i = 0; i < world.auroras.size(); i++) {
-            gl::vertex_array *aurora_va = new gl::vertex_array;
-            aurora_va->set_elements(world.auroras[i].samples().size());
-            aurora_va->attrib(0)->format(4);
-            aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec4), GL_DYNAMIC_DRAW);
+    if (global_options.aurora) {
+        // Load dynamic data first, so it can be copied over the course of the function
+        if (aurora_vas.empty()) {
+            for (size_t i = 0; i < world.auroras.size(); i++) {
+                gl::vertex_array *aurora_va = new gl::vertex_array;
+                aurora_va->set_elements(world.auroras[i].samples().size());
+                aurora_va->attrib(0)->format(4);
+                aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec4), GL_DYNAMIC_DRAW);
 
-            aurora_vas.push_back(aurora_va);
+                aurora_vas.push_back(aurora_va);
+            }
         }
-    }
 
-    for (size_t i = 0; i < aurora_vas.size(); i++) {
-        memcpy(aurora_vas[i]->attrib(0)->map(),
-               world.auroras[i].samples().data(),
-               world.auroras[i].samples().size() * sizeof(vec4));
+        for (size_t i = 0; i < aurora_vas.size(); i++) {
+            memcpy(aurora_vas[i]->attrib(0)->map(),
+                   world.auroras[i].samples().data(),
+                   world.auroras[i].samples().size() * sizeof(vec4));
 
-        aurora_vas[i]->attrib(0)->unmap();
+            aurora_vas[i]->attrib(0)->unmap();
+        }
     }
 
 
@@ -1031,29 +1035,31 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     earth->draw();
 
 
-    aurora_bands->bind();
-    (*sub_atmo_fbo)[1].bind();
-    sub_atmo_fbo->depth().bind();
+    if (global_options.aurora) {
+        aurora_bands->bind();
+        (*sub_atmo_fbo)[1].bind();
+        sub_atmo_fbo->depth().bind();
 
-    aurora_prg->use();
-    aurora_prg->uniform<mat4>("mat_mv") = cur_aurora_mv;
-    aurora_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
-    aurora_prg->uniform<vec3>("cam_pos") = status.camera_position;
-    aurora_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
-    aurora_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
-    aurora_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
-    aurora_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
-    aurora_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
-    aurora_prg->uniform<gl::texture>("bands") = *aurora_bands;
+        aurora_prg->use();
+        aurora_prg->uniform<mat4>("mat_mv") = cur_aurora_mv;
+        aurora_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+        aurora_prg->uniform<vec3>("cam_pos") = status.camera_position;
+        aurora_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
+        aurora_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
+        aurora_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
+        aurora_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
+        aurora_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
+        aurora_prg->uniform<gl::texture>("bands") = *aurora_bands;
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    for (gl::vertex_array *va: aurora_vas) {
-        va->draw(GL_LINE_LOOP);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        for (gl::vertex_array *va: aurora_vas) {
+            va->draw(GL_LINE_LOOP);
+        }
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
     }
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
 }

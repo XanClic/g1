@@ -4,6 +4,7 @@
 
 #include <dake/math.hpp>
 
+#include "options.hpp"
 #include "physics.hpp"
 #include "software.hpp"
 
@@ -114,15 +115,17 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.earth_angle -= year_angle;
 
 
-    if (!output.auroras.size()) {
-        output.auroras.resize(input.auroras.size());
-    }
+    if (global_options.aurora) {
+        if (!output.auroras.size()) {
+            output.auroras.resize(input.auroras.size());
+        }
 
-    for (size_t i = 0; i < output.auroras.size(); i++) {
-        output.auroras[i].step(input.auroras[i], input.aurora_hotspots, output);
-    }
+        for (size_t i = 0; i < output.auroras.size(); i++) {
+            output.auroras[i].step(input.auroras[i], input.aurora_hotspots, output);
+        }
 
-    output.aurora_hotspots.step(input.aurora_hotspots, output);
+        output.aurora_hotspots.step(input.aurora_hotspots, output);
+    }
 }
 
 
@@ -169,5 +172,7 @@ void WorldState::initialize(void)
     ships[0].thruster_states.resize(13);
     memset(ships[0].thruster_states.data(), 0, 13 * sizeof(float));
 
-    auroras.resize(3);
+    if (global_options.aurora) {
+        auroras.resize(3);
+    }
 }

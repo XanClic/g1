@@ -3,6 +3,7 @@
 
 struct Options {
     int min_lod = 0, max_lod = 8;
+    bool aurora = true;
 };
 
 
