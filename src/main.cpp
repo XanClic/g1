@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
             {"min-lod", required_argument, nullptr, 256},
             {"max-lod", required_argument, nullptr, 257},
             {"disable-aurora", no_argument, nullptr, 258},
+
+            {nullptr, 0, nullptr, 0}
         };
 
         int option = getopt_long(argc, argv, "h", options, nullptr);
