@@ -79,10 +79,10 @@ TODO
 - ~~Aurora~~
 - Specify bytecode for in-game software (IGS)
 - Performance improvements
-    - Pipelining (split physics and graphics into separate threads)
-    - Texture fusion (fuse e.g. cloud layer and earth texture into a single 4
-      channel texture)
-    - Texture compression
+    - ~~Pipelining (split physics and graphics into separate threads)~~
+    - ~~Texture fusion (fuse e.g. cloud layer and earth texture into a single 4
+      channel texture)~~
+    - ~~Texture compression~~
     - Allow reduced scratch texture (no view-dependent scratches, smaller
       resolution)
     - Allow smaller star map
