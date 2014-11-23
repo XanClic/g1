@@ -134,7 +134,8 @@ XSMD *load_xsmd(const std::string &name)
 
     fseek(fp, hdr->vertex_attrib_headers_offset, SEEK_SET);
 
-    XSMD::XSMDVertexAttrib **ahdrs = static_cast<XSMD::XSMDVertexAttrib **>(malloc(hdr->vertex_attrib_count * sizeof(*ahdrs)));
+    XSMD::XSMDVertexAttrib **ahdrs = static_cast<XSMD::XSMDVertexAttrib **>(malloc(hdr->vertex_attrib_count *
+                                                                                   sizeof(*ahdrs)));
     size_t *strides = new size_t[hdr->vertex_attrib_count + 1];
     strides[0] = 0;
 
@@ -143,7 +144,8 @@ XSMD *load_xsmd(const std::string &name)
 
         fread(ahdrs[i], sizeof(*ahdrs[i]), 1, fp);
 
-        ahdrs[i] = static_cast<XSMD::XSMDVertexAttrib *>(realloc(ahdrs[i], sizeof(*ahdrs[i]) + ahdrs[i]->name_length + 1));
+        ahdrs[i] = static_cast<XSMD::XSMDVertexAttrib *>(realloc(ahdrs[i],
+                                                                 sizeof(*ahdrs[i]) + ahdrs[i]->name_length + 1));
         fread(ahdrs[i]->name, 1, ahdrs[i]->name_length, fp);
         ahdrs[i]->name[ahdrs[i]->name_length] = 0;
 

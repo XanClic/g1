@@ -33,7 +33,8 @@ void main(void)
     float diff = dot(normalize(mat_nrm * normal), -light_dir);
 
     float brightness = smoothstep(-0.05, 0.2, diff);
-    vec3 color = mix(vec3(1.0, 0.6, 0.0), vec3(1.0), smoothstep(0.0, 0.1, abs(dot(earth_normal, -light_dir) + 0.03)));
+    vec3 color = mix(vec3(1.0, 0.6, 0.0), vec3(1.0),
+                     smoothstep(0.0, 0.1, abs(dot(earth_normal, -light_dir) + 0.03)));
 
     out_col = vec4(brightness * color, density);
 }

@@ -39,7 +39,9 @@ void menu_loop(void)
     menu_bg_aspect = static_cast<float>(menu_bg_img.width()) / menu_bg_img.height();
     menu_bg = new gl::texture(menu_bg_img);
 
-    menu_prg = new gl::program {gl::shader::vert("shaders/menu_vert.glsl"), gl::shader::frag("shaders/menu_frag.glsl")};
+    menu_prg = new gl::program {gl::shader::vert("shaders/menu_vert.glsl"),
+                                gl::shader::frag("shaders/menu_frag.glsl")};
+
     menu_prg->bind_attrib("va_pos", 0);
     menu_prg->bind_frag("out_col", 0);
 
@@ -106,10 +108,14 @@ static void render_menu(bool loading)
         set_text_color((hover == TEST_ENV) ? vec4(1.f, 1.f, 1.f, 1.f)
                      : (down  == TEST_ENV) ? vec4(.3f, .3f, .3f, 1.f)
                                            : vec4(.6f, .6f, .6f, 1.f));
-        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_ENVIRONMENT), ALIGN_CENTER, ALIGN_BOTTOM);
+
+        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_ENVIRONMENT),
+                  ALIGN_CENTER, ALIGN_BOTTOM);
     } else {
         set_text_color(vec4(.5f, .5f, .5f, 1.f));
-        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_LOADING), ALIGN_CENTER, ALIGN_BOTTOM);
+
+        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_LOADING),
+                  ALIGN_CENTER, ALIGN_BOTTOM);
     }
 
 

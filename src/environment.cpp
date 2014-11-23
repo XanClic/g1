@@ -328,14 +328,24 @@ void init_environment(void)
                                .rotated(.41f, vec3(1.f, 0.f, 0.f)); // axial tilt
 
     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
-        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"), gl::shader::frag("shaders/earth_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"), gl::shader::frag("shaders/cloud_frag.glsl")};
+        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"),
+                                     gl::shader::frag("shaders/earth_frag.glsl")};
+
+        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"),
+                                     gl::shader::frag("shaders/cloud_frag.glsl")};
     } else {
-        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"), gl::shader::frag("shaders/earth_nbl_frag.glsl")};
-        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"), gl::shader::frag("shaders/cloud_nbl_frag.glsl")};
+        earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"),
+                                     gl::shader::frag("shaders/earth_nbl_frag.glsl")};
+
+        cloud_prg = new gl::program {gl::shader::vert("shaders/cloud_vert.glsl"),
+                                     gl::shader::frag("shaders/cloud_nbl_frag.glsl")};
     }
-    atmob_prg = new gl::program {gl::shader::vert("shaders/ptn_vert.glsl"),   gl::shader::frag("shaders/atmob_frag.glsl")};
-    atmof_prg = new gl::program {gl::shader::vert("shaders/atmof_vert.glsl"), gl::shader::frag("shaders/atmof_frag.glsl")};
+
+    atmob_prg = new gl::program {gl::shader::vert("shaders/ptn_vert.glsl"),
+                                 gl::shader::frag("shaders/atmob_frag.glsl")};
+
+    atmof_prg = new gl::program {gl::shader::vert("shaders/atmof_vert.glsl"),
+                                 gl::shader::frag("shaders/atmof_frag.glsl")};
 
     earth->bind_program_vertex_attribs(*earth_prg);
     earth->bind_program_vertex_attribs(*cloud_prg);
@@ -357,11 +367,15 @@ void init_environment(void)
     atmo_map->tmu() = 3;
 
 
-    sun_prg = new gl::program {gl::shader::vert("shaders/sun_vert.glsl"), gl::shader::frag("shaders/sun_frag.glsl")};
+    sun_prg = new gl::program {gl::shader::vert("shaders/sun_vert.glsl"),
+                               gl::shader::frag("shaders/sun_frag.glsl")};
+
     sun_prg->bind_attrib("va_position", 0);
     sun_prg->bind_frag("out_col", 0);
 
-    moon_prg = new gl::program {gl::shader::vert("shaders/moon_vert.glsl"), gl::shader::frag("shaders/moon_frag.glsl")};
+    moon_prg = new gl::program {gl::shader::vert("shaders/moon_vert.glsl"),
+                                gl::shader::frag("shaders/moon_frag.glsl")};
+
     moon_prg->bind_attrib("va_position", 0);
     moon_prg->bind_frag("out_col", 0);
 
@@ -376,7 +390,10 @@ void init_environment(void)
 
 
     if (global_options.aurora) {
-        aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"), gl::shader::geom("shaders/aurora_geom.glsl"), gl::shader::frag("shaders/aurora_frag.glsl")};
+        aurora_prg = new gl::program {gl::shader::vert("shaders/aurora_vert.glsl"),
+                                      gl::shader::geom("shaders/aurora_geom.glsl"),
+                                      gl::shader::frag("shaders/aurora_frag.glsl")};
+
         aurora_prg->bind_attrib("va_position", 0);
         aurora_prg->bind_frag("out_col", 0);
 
@@ -391,14 +408,20 @@ void init_environment(void)
     gl::image skybox_templ("assets/skybox-top.png");
     skybox_tex = new gl::cubemap;
     skybox_tex->format(GL_COMPRESSED_RGB_S3TC_DXT1_EXT, skybox_templ.width(), skybox_templ.height());
-    skybox_tex->load_layer(gl::cubemap::TOP,    gl::image(gl::image("assets/skybox-top.png"   ), gl::image::COMPRESSED_S3TC_DXT1));
-    skybox_tex->load_layer(gl::cubemap::BOTTOM, gl::image(gl::image("assets/skybox-bottom.png"), gl::image::COMPRESSED_S3TC_DXT1));
-    skybox_tex->load_layer(gl::cubemap::RIGHT,  gl::image(gl::image("assets/skybox-right.png" ), gl::image::COMPRESSED_S3TC_DXT1));
-    skybox_tex->load_layer(gl::cubemap::LEFT,   gl::image(gl::image("assets/skybox-left.png"  ), gl::image::COMPRESSED_S3TC_DXT1));
-    skybox_tex->load_layer(gl::cubemap::FRONT,  gl::image(gl::image("assets/skybox-front.png" ), gl::image::COMPRESSED_S3TC_DXT1));
-    skybox_tex->load_layer(gl::cubemap::BACK,   gl::image(gl::image("assets/skybox-back.png"  ), gl::image::COMPRESSED_S3TC_DXT1));
+    for (const auto &p: {std::make_pair(gl::cubemap::TOP,    "assets/skybox-top.png"),
+                         std::make_pair(gl::cubemap::BOTTOM, "assets/skybox-bottom.png"),
+                         std::make_pair(gl::cubemap::RIGHT,  "assets/skybox-right.png"),
+                         std::make_pair(gl::cubemap::LEFT,   "assets/skybox-left.png"),
+                         std::make_pair(gl::cubemap::FRONT,  "assets/skybox-front.png"),
+                         std::make_pair(gl::cubemap::BACK,   "assets/skybox-back.png")})
+    {
+        gl::image img(gl::image(p.second), gl::image::COMPRESSED_S3TC_DXT1);
+        skybox_tex->load_layer(p.first, img);
+    }
 
-    skybox_prg = new gl::program {gl::shader::vert("shaders/skybox_vert.glsl"), gl::shader::frag("shaders/skybox_frag.glsl")};
+    skybox_prg = new gl::program {gl::shader::vert("shaders/skybox_vert.glsl"),
+                                  gl::shader::frag("shaders/skybox_frag.glsl")};
+
     skybox_prg->bind_attrib("va_position", 0);
     skybox_prg->bind_frag("out_col", 0);
 
@@ -600,7 +623,12 @@ static void lod_set_uniforms(void)
                     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
                         earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
                     }
-                    earth_prg->uniform<vec4>("day_texture_params[" + si + "]") = vec4(static_cast<float>(day_lods[lod].horz_tiles), static_cast<float>(day_lods[lod].vert_tiles), tile.s, tile.t);
+
+                    earth_prg->uniform<vec4>("day_texture_params[" + si + "]")
+                        = vec4(static_cast<float>(day_lods[lod].horz_tiles),
+                               static_cast<float>(day_lods[lod].vert_tiles),
+                               tile.s,
+                               tile.t);
                 }
 
                 if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
@@ -610,7 +638,12 @@ static void lod_set_uniforms(void)
                     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
                         earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
                     }
-                    earth_prg->uniform<vec4>("night_texture_params[" + si + "]") = vec4(static_cast<float>(night_lods[lod].horz_tiles), static_cast<float>(night_lods[lod].vert_tiles), tile.s, tile.t);
+
+                    earth_prg->uniform<vec4>("night_texture_params[" + si + "]")
+                        = vec4(static_cast<float>(night_lods[lod].horz_tiles),
+                               static_cast<float>(night_lods[lod].vert_tiles),
+                               tile.s,
+                               tile.t);
                 }
             }
         }
@@ -626,7 +659,12 @@ static void lod_set_uniforms(void)
                     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
                         cloud_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
                     }
-                    cloud_prg->uniform<vec4>("day_texture_params[" + si + "]") = vec4(static_cast<float>(day_lods[lod].horz_tiles), static_cast<float>(day_lods[lod].vert_tiles), tile.s, tile.t);
+
+                    cloud_prg->uniform<vec4>("day_texture_params[" + si + "]")
+                        = vec4(static_cast<float>(day_lods[lod].horz_tiles),
+                               static_cast<float>(day_lods[lod].vert_tiles),
+                               tile.s,
+                               tile.t);
                 }
             }
         }
@@ -763,7 +801,11 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
         }
     }
 
-    std::sort(lod_list.begin(), lod_list.end(), [](const std::tuple<float, int, int> &x, const std::tuple<float, int, int> &y) { return std::get<0>(x) > std::get<0>(y); });
+    std::sort(lod_list.begin(), lod_list.end(), [](const std::tuple<float, int, int> &x,
+                                                   const std::tuple<float, int, int> &y)
+                                                {
+                                                    return std::get<0>(x) > std::get<0>(y);
+                                                });
 
     float cam_ground_dist = gstat.camera_position.length() - 6357.f;
     int base_lod = log2f(cam_ground_dist / gstat.width) + 1.f;

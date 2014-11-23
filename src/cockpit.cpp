@@ -40,11 +40,15 @@ void init_cockpit(void)
     line_va->attrib(0)->data(boole);
 
 
-    line_prg = new gl::program {gl::shader::vert("shaders/line_vert.glsl"), gl::shader::frag("shaders/line_frag.glsl")};
+    line_prg = new gl::program {gl::shader::vert("shaders/line_vert.glsl"),
+                                gl::shader::frag("shaders/line_frag.glsl")};
+
     line_prg->bind_attrib("va_segment", 0);
     line_prg->bind_frag("out_col", 0);
 
-    scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"), gl::shader::frag("shaders/scratch_frag.glsl")};
+    scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"),
+                                   gl::shader::frag("shaders/scratch_frag.glsl")};
+
     scratch_prg->bind_attrib("va_pos", 0);
     scratch_prg->bind_frag("out_col", 0);
 
@@ -118,7 +122,8 @@ static bool in_bounds(const vec2 &proj, const vec2 &bx, const vec2 &by)
 }
 
 
-static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec4 &vector, const vec2 &bx, const vec2 &by, float sxs, float sys, bool *visible = nullptr)
+static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec4 &vector, const vec2 &bx, const vec2 &by,
+                                    float sxs, float sys, bool *visible = nullptr)
 {
     float dp = status.camera_forward.dot(vec3(vector));
 
@@ -134,9 +139,11 @@ static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec4 &ve
         }
 
         if (dp > 0.f) {
-            proj =  proj * helper::minimum((fabsf(bx[proj.x() > 0.f]) - 1.5f * sxs) / fabsf(proj.x()), (fabsf(by[proj.y() > 0.f]) - 1.5f * sys) / fabsf(proj.y()));
+            proj =  proj * helper::minimum((fabsf(bx[proj.x() > 0.f]) - 1.5f * sxs) / fabsf(proj.x()),
+                                           (fabsf(by[proj.y() > 0.f]) - 1.5f * sys) / fabsf(proj.y()));
         } else {
-            proj = -proj * helper::minimum((fabsf(bx[proj.x() < 0.f]) - 1.5f * sxs) / fabsf(proj.x()), (fabsf(by[proj.y() < 0.f]) - 1.5f * sys) / fabsf(proj.y()));
+            proj = -proj * helper::minimum((fabsf(bx[proj.x() < 0.f]) - 1.5f * sxs) / fabsf(proj.x()),
+                                           (fabsf(by[proj.y() < 0.f]) - 1.5f * sys) / fabsf(proj.y()));
         }
     }
 
@@ -144,7 +151,8 @@ static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec4 &ve
 }
 
 
-static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &vector, const vec2 &bx, const vec2 &by, float sxs, float sys, bool *visible = nullptr)
+static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &vector, const vec2 &bx, const vec2 &by,
+                                    float sxs, float sys, bool *visible = nullptr)
 {
     return project_clamp_to_border(status, vec4::direction(vector), bx, by, sxs, sys, visible);
 }
@@ -299,7 +307,8 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
                 draw_line(pos[0], pos[1]);
 
                 if (!(angle % 10)) {
-                    draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys), localize(angle));
+                    draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys),
+                              localize(angle));
                 }
             }
         }
@@ -327,7 +336,8 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
             draw_line(pos[0], pos[1]);
 
             if (!(angle % 10)) {
-                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys), localize(angle));
+                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys),
+                          localize(angle));
             }
         }
     }

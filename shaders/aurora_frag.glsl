@@ -29,5 +29,8 @@ void main(void)
     float ze_a = 2.0 * sa_z_dim.x * sa_z_dim.y / (sa_z_dim.y + sa_z_dim.x - ze * (sa_z_dim.y - sa_z_dim.x));
     float za_a = dot(gf_pos - cam_pos, cam_fwd);
 
-    out_col = vec4(base, (green + red) * max(1.0 - texture(stencil, screen_pos).r, step(za_a, ze_a)) * texture(bands, vec2(gf_texcoord.x, 0.0)).r * gf_strength);
+    out_col = vec4(base, (green + red)
+                         * max(1.0 - texture(stencil, screen_pos).r, step(za_a, ze_a))
+                         * texture(bands, vec2(gf_texcoord.x, 0.0)).r
+                         * gf_strength);
 }
