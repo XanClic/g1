@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
             {"min-lod", required_argument, nullptr, 256},
             {"max-lod", required_argument, nullptr, 257},
             {"disable-aurora", no_argument, nullptr, 258},
+            {"scratch-map-res", required_argument, nullptr, 259},
+            {"uniform-scratch-map", no_argument, nullptr, 260},
 
             {nullptr, 0, nullptr, 0}
         };
@@ -45,6 +47,12 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "  -h, --help       Shows this information\n");
                 fprintf(stderr, "  --min-lod=LOD    Sets the minimum LOD (0..8; default: 0)\n");
                 fprintf(stderr, "  --max-lod=LOD    Sets the maximum LOD (3..8; default: 8)\n");
+                fprintf(stderr, "  --disable-aurora Disables aurora borealis and australis\n");
+                fprintf(stderr, "  --scratch-map-res=resolution\n");
+                fprintf(stderr, "                   Sets the vertical resolution of the scratch map\n");
+                fprintf(stderr, "                   (720 or 1080)\n");
+                fprintf(stderr, "  --uniform-scratch-map\n");
+                fprintf(stderr, "                   Disables scratches in the scratch map\n");
                 return 0;
 
             case 256: {
@@ -75,6 +83,23 @@ int main(int argc, char *argv[])
 
             case 258:
                 global_options.aurora = false;
+                break;
+
+            case 259: {
+                char *endp;
+                errno = 0;
+                unsigned long res = strtoul(optarg, &endp, 0);
+                if (errno || ((res != 720) && (res != 1080)) || *endp) {
+                    fprintf(stderr, "Invalid argument given for --scratch-map-res (allowed: 720, 1080)\n");
+                    return 1;
+                }
+
+                global_options.scratch_map_resolution = res;
+                break;
+            }
+
+            case 260:
+                global_options.uniform_scratch_map = true;
                 break;
         }
     }

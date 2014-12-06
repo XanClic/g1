@@ -4,6 +4,9 @@
 struct Options {
     int min_lod = 0, max_lod = 8;
     bool aurora = true;
+
+    int scratch_map_resolution = 1080;
+    bool uniform_scratch_map = false;
 };
 
 
