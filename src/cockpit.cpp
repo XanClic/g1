@@ -5,6 +5,7 @@
 
 #include "cockpit.hpp"
 #include "localize.hpp"
+#include "options.hpp"
 #include "text.hpp"
 
 
@@ -46,14 +47,22 @@ void init_cockpit(void)
     line_prg->bind_attrib("va_segment", 0);
     line_prg->bind_frag("out_col", 0);
 
-    scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"),
-                                   gl::shader::frag("shaders/scratch_frag.glsl")};
+    if (global_options.uniform_scratch_map) {
+        scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"),
+                                       gl::shader::frag("shaders/scratch_uniform_frag.glsl")};
+    } else {
+        scratch_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"),
+                                       gl::shader::frag("shaders/scratch_frag.glsl")};
+    }
 
     scratch_prg->bind_attrib("va_pos", 0);
     scratch_prg->bind_frag("out_col", 0);
 
 
-    scratch_tex = new gl::texture("assets/scratches.png");
+    scratch_tex = new gl::texture(std::string("assets/scratches-") +
+                                  (global_options.uniform_scratch_map ? "uniform-" : "") +
+                                  std::to_string(global_options.scratch_map_resolution) +
+                                  "p.png");
     scratch_tex->set_tmu(1);
     scratch_tex->filter(GL_LINEAR);
 
@@ -199,7 +208,9 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     scratch_prg->use();
     scratch_prg->uniform<vec3>("sun_dir")       = world.sun_light_dir * sun_strength;
     scratch_prg->uniform<vec3>("sun_bloom_dir") = world.sun_light_dir * sun_bloom_strength;
-    scratch_prg->uniform<vec2>("sun_position")  = projected_sun;
+    if (!global_options.uniform_scratch_map) {
+        scratch_prg->uniform<vec2>("sun_position")  = projected_sun;
+    }
     scratch_prg->uniform<vec3>("forward") = ship.forward;
     scratch_prg->uniform<vec3>("right")   = ship.right;
     scratch_prg->uniform<vec3>("up")      = ship.up;
