@@ -7,6 +7,8 @@ struct Options {
 
     int scratch_map_resolution = 1080;
     bool uniform_scratch_map = false;
+
+    int star_map_resolution = 2048;
 };
 
 

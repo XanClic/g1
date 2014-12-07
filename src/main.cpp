@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
             {"disable-aurora", no_argument, nullptr, 258},
             {"scratch-map-res", required_argument, nullptr, 259},
             {"uniform-scratch-map", no_argument, nullptr, 260},
+            {"star-map-res", required_argument, nullptr, 261},
 
             {nullptr, 0, nullptr, 0}
         };
@@ -53,6 +54,9 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "                   (720 or 1080)\n");
                 fprintf(stderr, "  --uniform-scratch-map\n");
                 fprintf(stderr, "                   Disables scratches in the scratch map\n");
+                fprintf(stderr, "  --star-map-res=resolution\n");
+                fprintf(stderr, "                   Sets the resolution of one side of the star map\n");
+                fprintf(stderr, "                   (512, 1024 or 2048)\n");
                 return 0;
 
             case 256: {
@@ -101,6 +105,19 @@ int main(int argc, char *argv[])
             case 260:
                 global_options.uniform_scratch_map = true;
                 break;
+
+            case 261: {
+                char *endp;
+                errno = 0;
+                unsigned long res = strtoul(optarg, &endp, 0);
+                if (errno || ((res != 512) && (res != 1024) && (res != 2048)) || *endp) {
+                    fprintf(stderr, "Invalid argument given for --star-map-res (allowed: 512, 1024, 2048)\n");
+                    return 1;
+                }
+
+                global_options.star_map_resolution = res;
+                break;
+            }
         }
     }
 
