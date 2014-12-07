@@ -405,17 +405,20 @@ void init_environment(void)
     skybox = load_xsmd("assets/skybox.xsmd");
     skybox->make_vertex_array();
 
-    gl::image skybox_templ("assets/skybox-top.png");
     skybox_tex = new gl::cubemap;
-    skybox_tex->format(GL_COMPRESSED_RGB_S3TC_DXT1_EXT, skybox_templ.width(), skybox_templ.height());
-    for (const auto &p: {std::make_pair(gl::cubemap::TOP,    "assets/skybox-top.png"),
-                         std::make_pair(gl::cubemap::BOTTOM, "assets/skybox-bottom.png"),
-                         std::make_pair(gl::cubemap::RIGHT,  "assets/skybox-right.png"),
-                         std::make_pair(gl::cubemap::LEFT,   "assets/skybox-left.png"),
-                         std::make_pair(gl::cubemap::FRONT,  "assets/skybox-front.png"),
-                         std::make_pair(gl::cubemap::BACK,   "assets/skybox-back.png")})
+    skybox_tex->format(GL_COMPRESSED_RGB_S3TC_DXT1_EXT, global_options.star_map_resolution,
+                                                        global_options.star_map_resolution);
+    for (const auto &p: {std::make_pair(gl::cubemap::TOP,    "top"),
+                         std::make_pair(gl::cubemap::BOTTOM, "bottom"),
+                         std::make_pair(gl::cubemap::RIGHT,  "right"),
+                         std::make_pair(gl::cubemap::LEFT,   "left"),
+                         std::make_pair(gl::cubemap::FRONT,  "front"),
+                         std::make_pair(gl::cubemap::BACK,   "back")})
     {
-        gl::image img(gl::image(p.second), gl::image::COMPRESSED_S3TC_DXT1);
+        std::string fname = std::string("assets/skybox-") + p.second + "-"
+                          + std::to_string(global_options.star_map_resolution) + ".png";
+
+        gl::image img(gl::image(fname), gl::image::COMPRESSED_S3TC_DXT1);
         skybox_tex->load_layer(p.first, img);
     }
 
