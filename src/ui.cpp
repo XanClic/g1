@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstring>
+#include <functional>
 #include <stdexcept>
 #include <string>
 
@@ -15,8 +17,28 @@
 using namespace dake::math;
 
 
+enum MouseDirection {
+    MOUSE_LEFT,
+    MOUSE_RIGHT,
+    MOUSE_DOWN,
+    MOUSE_UP
+};
+
+
+namespace std
+{
+template<> struct hash<MouseDirection> {
+    size_t operator()(const MouseDirection &d) const { return hash<int>()(d); }
+};
+}
+
+
 static SDL_Window *wnd;
 static int wnd_width, wnd_height;
+
+
+static std::unordered_map<SDL_Keycode, std::string> keyboard_mappings;
+static std::unordered_map<MouseDirection, std::string> mouse_mappings;
 
 
 static void create_context(int w, int h, int major = 0, int minor = 0)
@@ -84,23 +106,30 @@ void init_ui(void)
 
     wnd_width = 1280;
     wnd_height = 720;
+
+
+    keyboard_mappings[SDLK_d] = "strafe.-x";
+    keyboard_mappings[SDLK_a] = "strafe.+x";
+    keyboard_mappings[SDLK_s] = "strafe.-y";
+    keyboard_mappings[SDLK_w] = "strafe.+y";
+    keyboard_mappings[SDLK_PAGEDOWN] = "strafe.-z";
+    keyboard_mappings[SDLK_PAGEUP  ] = "strafe.+z";
+
+    mouse_mappings[MOUSE_DOWN ] = "rotate.-x";
+    mouse_mappings[MOUSE_UP   ] = "rotate.+x";
+    mouse_mappings[MOUSE_LEFT ] = "rotate.-y";
+    mouse_mappings[MOUSE_RIGHT] = "rotate.+y";
+    keyboard_mappings[SDLK_q] = "rotate.-z";
+    keyboard_mappings[SDLK_e] = "rotate.+z";
+
+    keyboard_mappings[SDLK_z] = "-main_engine";
+    keyboard_mappings[SDLK_x] = "+main_engine";
 }
 
 
 void ui_process_events(Input &input)
 {
-    static bool capture_movement, accel_fwd, accel_bwd, roll_left, roll_right;
-    static bool strafe_left, strafe_right, strafe_up, strafe_down;
-
-    input.yaw   = 0.f;
-    input.pitch = 0.f;
-    input.roll  = 0.f;
-
-    input.strafe_x = 0.f;
-    input.strafe_y = 0.f;
-    input.strafe_z = 0.f;
-
-    input.main_engine = 0.f;
+    static bool capture_movement;
 
     if (capture_movement) {
         int abs_x, abs_y;
@@ -109,24 +138,18 @@ void ui_process_events(Input &input)
         float rel_x = 2.f * abs_x / wnd_width - 1.f;
         float rel_y = 1.f - 2.f * abs_y / wnd_height;
 
-        input.yaw   = rel_x;
-        input.pitch = rel_y;
+        input.mapping_states[mouse_mappings[MOUSE_LEFT ]] = dake::helper::maximum(-rel_x, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_RIGHT]] = dake::helper::maximum( rel_x, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_DOWN ]] = dake::helper::maximum(-rel_y, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_UP   ]] = dake::helper::maximum( rel_y, 0.f);
+    } else {
+        for (const auto &mm: mouse_mappings) {
+            input.mapping_states[mm.second] = 0.f;
+        }
     }
 
-    if (accel_fwd ^ accel_bwd) {
-        input.main_engine = accel_fwd ? 1.f : -1.f;
-    }
-
-    if (roll_left ^ roll_right) {
-        input.roll = roll_right ? 1.f : -1.f;
-    }
-
-    if (strafe_left ^ strafe_right) {
-        input.strafe_x = strafe_right ? 1.f : -1.f;
-    }
-
-    if (strafe_up ^ strafe_down) {
-        input.strafe_y = strafe_up ? 1.f : -1.f;
+    for (const auto &km: keyboard_mappings) {
+        input.mapping_states[km.second] = 0.f;
     }
 
 
@@ -160,84 +183,22 @@ void ui_process_events(Input &input)
                 }
                 break;
 
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                    case SDLK_x:
-                        accel_fwd = true;
-                        break;
+            case SDL_KEYDOWN: {
+                auto mapping = keyboard_mappings.find(event.key.keysym.sym);
+                if (mapping != keyboard_mappings.end()) {
+                    input.mapping_states[mapping->second] = 1.f;
+                } else {
+                    switch (event.key.keysym.sym) {
+                        case SDLK_ESCAPE:
+                            quit_main_loop();
+                            break;
 
-                    case SDLK_z:
-                        accel_bwd = true;
-                        break;
-
-                    case SDLK_q:
-                        roll_left = true;
-                        break;
-
-                    case SDLK_e:
-                        roll_right = true;
-                        break;
-
-                    case SDLK_w:
-                        strafe_up = true;
-                        break;
-
-                    case SDLK_s:
-                        strafe_down = true;
-                        break;
-
-                    case SDLK_a:
-                        strafe_left = true;
-                        break;
-
-                    case SDLK_d:
-                        strafe_right = true;
-                        break;
-
-                    case SDLK_ESCAPE:
-                        quit_main_loop();
-                        break;
-
-                    case SDLK_F12:
-                        olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
+                        case SDLK_F12:
+                            olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
+                    }
                 }
                 break;
-
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                    case SDLK_x:
-                        accel_fwd = false;
-                        break;
-
-                    case SDLK_z:
-                        accel_bwd = false;
-                        break;
-
-                    case SDLK_q:
-                        roll_left = false;
-                        break;
-
-                    case SDLK_e:
-                        roll_right = false;
-                        break;
-
-                    case SDLK_w:
-                        strafe_up = false;
-                        break;
-
-                    case SDLK_s:
-                        strafe_down = false;
-                        break;
-
-                    case SDLK_a:
-                        strafe_left = false;
-                        break;
-
-                    case SDLK_d:
-                        strafe_right = false;
-                        break;
-                }
-                break;
+            }
         }
     }
 }

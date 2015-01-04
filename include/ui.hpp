@@ -1,13 +1,14 @@
 #ifndef UI_HPP
 #define UI_HPP
 
+#include <string>
+#include <unordered_map>
+
 #include <dake/math/matrix.hpp>
 
 
 struct Input {
-    float yaw, pitch, roll;
-    float strafe_x, strafe_y, strafe_z;
-    float main_engine;
+    std::unordered_map<std::string, float> mapping_states;
 };
 
 
