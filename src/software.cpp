@@ -169,18 +169,25 @@ void Software::execute(ShipState &ship, const Input &input)
 
     lua_newtable(ls);
 
-    vec3 pyr(input.pitch, input.yaw, input.roll);
+    vec3 rotate(input.mapping_states.find("rotate.+x")->second - input.mapping_states.find("rotate.-x")->second,
+                input.mapping_states.find("rotate.+y")->second - input.mapping_states.find("rotate.-y")->second,
+                input.mapping_states.find("rotate.+z")->second - input.mapping_states.find("rotate.-z")->second);
+
     lua_pushstring(ls, "rotate");
-    lua_pushvector(ls, pyr);
+    lua_pushvector(ls, rotate);
     lua_settable(ls, -3);
 
-    vec3 strafe(input.strafe_x, input.strafe_y, input.strafe_z);
+    vec3 strafe(input.mapping_states.find("strafe.+x")->second - input.mapping_states.find("strafe.-x")->second,
+                input.mapping_states.find("strafe.+y")->second - input.mapping_states.find("strafe.-y")->second,
+                input.mapping_states.find("strafe.+z")->second - input.mapping_states.find("strafe.-z")->second);
+
     lua_pushstring(ls, "strafe");
     lua_pushvector(ls, strafe);
     lua_settable(ls, -3);
 
     lua_pushstring(ls, "main_engine");
-    lua_pushnumber(ls, input.main_engine);
+    lua_pushnumber(ls, input.mapping_states.find("+main_engine")->second -
+                       input.mapping_states.find("-main_engine")->second);
     lua_settable(ls, -3);
 
 
