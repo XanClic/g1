@@ -148,8 +148,11 @@ void ui_process_events(Input &input)
         }
     }
 
-    for (const auto &km: keyboard_mappings) {
-        input.mapping_states[km.second] = 0.f;
+    if (!input.initialized) {
+        for (const auto &km: keyboard_mappings) {
+            input.mapping_states[km.second] = 0.f;
+        }
+        input.initialized = true;
     }
 
 
@@ -196,6 +199,14 @@ void ui_process_events(Input &input)
                         case SDLK_F12:
                             olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
                     }
+                }
+                break;
+            }
+
+            case SDL_KEYUP: {
+                auto mapping = keyboard_mappings.find(event.key.keysym.sym);
+                if (mapping != keyboard_mappings.end()) {
+                    input.mapping_states[mapping->second] = 0.f;
                 }
                 break;
             }

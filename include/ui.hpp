@@ -8,6 +8,7 @@
 
 
 struct Input {
+    bool initialized = false; // FIXME
     std::unordered_map<std::string, float> mapping_states;
 };
 
