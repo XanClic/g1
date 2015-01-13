@@ -54,6 +54,9 @@ struct ShipState {
     // normalized
     dake::math::vec3 forward, up, right;
 
+    dake::math::vec3 local_velocity, local_acceleration;
+    dake::math::vec3 local_rotational_velocity;
+
     // kg
     float total_mass;
 

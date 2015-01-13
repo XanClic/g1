@@ -121,11 +121,11 @@ void Software::execute(ShipState &ship, const Input &input)
     lua_newtable(ls);
 
     lua_pushstring(ls, "acceleration");
-    lua_pushvector(ls, ship.acceleration);
+    lua_pushvector(ls, ship.local_acceleration);
     lua_settable(ls, -3);
 
     lua_pushstring(ls, "rotational_velocity");
-    lua_pushvector(ls, ship.rotational_velocity);
+    lua_pushvector(ls, ship.local_rotational_velocity);
     lua_settable(ls, -3);
 
     lua_pushstring(ls, "total_mass");

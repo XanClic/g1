@@ -95,6 +95,12 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.up      = in.up;
             out.forward = in.forward;
         }
+
+        // .transpose() == .invert() (local_mat is a rotation matrix)
+        local_mat.transpose();
+        out.local_velocity            = local_mat * out.velocity;
+        out.local_acceleration        = local_mat * out.acceleration;
+        out.local_rotational_velocity = local_mat * out.rotational_velocity;
     }
 
 
