@@ -64,9 +64,9 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);
         }
 
-        forces += -in.position.normalized() *
-                  6.67384e-11f * in.total_mass * 5.974e24f
-                  / powf(1e3f * in.position.length(), 2.f);
+        forces += -1.e3 * vec<3, double>(in.position) *
+                  6.67384e-11 * in.total_mass * 5.974e24
+                  / pow(1.e3 * in.position.length(), 3.);
 
         out.acceleration = forces / in.total_mass;
         out.torque       = torque;
