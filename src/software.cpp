@@ -190,6 +190,10 @@ void Software::execute(ShipState &ship, const Input &input)
                        input.mapping_states.find("-main_engine")->second);
     lua_settable(ls, -3);
 
+    lua_pushstring(ls, "kill_rotation");
+    lua_pushboolean(ls, input.mapping_states.find("kill_rotation")->second >= .5f);
+    lua_settable(ls, -3);
+
 
     lua_call(ls, 2, 1);
 

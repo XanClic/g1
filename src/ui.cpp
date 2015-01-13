@@ -124,6 +124,8 @@ void init_ui(void)
 
     keyboard_mappings[SDLK_z] = "-main_engine";
     keyboard_mappings[SDLK_x] = "+main_engine";
+
+    keyboard_mappings[SDLK_F5] = "kill_rotation";
 }
 
 
