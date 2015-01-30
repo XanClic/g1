@@ -6,7 +6,7 @@ in vec2 vf_txc;
 flat in ivec2 vf_tex;
 
 out vec4 out_col;
-out float out_stencil;
+out vec4 out_stencil;
 
 uniform sampler2DArray day_texture, night_texture;
 uniform vec4 day_texture_params[20], night_texture_params[20];
@@ -52,5 +52,5 @@ void main(void)
     vec3 diff_color = smoothstep(-0.1, 0.5, ndotx) * day.rgb;
 
     out_col = vec4((1.0 - day.a * 0.7) * mix(diff_color, spec_color, night_tex.g) + night_addition, 1.0);
-    out_stencil = 1.0;
+    out_stencil = vec4(1.0);
 }
