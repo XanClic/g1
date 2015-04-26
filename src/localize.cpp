@@ -11,7 +11,7 @@ static const char *translations[][3] = {
     {
         "Orbitalgeschwindigkeit",
         "Orbitalgeschwindigkeit",
-    //   ō   r   bi      ta  l       ge      sch     wi  n       di  ch      ka      -i      t
+    //   ō   r       bi  ta  l       ge      sch     wi  n       di  ch      ka      -i      t
         "\x24\xc3\xaa\x69\x30\xc3\xb4\xc2\xbb\xc3\xb3\x79\xc3\xab\x39\xc3\xb7\xc2\xb0\xc3\xba\xc3\xa8",
     },
 
@@ -27,6 +27,13 @@ static const char *translations[][3] = {
         "Testumgebung",
     //  te   s       t       u   m       ge      bu  ng
         "\x33\xc3\xb2\xc3\xa8\x2a\xc3\xb1\xc2\xbb\x6a\xc3\xb0",
+    },
+
+    {
+        "Testszenario",
+        "Testszenario",
+    //  te   s       t       se      na  ri  ō
+        "\x33\xc3\xb2\xc3\xa8\xc2\x8b\x48\x41\x24",
     },
 
     {

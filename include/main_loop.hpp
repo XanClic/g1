@@ -1,7 +1,10 @@
 #ifndef MAIN_LOOP_HPP
 #define MAIN_LOOP_HPP
 
-void main_loop(void);
+#include <string>
+
+
+void main_loop(const std::string &scenario);
 
 void quit_main_loop(void);
 

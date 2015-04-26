@@ -22,21 +22,22 @@ using namespace dake::math;
 
 
 static const char *const software_type_names[] = {
-    "flight control"
+    "flight control",
+    "scenario",
 };
 
 static std::vector<Software *> software[Software::TYPE_MAX];
+
+
+static int luaw_crossp(lua_State *ls);
+static int luaw_dotp(lua_State *ls);
 
 
 Software::Software(const std::string &n, const std::string &filename):
     enm(n)
 {
     ls = luaL_newstate();
-
-    luaopen_base(ls);
-    luaopen_table(ls);
-    luaopen_string(ls);
-    luaopen_math(ls);
+    luaL_openlibs(ls);
 
     if (luaL_loadfile(ls, filename.c_str())) {
         throw std::runtime_error("Could not load lua script " + filename + ": " + std::string(lua_tostring(ls, -1)));
@@ -44,6 +45,7 @@ Software::Software(const std::string &n, const std::string &filename):
 
 
     sg("FLIGHT_CONTROL", FLIGHT_CONTROL);
+    sg("SCENARIO", SCENARIO);
 
     sg("RCS",  Thruster::RCS);
     sg("MAIN", Thruster::MAIN);
@@ -58,6 +60,13 @@ Software::Software(const std::string &n, const std::string &filename):
     sg("BOTTOM",   Thruster::BOTTOM);
     sg("FRONT",    Thruster::FRONT);
     sg("BACK",     Thruster::BACK);
+
+
+    lua_pushcfunction(ls, luaw_crossp);
+    lua_setglobal(ls, "crossp");
+
+    lua_pushcfunction(ls, luaw_dotp);
+    lua_setglobal(ls, "dotp");
 
 
     lua_call(ls, 0, LUA_MULTRET);
@@ -82,6 +91,20 @@ Software::Software(const std::string &n, const std::string &filename):
 
     nm = lua_tolstring(ls, -1, nullptr);
     lua_pop(ls, 1);
+
+
+    switch (t) {
+        case FLIGHT_CONTROL:
+            sw = new FlightControlSoftware(this);
+            break;
+
+        case SCENARIO:
+            sw = new ScenarioScript(this);
+            break;
+
+        default:
+            throw std::runtime_error(enm + ": Invalid type given");
+    }
 }
 
 
@@ -92,128 +115,380 @@ void Software::sg(const char *n, int v)
 }
 
 
+static vec3 lua_tovector(lua_State *ls, int index)
+{
+    vec3 vec;
+
+    if (lua_isnil(ls, index)) {
+        return vec3::zero();
+    }
+
+    lua_getfield(ls, index, "x");
+    vec.x() = lua_tonumber(ls, -1);
+    lua_pop(ls, 1);
+
+    lua_getfield(ls, index, "y");
+    vec.y() = lua_tonumber(ls, -1);
+    lua_pop(ls, 1);
+
+    lua_getfield(ls, index, "z");
+    vec.z() = lua_tonumber(ls, -1);
+    lua_pop(ls, 1);
+
+    return vec;
+}
+
+
+static int luaw_veclength(lua_State *ls);
+static int luaw_vecrotate(lua_State *ls);
+static int luaw_vecadd(lua_State *ls);
+static int luaw_vecsub(lua_State *ls);
+static int luaw_vecmul(lua_State *ls);
+static int luaw_vecdiv(lua_State *ls);
+
+
 static void lua_pushvector(lua_State *ls, const vec3 &vec)
 {
     lua_newtable(ls);
 
-    lua_pushstring(ls, "x");
     lua_pushnumber(ls, vec.x());
-    lua_settable(ls, -3);
+    lua_setfield(ls, -2, "x");
 
-    lua_pushstring(ls, "y");
     lua_pushnumber(ls, vec.y());
-    lua_settable(ls, -3);
+    lua_setfield(ls, -2, "y");
 
-    lua_pushstring(ls, "z");
     lua_pushnumber(ls, vec.z());
-    lua_settable(ls, -3);
+    lua_setfield(ls, -2, "z");
+
+    lua_pushcfunction(ls, luaw_veclength);
+    lua_setfield(ls, -2, "length");
+
+    lua_pushcfunction(ls, luaw_vecrotate);
+    lua_setfield(ls, -2, "rotate");
+
+    lua_newtable(ls);
+
+    lua_pushcfunction(ls, luaw_vecadd);
+    lua_setfield(ls, -2, "__add");
+
+    lua_pushcfunction(ls, luaw_vecsub);
+    lua_setfield(ls, -2, "__sub");
+
+    lua_pushcfunction(ls, luaw_vecmul);
+    lua_setfield(ls, -2, "__mul");
+
+    lua_pushcfunction(ls, luaw_vecdiv);
+    lua_setfield(ls, -2, "__div");
+
+    lua_setmetatable(ls, -2);
 }
 
 
-void Software::execute(ShipState &ship, const Input &input)
+static int luaw_veclength(lua_State *ls)
 {
-    lua_getglobal(ls, "flight_control");
-    if (lua_isnil(ls, -1)) {
-        throw std::runtime_error(enm + ": flight_control undefined");
+    lua_pushnumber(ls, lua_tovector(ls, 1).length());
+    return 1;
+}
+
+
+static int luaw_vecrotate(lua_State *ls)
+{
+    mat4 rot = mat4::identity().rotate(lua_tonumber(ls, 3), lua_tovector(ls, 2));
+    lua_pushvector(ls, vec3(rot * vec4::direction(lua_tovector(ls, 1))));
+    return 1;
+}
+
+
+static int luaw_vecadd(lua_State *ls)
+{
+    lua_pushvector(ls, lua_tovector(ls, 1) + lua_tovector(ls, 2));
+    return 1;
+}
+
+
+static int luaw_vecsub(lua_State *ls)
+{
+    lua_pushvector(ls, lua_tovector(ls, 1) - lua_tovector(ls, 2));
+    return 1;
+}
+
+
+static int luaw_vecmul(lua_State *ls)
+{
+    if (lua_isnumber(ls, 1)) {
+        lua_pushvector(ls, static_cast<float>(lua_tonumber(ls, 1)) * lua_tovector(ls, 2));
+    } else {
+        lua_pushvector(ls, static_cast<float>(lua_tonumber(ls, 2)) * lua_tovector(ls, 1));
+    }
+    return 1;
+}
+
+
+static int luaw_vecdiv(lua_State *ls)
+{
+    lua_pushvector(ls, lua_tovector(ls, 1) / lua_tonumber(ls, 2));
+    return 1;
+}
+
+
+static int luaw_crossp(lua_State *ls)
+{
+    lua_pushvector(ls, lua_tovector(ls, 1).cross(lua_tovector(ls, 2)));
+    return 1;
+}
+
+
+static int luaw_dotp(lua_State *ls)
+{
+    lua_pushnumber(ls, lua_tovector(ls, 1).dot(lua_tovector(ls, 2)));
+    return 1;
+}
+
+
+void FlightControlSoftware::execute(ShipState &ship, const Input &input)
+{
+    lua_getglobal(ls(), "flight_control");
+    if (lua_isnil(ls(), -1)) {
+        throw std::runtime_error(enm() + ": flight_control undefined");
     }
 
 
-    lua_newtable(ls);
+    lua_newtable(ls());
 
-    lua_pushstring(ls, "acceleration");
-    lua_pushvector(ls, ship.local_acceleration);
-    lua_settable(ls, -3);
+    lua_pushvector(ls(), ship.local_acceleration);
+    lua_setfield(ls(), -2, "acceleration");
 
-    lua_pushstring(ls, "rotational_velocity");
-    lua_pushvector(ls, ship.local_rotational_velocity);
-    lua_settable(ls, -3);
+    lua_pushvector(ls(), ship.local_rotational_velocity);
+    lua_setfield(ls(), -2, "rotational_velocity");
 
-    lua_pushstring(ls, "total_mass");
-    lua_pushnumber(ls, ship.total_mass);
-    lua_settable(ls, -3);
+    lua_pushnumber(ls(), ship.total_mass);
+    lua_setfield(ls(), -2, "total_mass");
 
-    lua_pushstring(ls, "thrusters");
-    lua_newtable(ls);
+    lua_newtable(ls());
 
     for (size_t i = 0; i < ship.ship->thrusters.size(); i++) {
         const Thruster &thr = ship.ship->thrusters[i];
 
-        lua_pushunsigned(ls, i);
-        lua_newtable(ls);
+        lua_pushinteger(ls(), i);
+        lua_newtable(ls());
 
-        lua_pushstring(ls, "force");
-        lua_pushvector(ls, thr.force);
-        lua_settable(ls, -3);
+        lua_pushvector(ls(), thr.force);
+        lua_setfield(ls(), -2, "force");
 
-        lua_pushstring(ls, "relative_position");
-        lua_pushvector(ls, thr.relative_position);
-        lua_settable(ls, -3);
+        lua_pushvector(ls(), thr.relative_position);
+        lua_setfield(ls(), -2, "relative_position");
 
-        lua_pushstring(ls, "type");
-        lua_pushinteger(ls, thr.type);
-        lua_settable(ls, -3);
+        lua_pushinteger(ls(), thr.type);
+        lua_setfield(ls(), -2, "type");
 
-        lua_pushstring(ls, "general_position");
-        lua_pushinteger(ls, thr.general_position);
-        lua_settable(ls, -3);
+        lua_pushinteger(ls(), thr.general_position);
+        lua_setfield(ls(), -2, "general_position");
 
-        lua_pushstring(ls, "general_direction");
-        lua_pushinteger(ls, thr.general_direction);
-        lua_settable(ls, -3);
+        lua_pushinteger(ls(), thr.general_direction);
+        lua_setfield(ls(), -2, "general_direction");
 
-        lua_settable(ls, -3);
+        lua_settable(ls(), -3);
     }
 
-    lua_settable(ls, -3);
+    lua_setfield(ls(), -2, "thrusters");
 
 
-    lua_newtable(ls);
+    lua_newtable(ls());
 
     vec3 rotate(input.mapping_states.find("rotate.+x")->second - input.mapping_states.find("rotate.-x")->second,
                 input.mapping_states.find("rotate.+y")->second - input.mapping_states.find("rotate.-y")->second,
                 input.mapping_states.find("rotate.+z")->second - input.mapping_states.find("rotate.-z")->second);
 
-    lua_pushstring(ls, "rotate");
-    lua_pushvector(ls, rotate);
-    lua_settable(ls, -3);
+    lua_pushvector(ls(), rotate);
+    lua_setfield(ls(), -2, "rotate");
 
     vec3 strafe(input.mapping_states.find("strafe.+x")->second - input.mapping_states.find("strafe.-x")->second,
                 input.mapping_states.find("strafe.+y")->second - input.mapping_states.find("strafe.-y")->second,
                 input.mapping_states.find("strafe.+z")->second - input.mapping_states.find("strafe.-z")->second);
 
-    lua_pushstring(ls, "strafe");
-    lua_pushvector(ls, strafe);
-    lua_settable(ls, -3);
+    lua_pushvector(ls(), strafe);
+    lua_setfield(ls(), -2, "strafe");
 
-    lua_pushstring(ls, "main_engine");
-    lua_pushnumber(ls, input.mapping_states.find("+main_engine")->second -
-                       input.mapping_states.find("-main_engine")->second);
-    lua_settable(ls, -3);
+    lua_pushnumber(ls(), input.mapping_states.find("+main_engine")->second -
+                         input.mapping_states.find("-main_engine")->second);
+    lua_setfield(ls(), -2, "main_engine");
 
-    lua_pushstring(ls, "kill_rotation");
-    lua_pushboolean(ls, input.mapping_states.find("kill_rotation")->second >= .5f);
-    lua_settable(ls, -3);
+    lua_pushboolean(ls(), input.mapping_states.find("kill_rotation")->second >= .5f);
+    lua_setfield(ls(), -2, "kill_rotation");
 
 
-    lua_call(ls, 2, 1);
+    lua_call(ls(), 2, 1);
 
 
-    for (size_t i = 0; i < ship.thruster_states.size(); i++) {
-        lua_pushunsigned(ls, i);
-        lua_gettable(ls, -2);
-
-        if (lua_isnil(ls, -1)) {
-            ship.thruster_states[i] = 0.f;
-        } else if (lua_isnumber(ls, -1)) {
-            ship.thruster_states[i] = lua_tonumber(ls, -1);
-        } else {
-            throw std::runtime_error(enm + ": Bad thruster state returned");
-        }
-
-        lua_pop(ls, 1);
+    if (lua_isnil(ls(), -1)) {
+        lua_pop(ls(), 1);
+        return;
     }
 
-    lua_pop(ls, 1);
+    for (size_t i = 0; i < ship.thruster_states.size(); i++) {
+        lua_pushinteger(ls(), i);
+        lua_gettable(ls(), -2);
+
+        if (lua_isnil(ls(), -1)) {
+            ship.thruster_states[i] = 0.f;
+        } else if (lua_isnumber(ls(), -1)) {
+            ship.thruster_states[i] = lua_tonumber(ls(), -1);
+        } else {
+            throw std::runtime_error(enm() + ": Bad thruster state returned");
+        }
+
+        lua_pop(ls(), 1);
+    }
+
+    lua_pop(ls(), 1);
+}
+
+
+int ScenarioScript::luaw_enable_player_physics(lua_State *ls)
+{
+    enable_player_physics(lua_toboolean(ls, 1));
+    return 0;
+}
+
+
+int ScenarioScript::luaw_fix_player_to_ground(lua_State *ls)
+{
+    fix_player_to_ground(lua_toboolean(ls, 1));
+    return 0;
+}
+
+
+int ScenarioScript::luaw_set_player_position(lua_State *ls)
+{
+    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    ShipState &ps = ss->current_world_state->ships[ss->current_world_state->player_ship];
+    float lng = lua_tonumber(ls, 1) - M_PIf / 2.f;
+    float lat = lua_tonumber(ls, 2);
+
+    ps.position = ss->current_world_state->earth_mv * vec4(cosf(lat) * sinf(lng), sinf(lat), cosf(lat) * cosf(lng), 1.f);
+    ps.position += static_cast<float>(lua_tonumber(ls, 3)) / 1e3f * ps.position.normalized();
+
+    return 0;
+}
+
+
+int ScenarioScript::luaw_set_player_velocity(lua_State *ls)
+{
+    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+
+    ss->current_world_state->ships[ss->current_world_state->player_ship].velocity =
+        vec3(lua_tonumber(ls, 1), lua_tonumber(ls, 2), lua_tonumber(ls, 3));
+
+    return 0;
+}
+
+
+int ScenarioScript::luaw_set_player_bearing(lua_State *ls)
+{
+    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    ShipState &ps = ss->current_world_state->ships[ss->current_world_state->player_ship];
+    vec3 tangent = vec3(ss->current_world_state->earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(ps.position).normalized();
+
+    ps.up       = ps.position.normalized();
+    ps.forward  = vec3(mat4::identity().rotated(lua_tonumber(ls, 1), ps.up) * vec4::direction(tangent));
+    ps.right    = ps.forward.cross(ps.up);
+
+    return 0;
+}
+
+
+void ScenarioScript::initialize(WorldState &state)
+{
+    lua_pushcfunction(ls(), ScenarioScript::luaw_enable_player_physics);
+    lua_setglobal(ls(), "enable_player_physics");
+
+    lua_pushcfunction(ls(), ScenarioScript::luaw_fix_player_to_ground);
+    lua_setglobal(ls(), "fix_player_to_ground");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_position, 1);
+    lua_setglobal(ls(), "set_player_position");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_velocity, 1);
+    lua_setglobal(ls(), "set_player_velocity");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_bearing, 1);
+    lua_setglobal(ls(), "set_player_bearing");
+
+    current_world_state = &state;
+
+    lua_getglobal(ls(), "initialize");
+    lua_call(ls(), 0, 0);
+
+    current_world_state = nullptr;
+}
+
+
+void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, const Input &input)
+{
+    ShipState &ops = out_state.ships[out_state.player_ship];
+    const ShipState &ips = in_state.ships[in_state.player_ship];
+
+    lua_getglobal(ls(), "step");
+
+    lua_pushnumber(ls(), out_state.interval);
+
+    lua_newtable(ls());
+
+    struct cvecval { const char *name; const vec3 &vec; };
+    for (const auto &vec: (cvecval[]){ { "position", ips.position }, { "velocity", ips.velocity },
+                                       { "up", ips.up }, { "forward", ips.forward }, { "right", ips.right } })
+    {
+        lua_pushvector(ls(), vec.vec);
+        lua_setfield(ls(), -2, vec.name);
+    }
+
+    current_world_state = &out_state;
+    lua_call(ls(), 2, 1);
+    current_world_state = nullptr;
+
+    if (lua_isnil(ls(), -1)) {
+        lua_pop(ls(), 1);
+        return;
+    }
+
+    struct vecval { const char *name; vec3 &vec; };
+    for (const auto &vec: (vecval[]){ { "position", ops.position }, { "velocity", ops.velocity },
+                                      { "up", ops.up }, { "forward", ops.forward }, { "right", ops.right } })
+    {
+        lua_getfield(ls(), -1, vec.name);
+        vec.vec = lua_tovector(ls(), -1);
+        lua_pop(ls(), 1);
+    }
+
+    if (!ops.up.length()) {
+        ops.up = ops.right.cross(ops.forward);
+    } else if (!ops.forward.length()) {
+        ops.forward = ops.up.cross(ops.right);
+    } else if (!ops.right.length()) {
+        ops.right = ops.forward.cross(ops.up);
+    }
+
+    lua_pop(ls(), 1);
+}
+
+
+template<> FlightControlSoftware &Software::sub<FlightControlSoftware>(void)
+{
+    if (t != FLIGHT_CONTROL) {
+        throw std::runtime_error("Attempted to cast non-flight-control software to FlightControlSoftware");
+    }
+    return *reinterpret_cast<FlightControlSoftware *>(sw);
+}
+
+template<> ScenarioScript &Software::sub<ScenarioScript>(void)
+{
+    if (t != SCENARIO) {
+        throw std::runtime_error("Attempted to cast non-scenario-script to ScenarioScript");
+    }
+    return *reinterpret_cast<ScenarioScript *>(sw);
 }
 
 
@@ -241,9 +516,21 @@ void load_software(void)
 }
 
 
-void execute_software(ShipState &ship, const Input &input)
+void execute_flight_control_software(ShipState &ship, const Input &input)
 {
     for (Software *s: software[Software::FLIGHT_CONTROL]) {
-        s->execute(ship, input);
+        s->sub<FlightControlSoftware>().execute(ship, input);
     }
+}
+
+
+Software *get_scenario(const std::string &name)
+{
+    for (Software *s: software[Software::SCENARIO]) {
+        if (s->name() == name) {
+            return s;
+        }
+    }
+
+    return nullptr;
 }

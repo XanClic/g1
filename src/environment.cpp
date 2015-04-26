@@ -28,11 +28,10 @@ static XSMD *earth, *skybox;
 static gl::array_texture *day_tex, *night_tex;
 static gl::texture *cloud_normal_map, *aurora_bands, *moon_tex, *atmo_map;
 static gl::cubemap *skybox_tex;
-static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *sun_prg, *moon_prg, *aurora_prg, *skybox_prg;
+static gl::program *earth_prg, *cloud_prg, *atmob_prg, *atmof_prg, *atmoi_prg, *sun_prg, *moon_prg, *aurora_prg, *skybox_prg;
 static gl::framebuffer *sub_atmo_fbo;
 static gl::vertex_attrib *earth_tex_va;
 static std::vector<gl::vertex_array *> aurora_vas;
-static mat4 earth_mv, cloud_mv, atmo_mv;
 
 // type \in \{ day, night \}
 static int max_tex_per_type = 20;
@@ -324,9 +323,6 @@ void init_environment(void)
     cloud_normal_map->wrap(GL_REPEAT);
 
 
-    earth_mv = mat4::identity().scaled(vec3(6371.f, 6371.f, 6371.f))
-                               .rotated(.41f, vec3(1.f, 0.f, 0.f)); // axial tilt
-
     if (gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
         earth_prg = new gl::program {gl::shader::vert("shaders/earth_vert.glsl"),
                                      gl::shader::frag("shaders/earth_frag.glsl")};
@@ -346,6 +342,9 @@ void init_environment(void)
 
     atmof_prg = new gl::program {gl::shader::vert("shaders/atmof_vert.glsl"),
                                  gl::shader::frag("shaders/atmof_frag.glsl")};
+
+    atmoi_prg = new gl::program {gl::shader::vert("shaders/scratch_vert.glsl"),
+                                 gl::shader::frag("shaders/atmoi_frag.glsl")};
 
     earth->bind_program_vertex_attribs(*earth_prg);
     earth->bind_program_vertex_attribs(*cloud_prg);
@@ -893,6 +892,8 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
 
 void draw_environment(const GraphicsStatus &status, const WorldState &world)
 {
+    const ShipState &ship = world.ships[world.player_ship];
+
     if (global_options.aurora) {
         // Load dynamic data first, so it can be copied over the course of the function
         if (aurora_vas.empty()) {
@@ -916,20 +917,19 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     }
 
 
-    mat4 cur_earth_mv  = earth_mv.rotated(world.earth_angle, vec3(0.f, 1.f, 0.f));
-    mat4 cur_cloud_mv  = cur_earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
-    mat4 cur_atmo_mv   = cur_earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
-    mat4 cur_aurora_mv = cur_earth_mv.scaled(vec3(6421.f / 6371.f, 6421.f / 6371.f, 6421.f / 6371.f));
+    mat4 cur_cloud_mv  = world.earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
+    mat4 cur_atmo_mv   = world.earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
+    mat4 cur_aurora_mv = world.earth_mv.scaled(vec3(6421.f / 6371.f, 6421.f / 6371.f, 6421.f / 6371.f));
 
 
     static float lod_update_timer;
 
     lod_update_timer += world.interval;
-    update_lods(status, cur_earth_mv, lod_update_timer >= .2f);
+    update_lods(status, world.earth_mv, lod_update_timer >= .2f);
     lod_update_timer = fmodf(lod_update_timer, .2f);
 
 
-    float sa_zn = (status.camera_position.length() - 6400.f) / 1.5f;
+    float sa_zn = (status.camera_position.length() - 6350.f) / 1.5f;
     float sa_zf =  status.camera_position.length() + 7000.f;
 
     mat4 sa_proj = mat4::projection(status.yfov, status.aspect, sa_zn, sa_zf);
@@ -1015,9 +1015,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     glCullFace(GL_BACK);
 
     earth_prg->use();
-    earth_prg->uniform<mat4>("mat_mv") = cur_earth_mv;
+    earth_prg->uniform<mat4>("mat_mv") = world.earth_mv;
     earth_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
-    earth_prg->uniform<mat3>("mat_nrm") = mat3(cur_earth_mv).transposed_inverse();
+    earth_prg->uniform<mat3>("mat_nrm") = mat3(world.earth_mv).transposed_inverse();
     earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
     earth_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
 
@@ -1035,7 +1035,15 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     sub_atmo_fbo->mask(1);
     sub_atmo_fbo->bind();
 
+    float height = status.camera_position.length() - 6371.f;
+
     glDepthMask(GL_FALSE);
+    if (height < 10.f) {
+        glCullFace(GL_FRONT);
+    }
+    if (height > 8.f && height < 12.f) {
+        glDisable(GL_CULL_FACE);
+    }
 
     cloud_normal_map->bind();
 
@@ -1053,6 +1061,12 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     earth->draw();
 
+    if (height < 10.f) {
+        glCullFace(GL_BACK);
+    }
+    if (height > 8.f && height < 12.f) {
+        glEnable(GL_CULL_FACE);
+    }
     glDepthMask(GL_TRUE);
 
 
@@ -1063,21 +1077,37 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     sub_atmo_fbo->depth().bind();
     atmo_map->bind();
 
-    atmof_prg->use();
-    atmof_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
-    atmof_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
-    atmof_prg->uniform<mat3>("mat_nrm") = mat3(cur_atmo_mv).transposed_inverse();
-    atmof_prg->uniform<vec3>("cam_pos") = status.camera_position;
-    atmof_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
-    atmof_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
-    atmof_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
-    atmof_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
-    atmof_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
-    atmof_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
-    atmof_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
-    atmof_prg->uniform<gl::texture>("atmo_map") = *atmo_map;
+    bool in_atmosphere = status.camera_position.length() <= 6441.f;
 
-    earth->draw();
+    gl::program *draw_earth_prg = in_atmosphere ? atmoi_prg : atmof_prg;
+
+    draw_earth_prg->use();
+    if (!in_atmosphere) {
+        draw_earth_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
+        draw_earth_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
+        draw_earth_prg->uniform<mat3>("mat_nrm") = mat3(cur_atmo_mv).transposed_inverse();
+    } else {
+        draw_earth_prg->uniform<vec3>("cam_right") = ship.right;
+        draw_earth_prg->uniform<vec3>("cam_up") = ship.up;
+        draw_earth_prg->uniform<float>("height") = height / 70.f;
+        draw_earth_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
+        draw_earth_prg->uniform<float>("yhfov") = status.yfov / 2.f;
+    }
+    draw_earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
+    draw_earth_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
+    draw_earth_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
+    draw_earth_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
+    draw_earth_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
+    draw_earth_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
+    draw_earth_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
+    draw_earth_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
+    draw_earth_prg->uniform<gl::texture>("atmo_map") = *atmo_map;
+
+    if (in_atmosphere) {
+        quad_vertices->draw(GL_TRIANGLE_STRIP);
+    } else {
+        earth->draw();
+    }
 
 
     if (global_options.aurora) {

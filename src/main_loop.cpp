@@ -2,6 +2,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -44,7 +45,7 @@ static void physics_worker(SharedInfo &info)
 }
 
 
-void main_loop(void)
+void main_loop(const std::string &scenario)
 {
     SharedInfo info;
 
@@ -58,7 +59,7 @@ void main_loop(void)
     info.world_states.emplace_back(new WorldState);
     info.world_states.emplace_back(new WorldState);
 
-    info.world_states[0]->initialize();
+    info.world_states[0]->initialize(scenario);
 
     std::thread physics_thr(physics_worker, std::ref(info));
 
