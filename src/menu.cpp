@@ -1,3 +1,6 @@
+#include <stdexcept>
+#include <string>
+
 #include <dake/dake.hpp>
 
 #include "localize.hpp"
@@ -13,7 +16,8 @@ using namespace dake::math;
 enum Buttons {
     NONE,
 
-    TEST_ENV,
+    TEST_ENVIRONMENT,
+    TEST_SCENARIO,
 };
 
 
@@ -26,12 +30,13 @@ static float menu_bg_aspect;
 static Buttons hover, down;
 
 
-static void render_menu(bool loading = false);
+static void render_menu(Buttons loading = NONE);
 
 
-void menu_loop(void)
+std::string menu_loop(void)
 {
-    bool quit = false, to_game = false;
+    bool quit = false;
+    Buttons to_game = NONE;
     bool mouse_down = false, mouse_was_down;
     vec2 mouse_pos;
 
@@ -61,18 +66,20 @@ void menu_loop(void)
         ui_process_menu_events(quit, mouse_down, mouse_pos);
 
         hover = NONE; down = NONE;
-        if ((mouse_pos.x() > -.5f) && (mouse_pos.x() < .5f) && (mouse_pos.y() > -.95f) && (mouse_pos.y() < -.65f)) {
-            (mouse_down ? down : hover) = TEST_ENV;
+        if (mouse_pos.x() < 0.f && mouse_pos.y() > -.95f && mouse_pos.y() < -.65f) {
+            (mouse_down ? down : hover) = TEST_ENVIRONMENT;
+        } else if (mouse_pos.x() > 0.f && mouse_pos.y() > -.95f && mouse_pos.y() < -.65f) {
+            (mouse_down ? down : hover) = TEST_SCENARIO;
         }
 
-        if (mouse_was_down && !mouse_down && (hover == TEST_ENV)) {
-            to_game = true;
+        if (mouse_was_down && !mouse_down && hover != NONE) {
+            to_game = hover;
         }
 
         render_menu();
     }
 
-    render_menu(true);
+    render_menu(to_game);
 
     delete menu_bg;
     delete menu_prg;
@@ -81,10 +88,18 @@ void menu_loop(void)
     if (quit) {
         exit(0);
     }
+
+    if (to_game == TEST_ENVIRONMENT) {
+        return "null";
+    } else if (to_game == TEST_SCENARIO) {
+        return "0";
+    } else {
+        throw std::runtime_error("Bad to_game value");
+    }
 }
 
 
-static void render_menu(bool loading)
+static void render_menu(Buttons loading)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -104,18 +119,30 @@ static void render_menu(bool loading)
     menu_va->draw(GL_TRIANGLE_STRIP);
 
 
-    if (!loading) {
-        set_text_color((hover == TEST_ENV) ? vec4(1.f, 1.f, 1.f, 1.f)
-                     : (down  == TEST_ENV) ? vec4(.3f, .3f, .3f, 1.f)
+    if (loading == NONE) {
+        set_text_color((hover == TEST_ENVIRONMENT) ? vec4(1.f, 1.f, 1.f, 1.f)
+                     : (down  == TEST_ENVIRONMENT) ? vec4(.3f, .3f, .3f, 1.f)
                                            : vec4(.6f, .6f, .6f, 1.f));
 
-        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_ENVIRONMENT),
-                  ALIGN_CENTER, ALIGN_BOTTOM);
+        draw_text(vec2(-.9f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_ENVIRONMENT),
+                  ALIGN_LEFT, ALIGN_BOTTOM);
+
+        set_text_color((hover == TEST_SCENARIO) ? vec4(1.f, 1.f, 1.f, 1.f)
+                     : (down  == TEST_SCENARIO) ? vec4(.3f, .3f, .3f, 1.f)
+                                           : vec4(.6f, .6f, .6f, 1.f));
+
+        draw_text(vec2(.9f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_SCENARIO),
+                  ALIGN_RIGHT, ALIGN_BOTTOM);
     } else {
         set_text_color(vec4(.5f, .5f, .5f, 1.f));
 
-        draw_text(vec2(0.f, -.9f), vec2(.1f * height / width, .2f), localize(LS_LOADING),
-                  ALIGN_CENTER, ALIGN_BOTTOM);
+        draw_text(vec2(-.9f, -.9f), vec2(.1f * height / width, .2f),
+                  localize(loading == TEST_ENVIRONMENT ? LS_LOADING : LS_TEST_ENVIRONMENT),
+                  ALIGN_LEFT, ALIGN_BOTTOM);
+
+        draw_text(vec2(.9f, -.9f), vec2(.1f * height / width, .2f),
+                  localize(loading == TEST_SCENARIO ? LS_LOADING : LS_TEST_SCENARIO),
+                  ALIGN_RIGHT, ALIGN_BOTTOM);
     }
 
 

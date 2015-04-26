@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <getopt.h>
+#include <string>
 
 #include "graphics.hpp"
 #include "main_loop.hpp"
@@ -134,12 +135,12 @@ int main(int argc, char *argv[])
 
     init_ui();
 
-    menu_loop();
+    std::string scenario = menu_loop();
 
     init_game_graphics();
     load_software();
 
-    main_loop();
+    main_loop(scenario);
 
 
     return 0;

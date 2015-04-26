@@ -22,7 +22,7 @@ void main(void)
 
     vec2 cntxc = (vf_txc - night_texture_params[vf_tex.y].pq) * night_texture_params[vf_tex.y].st;
     vec2 night_tex = texture(night_textures[vf_tex.y], cntxc).rg;
-    vec3 night = mix(vec3(0.005, 0.0075, 0.01), vec3(0.2, 0.2, 0.1), night_tex.r);
+    vec3 night = mix(vec3(0.0005, 0.00075, 0.001), vec3(0.2, 0.2, 0.1), night_tex.r);
 
     vec3 normal = normalize(vf_nrm);
     vec3 to_viewer = normalize(cam_pos - vf_pos);
@@ -52,6 +52,6 @@ void main(void)
 
     vec3 diff_color = smoothstep(-0.1, 0.5, ndotx) * day.rgb;
 
-    out_col = vec4((1.0 - day.a * 0.7) * mix(diff_color, spec_color, night_tex.g) + night_addition, 1.0);
+    out_col = vec4((1.0 - day.a * 0.9) * mix(diff_color, spec_color, night_tex.g) + night_addition, 1.0);
     out_stencil = vec4(1.0);
 }

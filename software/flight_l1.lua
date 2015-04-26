@@ -3,8 +3,13 @@ name = "L1"
 
 
 function flight_control(ship_state, input)
-    local states = {}
-    local thruster_i = 0
+    if input.kill_rotation then
+        return nil
+    end
+
+
+    states = {}
+    thruster_i = 0
 
     while ship_state.thrusters[thruster_i] ~= nil do
         thruster = ship_state.thrusters[thruster_i]
