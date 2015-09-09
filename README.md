@@ -72,10 +72,13 @@ TODO
 - ~~Get cockpit scratches right (need a normal map for the cockpit glass)~~
 - ~~Border for the HUD~~
 - Cockpit instruments
-- In-atmospheric graphical display; physics doesn’t matter so far, it just needs
-  to support live-rendered scripted cinematics
-    - Preferably sub-clouds
+- ~~In-atmospheric graphical display; physics doesn’t matter so far, it just
+  needs to support live-rendered scripted cinematics~~
+    - ~~Preferably sub-clouds~~
     - And rain! (god that would be awesome)
+    - Have good clouds
+    - Have ground meshes, or invent a scenario where we don't have to start
+      from the ground
 - ~~Aurora~~
 - Specify bytecode for in-game software (IGS)
 - Performance improvements
@@ -94,7 +97,7 @@ TODO
   (probably with the IGS defining a default)
 - Write better flight control software
     - L2
-        - Kill Rotation
+        - ~~Kill Rotation~~
         - Prograde
         - Retrograde
         - Orbit Normal
@@ -120,5 +123,7 @@ TODO
 - Design HUD IGS interface
     - And write HUD IGS
 - Start cinematic (and re-entry)
+  - ~~Scenario scripts~~
+  - Make it nice
 - Flesh out setting and plot
 - All the things missing from this list
