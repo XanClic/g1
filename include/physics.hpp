@@ -16,9 +16,8 @@
 struct WorldState {
     void initialize(const std::string &scenario);
 
-    std::chrono::steady_clock::time_point timestamp;
-    std::chrono::system_clock::time_point virtual_timestamp;
-    float interval;
+    std::chrono::system_clock::time_point timestamp, real_timestamp;
+    float interval, real_interval;
 
     dake::math::vec3 sun_light_dir;
     dake::math::vec3 moon_pos;

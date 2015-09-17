@@ -318,7 +318,7 @@ void do_graphics(const WorldState &input)
     ui_swap_buffers();
 
 
-    status.luminance += input.interval * (highest_avg - status.luminance);
+    status.luminance += input.real_interval * (highest_avg - status.luminance);
 
     if (status.luminance > 2.f) {
         status.luminance = 2.f;
