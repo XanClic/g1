@@ -64,7 +64,7 @@ class FlightControlSoftware: public SpecializedSoftware {
         {}
 
     public:
-        void execute(ShipState &ship, const Input &input);
+        void execute(ShipState &ship, const Input &input, float interval);
 
         friend class Software;
 };
@@ -98,7 +98,8 @@ template<> ScenarioScript &Software::sub<ScenarioScript>(void);
 
 void load_software(void);
 
-void execute_flight_control_software(ShipState &ship, const Input &input);
+void execute_flight_control_software(ShipState &ship, const Input &input,
+                                     float interval);
 
 Software *get_scenario(const std::string &name);
 
