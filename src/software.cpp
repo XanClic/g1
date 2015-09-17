@@ -245,7 +245,7 @@ static int luaw_dotp(lua_State *ls)
 }
 
 
-void FlightControlSoftware::execute(ShipState &ship, const Input &input)
+void FlightControlSoftware::execute(ShipState &ship, const Input &input, float interval)
 {
     lua_getglobal(ls(), "flight_control");
     if (lua_isnil(ls(), -1)) {
@@ -317,7 +317,10 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input)
     lua_setfield(ls(), -2, "kill_rotation");
 
 
-    lua_call(ls(), 2, 1);
+    lua_pushnumber(ls(), interval);
+
+
+    lua_call(ls(), 3, 1);
 
 
     if (lua_isnil(ls(), -1)) {
@@ -516,10 +519,10 @@ void load_software(void)
 }
 
 
-void execute_flight_control_software(ShipState &ship, const Input &input)
+void execute_flight_control_software(ShipState &ship, const Input &input, float interval)
 {
     for (Software *s: software[Software::FLIGHT_CONTROL]) {
-        s->sub<FlightControlSoftware>().execute(ship, input);
+        s->sub<FlightControlSoftware>().execute(ship, input, interval);
     }
 }
 

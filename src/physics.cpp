@@ -82,7 +82,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
 
     ShipState &player = output.ships[output.player_ship];
-    execute_flight_control_software(player, user_input);
+    execute_flight_control_software(player, user_input, output.interval);
 
 
     for (int i = 0; i < static_cast<int>(input.ships.size()); i++) {
