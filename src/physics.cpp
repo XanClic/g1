@@ -17,25 +17,37 @@ static bool player_fixed_to_ground = false;
 static float fixed_to_ground_length = 0.f; // FIXME
 
 
-static inline float time_interval(std::chrono::system_clock::duration d)
+static inline float time_interval(const std::chrono::system_clock::duration &d)
 {
-    return std::chrono::duration_cast<std::chrono::duration<float>>(d).count();
+    using namespace std::chrono;
+
+    return duration_cast<duration<float>>(d).count();
+}
+
+
+static inline std::chrono::system_clock::duration
+    interval_duration(float interval)
+{
+    using namespace std::chrono;
+
+    return duration_cast<system_clock::duration>(duration<float>(interval));
 }
 
 
 void do_physics(WorldState &output, const WorldState &input, const Input &user_input)
 {
-    output.timestamp = std::chrono::steady_clock::now();
-    output.interval  = time_interval(output.timestamp - input.timestamp);
+    output.real_timestamp = std::chrono::system_clock::now();
+    output.real_interval  = time_interval(output.real_timestamp - input.real_timestamp);
 
-    output.virtual_timestamp = std::chrono::system_clock::now();
+    output.interval  = output.real_interval;
+    output.timestamp = input.timestamp + interval_duration(output.interval);
 
     output.scenario = input.scenario;
 
 
     // note that this program's timezone is UTC
 
-    time_t time_t_now = std::chrono::system_clock::to_time_t(output.virtual_timestamp);
+    time_t time_t_now = std::chrono::system_clock::to_time_t(output.timestamp);
     // 0 == vernal point (spring)
     float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * M_PIf;
 
@@ -43,7 +55,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
     // 2015-04-18 18:56:56
     auto new_moon = std::chrono::system_clock::from_time_t(1429379816);
-    float moon_phase_time = time_interval(output.virtual_timestamp - new_moon);
+    float moon_phase_time = time_interval(output.timestamp - new_moon);
 
     float moon_phase_angle = fmodf(moon_phase_time / 2551442.9f, 1.f) * 2.f * M_PIf;
 
@@ -58,7 +70,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     last_midnight_tm.tm_hour = last_midnight_tm.tm_min = last_midnight_tm.tm_sec = 0;
 
     auto last_midnight = std::chrono::system_clock::from_time_t(mktime(&last_midnight_tm));
-    float second_of_day = time_interval(output.virtual_timestamp - last_midnight);
+    float second_of_day = time_interval(output.timestamp - last_midnight);
 
     output.earth_angle  = second_of_day / 86164.09f * 2.f * M_PIf;
     output.earth_angle -= year_angle;
@@ -208,10 +220,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
 void WorldState::initialize(const std::string &sn)
 {
-    timestamp = std::chrono::steady_clock::now();
+    real_timestamp = std::chrono::system_clock::now();
     interval  = 1.f / 60.f;
 
-    virtual_timestamp = std::chrono::system_clock::now();
+    timestamp = std::chrono::system_clock::now();
 
     scenario = get_scenario(sn);
     if (!scenario) {
@@ -252,14 +264,14 @@ void WorldState::initialize(const std::string &sn)
     ships[0].ship->thrusters[12] = Thruster(Thruster::RCS,  Thruster::LEFT,  Thruster::DOWN,
                                             vec3(-2.f, 0.f,  0.f), vec3(  0.f, -50.f,   0.f));
 
-    time_t time_t_now = std::chrono::system_clock::to_time_t(virtual_timestamp);
+    time_t time_t_now = std::chrono::system_clock::to_time_t(timestamp);
     float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * M_PIf;
 
     tm last_midnight_tm = *gmtime(&time_t_now);
     last_midnight_tm.tm_hour = last_midnight_tm.tm_min = last_midnight_tm.tm_sec = 0;
 
     auto last_midnight = std::chrono::system_clock::from_time_t(mktime(&last_midnight_tm));
-    float second_of_day = time_interval(virtual_timestamp - last_midnight);
+    float second_of_day = time_interval(timestamp - last_midnight);
 
     float earth_a  = second_of_day / 86164.09f * 2.f * M_PIf - year_angle;
 
