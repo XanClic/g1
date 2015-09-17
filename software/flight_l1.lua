@@ -3,11 +3,6 @@ name = "L1"
 
 
 function flight_control(ship_state, input, interval)
-    if input.kill_rotation then
-        return nil
-    end
-
-
     states = {}
     thruster_i = 0
 
