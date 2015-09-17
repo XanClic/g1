@@ -332,11 +332,9 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
         lua_pushinteger(ls(), i);
         lua_gettable(ls(), -2);
 
-        if (lua_isnil(ls(), -1)) {
-            ship.thruster_states[i] = 0.f;
-        } else if (lua_isnumber(ls(), -1)) {
-            ship.thruster_states[i] = lua_tonumber(ls(), -1);
-        } else {
+        if (lua_isnumber(ls(), -1)) {
+            ship.thruster_states[i] += lua_tonumber(ls(), -1);
+        } else if (!lua_isnil(ls(), -1)) {
             throw std::runtime_error(enm() + ": Bad thruster state returned");
         }
 
@@ -521,6 +519,9 @@ void load_software(void)
 
 void execute_flight_control_software(ShipState &ship, const Input &input, float interval)
 {
+    memset(ship.thruster_states.data(), 0,
+           sizeof(ship.thruster_states[0]) * ship.thruster_states.size());
+
     for (Software *s: software[Software::FLIGHT_CONTROL]) {
         s->sub<FlightControlSoftware>().execute(ship, input, interval);
     }
