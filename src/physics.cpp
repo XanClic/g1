@@ -224,9 +224,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 void WorldState::initialize(const std::string &sn)
 {
     real_timestamp = std::chrono::system_clock::now();
-    interval  = 1.f / 60.f;
+    real_interval  = 1.f / 60.f;
 
     timestamp = std::chrono::system_clock::now();
+    interval  = 1.f / 60.f;
 
     scenario = get_scenario(sn);
     if (!scenario) {
