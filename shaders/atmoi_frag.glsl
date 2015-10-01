@@ -29,9 +29,8 @@ void main(void)
     float strength = mix(pow(min(1.0, zb_a / div), exp), 0.7, (1.0 - stencil_val) * (1.0 - height));
 
     vec3 to_viewer = -normalize(vf_dir);
-    vec3 vf_pos = cam_pos - zb_a * to_viewer;
-
-    vec3 normal = normalize(vf_pos);
+    // FIXME (works fine as long as the earth is centered at (0, 0, 0), though)
+    vec3 normal = normalize(cam_pos);
 
     float to_viewer_strength = pow(clamp(dot(light_dir, to_viewer), 0.0, 1.0), 5.0);
 
