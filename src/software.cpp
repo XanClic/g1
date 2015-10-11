@@ -47,19 +47,19 @@ Software::Software(const std::string &n, const std::string &filename):
     sg("FLIGHT_CONTROL", FLIGHT_CONTROL);
     sg("SCENARIO", SCENARIO);
 
-    sg("RCS",  Thruster::RCS);
-    sg("MAIN", Thruster::MAIN);
+    sg("THRUSTER_RCS",  THRUSTER_RCS);
+    sg("THRUSTER_MAIN", THRUSTER_MAIN);
 
-    sg("RIGHT",    Thruster::RIGHT);
-    sg("LEFT",     Thruster::LEFT);
-    sg("UP",       Thruster::UP);
-    sg("DOWN",     Thruster::DOWN);
-    sg("FORWARD",  Thruster::FORWARD);
-    sg("BACKWARD", Thruster::BACKWARD);
-    sg("TOP",      Thruster::TOP);
-    sg("BOTTOM",   Thruster::BOTTOM);
-    sg("FRONT",    Thruster::FRONT);
-    sg("BACK",     Thruster::BACK);
+    sg("RIGHT",    RIGHT);
+    sg("LEFT",     LEFT);
+    sg("UP",       UP);
+    sg("DOWN",     DOWN);
+    sg("FORWARD",  FORWARD);
+    sg("BACKWARD", BACKWARD);
+    sg("TOP",      TOP);
+    sg("BOTTOM",   BOTTOM);
+    sg("FRONT",    FRONT);
+    sg("BACK",     BACK);
 
 
     lua_pushcfunction(ls, luaw_crossp);
