@@ -89,10 +89,17 @@ void Tile::load_source(const char *name, int lod, int si, int ti)
 
     source = malloc(source_size);
     if (!source) {
+        fclose(fp);
         throw std::runtime_error("Could not allocate memory");
     }
 
-    fread(source, 1, source_size, fp);
+    if (fread(source, 1, source_size, fp) < source_size) {
+        fclose(fp);
+        free(source);
+        source = nullptr;
+        throw std::runtime_error("Failed to read tile from "
+                                 + std::string(fname));
+    }
     fclose(fp);
 }
 
@@ -112,10 +119,17 @@ void Tile::load_alpha_source(const char *name, int lod, int si, int ti)
 
     alpha_source = malloc(alpha_source_size);
     if (!alpha_source) {
+        fclose(fp);
         throw std::runtime_error("Could not allocate memory");
     }
 
-    fread(alpha_source, 1, alpha_source_size, fp);
+    if (fread(alpha_source, 1, alpha_source_size, fp) < alpha_source_size) {
+        fclose(fp);
+        free(alpha_source);
+        alpha_source = nullptr;
+        throw std::runtime_error("Failed to read tile alpha from "
+                                 + std::string(fname));
+    }
     fclose(fp);
 }
 

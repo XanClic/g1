@@ -117,17 +117,28 @@ XSMD *load_xsmd(const std::string &name)
     }
 
     XSMD::XSMDHeader *hdr = new XSMD::XSMDHeader;
-    fread(hdr, sizeof(*hdr), 1, fp);
+    if (fread(hdr, sizeof(*hdr), 1, fp) < 1) {
+        fclose(fp);
+        delete hdr;
+        throw std::runtime_error("Failed to read XSMD header from " + name
+                                 + ": ");
+    }
 
     if (strncmp(hdr->magic, "XSOGLVDD", sizeof(hdr->magic))) {
+        fclose(fp);
+        delete hdr;
         throw std::invalid_argument("Given file " + name + " is not an XSMD file");
     }
 
     if (strncmp(hdr->version, "NPRJAW", sizeof(hdr->version))) {
+        fclose(fp);
+        delete hdr;
         throw std::invalid_argument("Given file " + name + " has an unknown XSMD version");
     }
 
     if (hdr->incompatible_features) {
+        fclose(fp);
+        delete hdr;
         throw std::invalid_argument("Given XSMD file " + name + " has incompatible features");
     }
 
@@ -142,11 +153,33 @@ XSMD *load_xsmd(const std::string &name)
     for (unsigned i = 0; i < hdr->vertex_attrib_count; i++) {
         ahdrs[i] = static_cast<XSMD::XSMDVertexAttrib *>(malloc(sizeof(*ahdrs[i])));
 
-        fread(ahdrs[i], sizeof(*ahdrs[i]), 1, fp);
+        if (fread(ahdrs[i], sizeof(*ahdrs[i]), 1, fp) < 1) {
+            fclose(fp);
+            for (unsigned j = 0; j < i; j++) {
+                free(ahdrs[i]);
+            }
+            free(ahdrs);
+            delete[] strides;
+            delete hdr;
+            throw std::runtime_error("Failed to read data from the XSMD file "
+                                     + name);
+        }
 
         ahdrs[i] = static_cast<XSMD::XSMDVertexAttrib *>(realloc(ahdrs[i],
                                                                  sizeof(*ahdrs[i]) + ahdrs[i]->name_length + 1));
-        fread(ahdrs[i]->name, 1, ahdrs[i]->name_length, fp);
+        if (fread(ahdrs[i]->name, 1, ahdrs[i]->name_length, fp)
+            < ahdrs[i]->name_length)
+        {
+            fclose(fp);
+            for (unsigned j = 0; j < i; j++) {
+                free(ahdrs[i]);
+            }
+            free(ahdrs);
+            delete[] strides;
+            delete hdr;
+            throw std::runtime_error("Failed to read data from the XSMD file "
+                                     + name);
+        }
         ahdrs[i]->name[ahdrs[i]->name_length] = 0;
 
         strides[i + 1] = strides[i] + ahdrs[i]->elements_per_vertex * XSMDDataTypeSize[ahdrs[i]->element_type];
@@ -155,7 +188,19 @@ XSMD *load_xsmd(const std::string &name)
     fseek(fp, hdr->vertex_data_offset, SEEK_SET);
 
     void *attr_data = malloc(hdr->vertex_count * strides[hdr->vertex_attrib_count]);
-    fread(attr_data, strides[hdr->vertex_attrib_count], hdr->vertex_count, fp);
+    if (fread(attr_data, strides[hdr->vertex_attrib_count], hdr->vertex_count,
+              fp) < hdr->vertex_count)
+    {
+        fclose(fp);
+        for (unsigned i = 0; i < hdr->vertex_attrib_count; i++) {
+            free(ahdrs[i]);
+        }
+        free(ahdrs);
+        delete[] strides;
+        delete hdr;
+        throw std::runtime_error("Failed to read data from the XSMD file "
+                                 + name);
+    }
 
     fclose(fp);
 
