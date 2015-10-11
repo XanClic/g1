@@ -1,0 +1,8 @@
+{
+    "empty_mass":   "single",
+
+    "thrusters": {
+        "type": "array",
+        "of":   "Thruster"
+    }
+}

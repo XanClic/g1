@@ -1,0 +1,28 @@
+[
+    "RIGHT",
+    "LEFT",
+    "UP",
+    "DOWN",
+    "FORWARD",
+    "BACKWARD",
+
+    {
+        "name":     "TOP",
+        "alias":    "UP"
+    },
+
+    {
+        "name":     "BOTTOM",
+        "alias":    "DOWN"
+    },
+
+    {
+        "name":     "FRONT",
+        "alias":    "FORWARD"
+    },
+
+    {
+        "name":     "BACK",
+        "alias":    "BACKWARD"
+    }
+]

@@ -10,13 +10,13 @@ function flight_control(ship_state, input, interval)
         thruster = ship_state.thrusters[thruster_i]
         state = 0.0
 
-        if thruster.type == MAIN then
+        if thruster.type == THRUSTER_MAIN then
             if thruster.general_direction == BACKWARD then
                 state = -input.main_engine
             else
                 state =  input.main_engine
             end
-        elseif thruster.type == RCS then
+        elseif thruster.type == THRUSTER_RCS then
             if thruster.general_direction == RIGHT or thruster.general_direction == LEFT then
                 if thruster.general_direction == RIGHT then
                     sign =  1.0

@@ -24,16 +24,28 @@ ExternalProject_Add(
 )
 
 ExternalProject_Get_Property(dake_source binary_dir)
+set(dake_dir "${binary_dir}")
 
 add_library(dake IMPORTED STATIC)
 add_dependencies(dake dake_source)
 set_property(TARGET dake APPEND PROPERTY IMPORTED_CONFIGURATIONS NOCONFIG)
-set_target_properties(dake PROPERTIES IMPORTED_LOCATION_NOCONFIG ${binary_dir}/libdake.a)
+set_target_properties(dake PROPERTIES IMPORTED_LOCATION_NOCONFIG "${binary_dir}/libdake.a")
 
-include_directories(include ${binary_dir}/include ${SDL2_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
-link_directories(${binary_dir})
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include"
+                   COMMAND mkdir -p "${CMAKE_BINARY_DIR}/include")
 
-add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp src/physics.cpp src/environment.cpp src/cockpit.cpp src/xsmd.cpp src/software.cpp src/localize.cpp src/text.cpp src/menu.cpp src/aurora.cpp)
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAKE_BINARY_DIR}/serializer.cpp"
+                   COMMAND "${CMAKE_SOURCE_DIR}/tools/generate-serializer.rb" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
+                   DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
+
+include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include" ${SDL2_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
+link_directories("${dake_dir}")
+
+add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
+                  src/physics.cpp src/environment.cpp src/cockpit.cpp
+                  src/xsmd.cpp src/software.cpp src/localize.cpp src/text.cpp
+                  src/menu.cpp src/aurora.cpp
+                  "${CMAKE_BINARY_DIR}/serializer.cpp")
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES} ${LUA_LIBRARIES} txc_dxtn dake)
 
 add_executable(create-sphere tools/create-sphere.cpp)
