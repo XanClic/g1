@@ -359,42 +359,96 @@ int ScenarioScript::luaw_fix_player_to_ground(lua_State *ls)
 }
 
 
-int ScenarioScript::luaw_set_player_position(lua_State *ls)
+static ShipState *lua_toship(lua_State *ls, int index)
 {
-    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
-    ShipState &ps = ss->current_world_state->ships[ss->current_world_state->player_ship];
-    float lng = lua_tonumber(ls, 1) - M_PIf / 2.f;
-    float lat = lua_tonumber(ls, 2);
+    lua_getfield(ls, index, "id");
+    ShipState *ship = static_cast<ShipState *>(lua_touserdata(ls, -1));
+    lua_pop(ls, 1);
 
-    ps.position = ss->current_world_state->earth_mv * vec4(cosf(lat) * sinf(lng), sinf(lat), cosf(lat) * cosf(lng), 1.f);
-    ps.position += static_cast<float>(lua_tonumber(ls, 3)) / 1e3f * ps.position.normalized();
+    return ship;
+}
+
+
+int ScenarioScript::luaw_set_ship_position(lua_State *ls)
+{
+    ScenarioScript *ss =
+        static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    ShipState *ship = lua_toship(ls, 1);
+    float lng = lua_tonumber(ls, 2) - M_PIf / 2.f;
+    float lat = lua_tonumber(ls, 3);
+    float height = lua_tonumber(ls, 4) / 1e3f;
+
+    ship->position = ss->current_world_state->earth_mv
+                     * vec4(cosf(lat) * sinf(lng),
+                            sinf(lat),
+                            cosf(lat) * cosf(lng),
+                            1.f);
+    ship->position += height * ship->position.normalized();
 
     return 0;
 }
 
 
-int ScenarioScript::luaw_set_player_velocity(lua_State *ls)
+int ScenarioScript::luaw_set_ship_velocity(lua_State *ls)
 {
-    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    ShipState *ship = lua_toship(ls, 1);
 
-    ss->current_world_state->ships[ss->current_world_state->player_ship].velocity =
-        vec3(lua_tonumber(ls, 1), lua_tonumber(ls, 2), lua_tonumber(ls, 3));
+    ship->velocity = vec3(lua_tonumber(ls, 2),
+                          lua_tonumber(ls, 3),
+                          lua_tonumber(ls, 4));
 
     return 0;
 }
 
 
-int ScenarioScript::luaw_set_player_bearing(lua_State *ls)
+int ScenarioScript::luaw_set_ship_bearing(lua_State *ls)
 {
-    ScenarioScript *ss = static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
-    ShipState &ps = ss->current_world_state->ships[ss->current_world_state->player_ship];
-    vec3 tangent = vec3(ss->current_world_state->earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(ps.position).normalized();
+    ScenarioScript *ss =
+        static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    ShipState *ship = lua_toship(ls, 1);
+    vec3 tangent = vec3(ss->current_world_state->earth_mv
+                        * vec4(0.f, 1.f, 0.f, 0.f))
+                   .cross(ship->position).normalized();
 
-    ps.up       = ps.position.normalized();
-    ps.forward  = vec3(mat4::identity().rotated(lua_tonumber(ls, 1), ps.up) * vec4::direction(tangent));
-    ps.right    = ps.forward.cross(ps.up);
+    ship->up      = ship->position.normalized();
+    ship->forward = vec3(mat4::identity().rotated(lua_tonumber(ls, 2), ship->up)
+                         * vec4::direction(tangent));
+    ship->right   = ship->forward.cross(ship->up);
 
     return 0;
+}
+
+
+void ScenarioScript::lua_pushship(ShipState *ship)
+{
+    lua_newtable(ls());
+
+    lua_pushlightuserdata(ls(), ship);
+    lua_setfield(ls(), -2, "id");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_ship_position, 1);
+    lua_setfield(ls(), -2, "set_position");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_ship_velocity, 1);
+    lua_setfield(ls(), -2, "set_velocity");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_set_ship_bearing, 1);
+    lua_setfield(ls(), -2, "set_bearing");
+}
+
+
+int ScenarioScript::luaw_player_ship(lua_State *ls)
+{
+    ScenarioScript *ss =
+        static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    int psi = ss->current_world_state->player_ship;
+
+    ss->lua_pushship(&ss->current_world_state->ships[psi]);
+
+    return 1;
 }
 
 
@@ -407,16 +461,8 @@ void ScenarioScript::initialize(WorldState &state)
     lua_setglobal(ls(), "fix_player_to_ground");
 
     lua_pushlightuserdata(ls(), this);
-    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_position, 1);
-    lua_setglobal(ls(), "set_player_position");
-
-    lua_pushlightuserdata(ls(), this);
-    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_velocity, 1);
-    lua_setglobal(ls(), "set_player_velocity");
-
-    lua_pushlightuserdata(ls(), this);
-    lua_pushcclosure(ls(), ScenarioScript::luaw_set_player_bearing, 1);
-    lua_setglobal(ls(), "set_player_bearing");
+    lua_pushcclosure(ls(), ScenarioScript::luaw_player_ship, 1);
+    lua_setglobal(ls(), "player_ship");
 
     current_world_state = &state;
 
