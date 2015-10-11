@@ -3,8 +3,10 @@ name = "null"
 
 
 function initialize()
-    set_player_position(1.40673537711, 0.495382619358, 300000)
-    set_player_bearing(0)
+    ps = player_ship()
+
+    ps:set_position(1.40673537711, 0.495382619358, 300000)
+    ps:set_bearing(0)
 end
 
 

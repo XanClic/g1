@@ -82,9 +82,12 @@ class ScenarioScript: public SpecializedSoftware {
 
         static int luaw_enable_player_physics(lua_State *ls);
         static int luaw_fix_player_to_ground(lua_State *ls);
-        static int luaw_set_player_position(lua_State *ls);
-        static int luaw_set_player_velocity(lua_State *ls);
-        static int luaw_set_player_bearing(lua_State *ls);
+        static int luaw_set_ship_position(lua_State *ls);
+        static int luaw_set_ship_velocity(lua_State *ls);
+        static int luaw_set_ship_bearing(lua_State *ls);
+        static int luaw_player_ship(lua_State *ls);
+
+        void lua_pushship(ShipState *ss);
 
     public:
         void execute(WorldState &out_world, const WorldState &in_world, const Input &input);
