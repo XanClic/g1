@@ -7,6 +7,11 @@ function initialize()
 
     ps:set_position(1.40673537711, 0.495382619358, 300000)
     ps:set_bearing(0)
+
+    ns = spawn_ship("mumeifune")
+
+    ns:set_position(1.4, 0.49, 300000)
+    ns:set_bearing(0)
 end
 
 

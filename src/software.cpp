@@ -11,8 +11,10 @@ extern "C" {
 #include <lauxlib.h>
 }
 
+#include "json-structs.hpp"
 #include "physics.hpp"
 #include "ship.hpp"
+#include "ship_types.hpp"
 #include "software.hpp"
 #include "ui.hpp"
 
@@ -452,6 +454,25 @@ int ScenarioScript::luaw_player_ship(lua_State *ls)
 }
 
 
+int ScenarioScript::luaw_spawn_ship(lua_State *ls)
+{
+    ScenarioScript *ss =
+        static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
+    const char *ship_name = lua_tolstring(ls, 1, nullptr);
+    const Ship *ship_type = ship_types[ship_name];
+
+    if (!ship_type) {
+        throw std::runtime_error("Unknown ship type “" + std::string(ship_name)
+                                 + "”");
+    }
+
+    ShipState &ns = ss->current_world_state->spawn_ship(ship_type);
+    ss->lua_pushship(&ns);
+
+    return 1;
+}
+
+
 void ScenarioScript::initialize(WorldState &state)
 {
     lua_pushcfunction(ls(), ScenarioScript::luaw_enable_player_physics);
@@ -463,6 +484,10 @@ void ScenarioScript::initialize(WorldState &state)
     lua_pushlightuserdata(ls(), this);
     lua_pushcclosure(ls(), ScenarioScript::luaw_player_ship, 1);
     lua_setglobal(ls(), "player_ship");
+
+    lua_pushlightuserdata(ls(), this);
+    lua_pushcclosure(ls(), ScenarioScript::luaw_spawn_ship, 1);
+    lua_setglobal(ls(), "spawn_ship");
 
     current_world_state = &state;
 
