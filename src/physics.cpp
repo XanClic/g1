@@ -8,6 +8,7 @@
 #include "json.hpp"
 #include "options.hpp"
 #include "physics.hpp"
+#include "ship_types.hpp"
 #include "software.hpp"
 
 
@@ -243,11 +244,7 @@ void WorldState::initialize(const std::string &sn)
     ships.resize(1);
     player_ship = 0;
 
-    ships[0].ship = new Ship;
-
-    GDData *d = json_parse_file("assets/ships/mumeifune.json");
-    Ship_parse(ships[0].ship, d);
-    delete d;
+    ships[0].ship = ship_types["mumeifune"];
 
     ships[0].position     = vec3::zero();
     ships[0].velocity     = vec3::zero();

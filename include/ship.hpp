@@ -7,7 +7,7 @@
 
 
 struct ShipState {
-    Ship *ship;
+    const Ship *ship;
 
     // position in km, velocity in m/s, acceleration in m/s^2
     dake::math::vec3 position, velocity, acceleration;

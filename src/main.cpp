@@ -14,6 +14,7 @@
 #include "main_loop.hpp"
 #include "menu.hpp"
 #include "options.hpp"
+#include "ship_types.hpp"
 #include "software.hpp"
 #include "ui.hpp"
 
@@ -139,6 +140,7 @@ int main(int argc, char *argv[])
 
     init_game_graphics();
     load_software();
+    load_ship_types();
 
     main_loop(scenario);
 
