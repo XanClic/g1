@@ -160,7 +160,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.torque = vec3::zero();
         }
 
-        if (!physics_enabled) {
+        if (!physics_enabled && input.scenario_initialized) {
             input.scenario->sub<ScenarioScript>().execute(output, input, user_input);
         }
 
@@ -218,21 +218,25 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         output.aurora_hotspots.step(input.aurora_hotspots, output);
     }
+
+
+    if (!input.scenario_initialized) {
+        output.scenario->sub<ScenarioScript>().initialize(output);
+    }
+    output.scenario_initialized = true;
 }
 
 
 void WorldState::initialize(const std::string &sn)
 {
     real_timestamp = std::chrono::system_clock::now();
-    real_interval  = 1.f / 60.f;
-
-    timestamp = std::chrono::system_clock::now();
-    interval  = 1.f / 60.f;
+    timestamp      = std::chrono::system_clock::now();
 
     scenario = get_scenario(sn);
     if (!scenario) {
         throw std::runtime_error("Unknown scenario " + sn + " specified");
     }
+    scenario_initialized = false;
 
     ships.resize(1);
     player_ship = 0;
@@ -268,21 +272,6 @@ void WorldState::initialize(const std::string &sn)
     ships[0].ship->thrusters[12] = { vec3(  0.f, -50.f,   0.f), vec3(-2.f, 0.f,  0.f),
                                      THRUSTER_RCS,  LEFT,  DOWN };
 
-    time_t time_t_now = std::chrono::system_clock::to_time_t(timestamp);
-    float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * M_PIf;
-
-    tm last_midnight_tm = *gmtime(&time_t_now);
-    last_midnight_tm.tm_hour = last_midnight_tm.tm_min = last_midnight_tm.tm_sec = 0;
-
-    auto last_midnight = std::chrono::system_clock::from_time_t(mktime(&last_midnight_tm));
-    float second_of_day = time_interval(timestamp - last_midnight);
-
-    float earth_a  = second_of_day / 86164.09f * 2.f * M_PIf - year_angle;
-
-    earth_mv = mat4::identity().scaled(vec3(6371.f, 6371.f, 6371.f))
-                               .rotated(.41f, vec3(1.f, 0.f, 0.f))
-                               .rotated(earth_a, vec3(0.f, 1.f, 0.f));
-    earth_inv_mv = earth_mv.inverse();
     ships[0].position     = vec3::zero();
     ships[0].velocity     = vec3::zero();
     ships[0].acceleration = vec3::zero();
@@ -303,8 +292,6 @@ void WorldState::initialize(const std::string &sn)
     if (global_options.aurora) {
         auroras.resize(3);
     }
-
-    scenario->sub<ScenarioScript>().initialize(*this);
 }
 
 

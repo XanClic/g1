@@ -33,6 +33,7 @@ struct WorldState {
     Aurora::HotspotList aurora_hotspots;
 
     Software *scenario;
+    bool scenario_initialized;
 };
 
 

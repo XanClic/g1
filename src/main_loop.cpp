@@ -61,6 +61,13 @@ void main_loop(const std::string &scenario)
 
     info.world_states[0]->initialize(scenario);
 
+    // Do one step, because some values are actually not initialized by
+    // "initialize".
+    ui_process_events(*info.input);
+    do_physics(*info.world_states[1], *info.world_states[0], *info.input);
+    info.current_graphics_state = 1;
+    info.current_physics_state  = 1;
+
     std::thread physics_thr(physics_worker, std::ref(info));
 
     while (!quit) {
