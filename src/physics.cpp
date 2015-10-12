@@ -241,31 +241,19 @@ void WorldState::initialize(const std::string &sn)
     }
     scenario_initialized = false;
 
-    ships.resize(1);
+    ships.emplace_back(ship_types["mumeifune"]);
     player_ship = 0;
-
-    ships[0].ship = ship_types["mumeifune"];
-
-    ships[0].position     = vec3::zero();
-    ships[0].velocity     = vec3::zero();
-    ships[0].acceleration = vec3::zero();
-
-    ships[0].rotational_velocity = vec3::zero();
-    ships[0].angular_momentum    = vec3::zero();
-    ships[0].torque              = vec3::zero();
-
-    ships[0].right   = vec3(0.f, 0.f, 1.f);
-    ships[0].up      = vec3(0.f, 1.f, 0.f);
-    ships[0].forward = vec3(1.f, 0.f, 0.f);
-
-    ships[0].total_mass = ships[0].ship->empty_mass;
-
-    ships[0].thruster_states.resize(13);
-    memset(ships[0].thruster_states.data(), 0, 13 * sizeof(float));
 
     if (global_options.aurora) {
         auroras.resize(3);
     }
+}
+
+
+ShipState &WorldState::spawn_ship(const Ship *type)
+{
+    ships.emplace_back(type);
+    return ships.back();
 }
 
 

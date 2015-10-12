@@ -7,6 +7,8 @@
 
 
 struct ShipState {
+    ShipState(const Ship *ship_type);
+
     const Ship *ship;
 
     // position in km, velocity in m/s, acceleration in m/s^2

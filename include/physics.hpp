@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "aurora.hpp"
+#include "json-structs.hpp"
 #include "ship.hpp"
 #include "software.hpp"
 #include "ui.hpp"
@@ -15,6 +16,8 @@
 
 struct WorldState {
     void initialize(const std::string &scenario);
+
+    ShipState &spawn_ship(const Ship *type);
 
     std::chrono::system_clock::time_point timestamp, real_timestamp;
     float interval, real_interval;
