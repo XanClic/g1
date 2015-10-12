@@ -45,6 +45,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/physics.cpp src/environment.cpp src/cockpit.cpp
                   src/xsmd.cpp src/software.cpp src/localize.cpp src/text.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
+                  src/ship_types.cpp
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${SDL2_LIBRARIES} ${LUA_LIBRARIES} txc_dxtn dake)
