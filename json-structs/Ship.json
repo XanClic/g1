@@ -1,4 +1,6 @@
 {
+    "name":         "string",
+
     "empty_mass":   "single",
 
     "thrusters": {
