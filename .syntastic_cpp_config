@@ -1,3 +1,4 @@
 -Iinclude
+-Ibuild/include
 -Ibuild/dake/include
 -std=c++11
