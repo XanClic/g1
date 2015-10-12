@@ -1,0 +1,110 @@
+{
+    "name":         "mumeifune",
+    "empty_mass":   500,
+
+    "thrusters": [
+        {
+            "type":                 "THRUSTER_MAIN",
+            "general_position":     "BACK",
+            "general_direction":    "FORWARD",
+            "force":                [0, 0, -1e7],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "FRONT",
+            "general_direction":    "UP",
+            "force":                [0, 50, 0],
+            "relative_position":    [0, 0, -2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "FRONT",
+            "general_direction":    "DOWN",
+            "force":                [0, -50, 0],
+            "relative_position":    [0, 0, -2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "FRONT",
+            "general_direction":    "RIGHT",
+            "force":                [50, 0, 0],
+            "relative_position":    [0, 0, -2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "FRONT",
+            "general_direction":    "LEFT",
+            "force":                [-50, 0, 0],
+            "relative_position":    [0, 0, -2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "BACK",
+            "general_direction":    "UP",
+            "force":                [0, 50, 0],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "BACK",
+            "general_direction":    "DOWN",
+            "force":                [0, -50, 0],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "BACK",
+            "general_direction":    "RIGHT",
+            "force":                [50, 0, 0],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "BACK",
+            "general_direction":    "LEFT",
+            "force":                [-50, 0, 0],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "RIGHT",
+            "general_direction":    "UP",
+            "force":                [0, 50, 0],
+            "relative_position":    [2, 0, 0]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "RIGHT",
+            "general_direction":    "DOWN",
+            "force":                [0, -50, 0],
+            "relative_position":    [2, 0, 0]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "LEFT",
+            "general_direction":    "UP",
+            "force":                [0, 50, 0],
+            "relative_position":    [-2, 0, 0]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "LEFT",
+            "general_direction":    "DOWN",
+            "force":                [0, -50, 0],
+            "relative_position":    [-2, 0, 0]
+        }
+    ]
+}

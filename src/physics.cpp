@@ -4,6 +4,8 @@
 
 #include <dake/math.hpp>
 
+#include "generic-data.hpp"
+#include "json.hpp"
 #include "options.hpp"
 #include "physics.hpp"
 #include "software.hpp"
@@ -242,35 +244,10 @@ void WorldState::initialize(const std::string &sn)
     player_ship = 0;
 
     ships[0].ship = new Ship;
-    ships[0].ship->empty_mass = 500.f;
 
-    ships[0].ship->thrusters.resize(13);
-    ships[0].ship->thrusters[ 0] = { vec3(  0.f,   0.f, -1e7f), vec3( 0.f, 0.f,  2.f),
-                                     THRUSTER_MAIN, BACK,  FORWARD };
-    ships[0].ship->thrusters[ 1] = { vec3(  0.f,  50.f,   0.f), vec3( 0.f, 0.f, -2.f),
-                                     THRUSTER_RCS,  FRONT, UP };
-    ships[0].ship->thrusters[ 2] = { vec3(  0.f, -50.f,   0.f), vec3( 0.f, 0.f, -2.f),
-                                     THRUSTER_RCS,  FRONT, DOWN };
-    ships[0].ship->thrusters[ 3] = { vec3( 50.f,   0.f,   0.f), vec3( 0.f, 0.f, -2.f),
-                                     THRUSTER_RCS,  FRONT, RIGHT };
-    ships[0].ship->thrusters[ 4] = { vec3(-50.f,   0.f,   0.f), vec3( 0.f, 0.f, -2.f),
-                                     THRUSTER_RCS,  FRONT, LEFT };
-    ships[0].ship->thrusters[ 5] = { vec3(  0.f,  50.f,   0.f), vec3( 0.f, 0.f,  2.f),
-                                     THRUSTER_RCS,  BACK,  UP };
-    ships[0].ship->thrusters[ 6] = { vec3(  0.f, -50.f,   0.f), vec3( 0.f, 0.f,  2.f),
-                                     THRUSTER_RCS,  BACK,  DOWN };
-    ships[0].ship->thrusters[ 7] = { vec3( 50.f,   0.f,   0.f), vec3( 0.f, 0.f,  2.f),
-                                     THRUSTER_RCS,  BACK,  RIGHT };
-    ships[0].ship->thrusters[ 8] = { vec3(-50.f,   0.f,   0.f), vec3( 0.f, 0.f,  2.f),
-                                     THRUSTER_RCS,  BACK,  LEFT };
-    ships[0].ship->thrusters[ 9] = { vec3(  0.f,  50.f,   0.f), vec3( 2.f, 0.f,  0.f),
-                                     THRUSTER_RCS,  RIGHT, UP };
-    ships[0].ship->thrusters[10] = { vec3(  0.f, -50.f,   0.f), vec3( 2.f, 0.f,  0.f),
-                                     THRUSTER_RCS,  RIGHT, DOWN };
-    ships[0].ship->thrusters[11] = { vec3(  0.f,  50.f,   0.f), vec3(-2.f, 0.f,  0.f),
-                                     THRUSTER_RCS,  LEFT,  UP };
-    ships[0].ship->thrusters[12] = { vec3(  0.f, -50.f,   0.f), vec3(-2.f, 0.f,  0.f),
-                                     THRUSTER_RCS,  LEFT,  DOWN };
+    GDData *d = json_parse_file("assets/ships/mumeifune.json");
+    Ship_parse(ships[0].ship, d);
+    delete d;
 
     ships[0].position     = vec3::zero();
     ships[0].velocity     = vec3::zero();
