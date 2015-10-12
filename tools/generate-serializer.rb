@@ -26,10 +26,11 @@ def interpret_array(type)
     "std::vector<#{ctype(type['of'])}>"
 end
 
-$builtin = ['single', 'vec3', 'array']
+$builtin = ['single', 'vec3', 'string', 'array']
 $builtin_type_map = {
     'single' => 'float',
     'vec3'   => 'dake::math::vec3',
+    'string' => 'std::string',
     'array'  => :interpret_array
 }
 
@@ -172,6 +173,7 @@ header.write <<EOF
 
 #include <dake/math/matrix.hpp>
 
+#include <string>
 #include <vector>
 
 
