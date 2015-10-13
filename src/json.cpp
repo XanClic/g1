@@ -265,11 +265,11 @@ static void json_do_parse_string(const char *json, GDData *d, const char **endp)
 
 static void json_do_parse_boolean(const char *json, GDData *d, const char **endp)
 {
-    if (!strcmp(json, "false")) {
+    if (!strncmp(json, "false", 5)) {
         *endp = json + 5;
         d->b = false;
         d->type = GDData::BOOLEAN;
-    } else if (!strcmp(json, "true")) {
+    } else if (!strncmp(json, "true", 4)) {
         *endp = json + 4;
         d->b = true;
         d->type = GDData::BOOLEAN;
@@ -280,7 +280,7 @@ static void json_do_parse_boolean(const char *json, GDData *d, const char **endp
 
 static void json_do_parse_null(const char *json, GDData *d, const char **endp)
 {
-    if (strcmp(json, "null")) {
+    if (strncmp(json, "null", 4)) {
         throw bad_json("Unexpected token", json);
     }
 
