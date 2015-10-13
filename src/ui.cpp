@@ -108,8 +108,8 @@ void init_ui(void)
     wnd_height = 720;
 
 
-    keyboard_mappings[SDLK_d] = "strafe.-x";
-    keyboard_mappings[SDLK_a] = "strafe.+x";
+    keyboard_mappings[SDLK_a] = "strafe.-x";
+    keyboard_mappings[SDLK_d] = "strafe.+x";
     keyboard_mappings[SDLK_s] = "strafe.-y";
     keyboard_mappings[SDLK_w] = "strafe.+y";
     keyboard_mappings[SDLK_PAGEDOWN] = "strafe.-z";

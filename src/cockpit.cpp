@@ -406,6 +406,66 @@ static void draw_artificial_horizon(const GraphicsStatus &status,
 }
 
 
+static void draw_radar_contacts(const GraphicsStatus &status,
+                                const WorldState &world,
+                                float cockpit_brightness, float blink_time,
+                                float sxs, float sys,
+                                const vec2 &hbx, const vec2 &hby)
+{
+    const ShipState &player = world.ships[world.player_ship];
+
+    sxs *= 2.f;
+    sys *= 2.f;
+
+    for (const ShipState &ship: world.ships) {
+        if (&ship == &player) {
+            continue;
+        }
+
+        vec3 rel_pos = ship.position - player.position;
+        float distance = rel_pos.length();
+        rel_pos.normalize();
+
+        // TODO: Check whether obstructed by earth
+        if (distance > 1e3f) {
+            continue;
+        }
+
+        bool visible;
+        vec2 proj = project_clamp_to_border(status, rel_pos, hbx, hby, sxs, sys,
+                                            &visible);
+
+        // Display the marker if one of the following is true:
+        // (1) It is in view
+        // (2) It is out of view, but far away (that is, it will be displayed
+        //                                      constantly then)
+        // (3) Otherwise (it is out of view, but close to us) it should blink
+        if (visible || distance > 50.f || blink_time < .5f) {
+            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
+                                                    visible ? 1.f : .3f);
+
+            draw_line(proj + vec2( 0.f,  sys), proj + vec2( sxs,  0.f));
+            draw_line(proj + vec2( sxs,  0.f), proj + vec2( 0.f, -sys));
+            draw_line(proj + vec2( 0.f, -sys), proj + vec2(-sxs,  0.f));
+            draw_line(proj + vec2(-sxs,  0.f), proj + vec2( 0.f,  sys));
+        }
+
+        if (visible) {
+            float rel_speed = rel_pos.dot(ship.velocity - player.velocity);
+
+            char info_l1[32], info_l2[32];
+            snprintf(info_l1, sizeof(info_l1), "%.2f km", distance);
+            snprintf(info_l2, sizeof(info_l2), "%.2f m/s", rel_speed);
+
+            draw_text(proj + vec2(0.f, 1.5f * sys), vec2(sxs * .25f, sys * .5f),
+                      info_l1, ALIGN_CENTER, ALIGN_BOTTOM);
+            draw_text(proj + vec2(0.f, 1.0f * sys), vec2(sxs * .25f, sys * .5f),
+                      info_l2, ALIGN_CENTER, ALIGN_BOTTOM);
+        }
+    }
+}
+
+
 void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 {
     // FIXME
@@ -465,6 +525,10 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
                     hbx, hby);
     draw_artificial_horizon(status, world, cockpit_brightness, aspect, sxs, sys,
                             hbx, hby);
+
+
+    draw_radar_contacts(status, world, cockpit_brightness, blink_time, sxs, sys,
+                        hbx, hby);
 
 
     glDisable(GL_SCISSOR_TEST);
