@@ -12,7 +12,8 @@ struct ShipState {
     const Ship *ship;
 
     // position in km, velocity in m/s, acceleration in m/s^2
-    dake::math::vec3 position, velocity, acceleration;
+    dake::math::vec<3, double> position;
+    dake::math::vec3 velocity, acceleration;
     // rotational_velocity in 1/s, angular_momentum in kg*m^2/s, torque in kg*m^2/s^2 (Nm)
     dake::math::vec3 rotational_velocity, angular_momentum, torque;
     // normalized

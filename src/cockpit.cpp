@@ -237,7 +237,7 @@ static void draw_cockpit_controls(const WorldState &world,
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
-              localize(ship.position.length() - 6371.f));
+              localize(static_cast<float>(ship.position.length()) - 6371.f));
 }
 
 

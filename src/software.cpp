@@ -385,7 +385,7 @@ int ScenarioScript::luaw_set_ship_position(lua_State *ls)
                             sinf(lat),
                             cosf(lat) * cosf(lng),
                             1.f);
-    ship->position += height * ship->position.normalized();
+    ship->position += static_cast<double>(height) * ship->position.normalized();
 
     return 0;
 }
