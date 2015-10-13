@@ -1120,7 +1120,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     draw_earth_prg->uniform<gl::texture>("atmo_map") = *atmo_map;
 
     if (in_atmosphere) {
+        glDepthMask(GL_FALSE);
         quad_vertices->draw(GL_TRIANGLE_STRIP);
+        glDepthMask(GL_TRUE);
     } else {
         earth->draw();
     }
