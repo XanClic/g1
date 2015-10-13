@@ -43,6 +43,9 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.real_interval  = time_interval(output.real_timestamp - input.real_timestamp);
 
     float time_accel = 1.f + 9.f * user_input.get_mapping("time_acceleration");
+    if (user_input.get_mapping("pause")) {
+        time_accel = 0.f;
+    }
 
     output.interval  = output.real_interval * time_accel;
     output.timestamp = input.timestamp + interval_duration(output.interval);

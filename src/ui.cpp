@@ -141,6 +141,7 @@ void init_ui(void)
     keyboard_mappings[SDLK_F5] = "kill_rotation";
 
     keyboard_mappings[SDLK_j] = Action("time_acceleration", true);
+    keyboard_mappings[SDLK_p] = Action("pause", true);
 }
 
 
