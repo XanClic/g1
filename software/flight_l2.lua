@@ -15,7 +15,9 @@ function kill_rotation(ship_state, interval)
 
         if thruster.type == THRUSTER_RCS then
             force = crossp(thruster.relative_position, thruster.force)
-            states[thruster_i] = force_coefficient * dotp(force, angular_momentum) / (force:length() ^ 2.0)
+            if force:length() > 0.0 then
+                states[thruster_i] = force_coefficient * dotp(force, angular_momentum) / (force:length() ^ 2.0)
+            end
         end
 
         thruster_i = thruster_i + 1
