@@ -14,7 +14,8 @@ using namespace dake::math;
 
 static gl::vertex_array *char_va;
 static gl::program *char_prg;
-static gl::texture *latin_font, *mado_font, *tengwar_font;
+static gl::texture *font[LOCALIZATIONS];
+static vec2 font_fr[LOCALIZATIONS];
 
 
 struct CharVAElement {
@@ -57,16 +58,23 @@ void init_text(void)
     char_prg->bind_frag("out_col", 0);
 
 
-    latin_font = new gl::texture("assets/latin.png");
-    latin_font->filter(GL_NEAREST);
+    gl::image lfi("assets/latin.png");
+    font[DE_LATIN] = new gl::texture(lfi);
+    font[DE_LATIN]->filter(GL_NEAREST);
+    font_fr[DE_LATIN].x() = (lfi.width()  - 16.f) / lfi.width();
+    font_fr[DE_LATIN].y() = (lfi.height() - 16.f) / lfi.height();
 
-    mado_font = new gl::texture("assets/mado.png");
-    mado_font->filter(GL_NEAREST);
+    gl::image mfi("assets/mado.png");
+    font[DE_MADO] = new gl::texture(mfi);
+    font[DE_MADO]->filter(GL_LINEAR);
+    font_fr[DE_MADO].x() = (mfi.width()  - 16.f) / mfi.width();
+    font_fr[DE_MADO].y() = (mfi.height() - 16.f) / mfi.height();
 
-    tengwar_font = new gl::texture("assets/tengwar.png");
-    tengwar_font->filter(GL_NEAREST);
-
-    char_prg->uniform<gl::texture>("font") = *latin_font;
+    gl::image tfi("assets/tengwar.png");
+    font[DE_TENGWAR] = new gl::texture(tfi);
+    font[DE_TENGWAR]->filter(GL_NEAREST);
+    font_fr[DE_TENGWAR].x() = (tfi.width()  - 16.f) / tfi.width();
+    font_fr[DE_TENGWAR].y() = (tfi.height() - 16.f) / tfi.height();
 }
 
 
@@ -129,15 +137,19 @@ void draw_text(const vec2 &pos, const vec2 &size, const std::string &text, HAlig
         default: throw std::invalid_argument("draw_text(): Invalid value given for valign");
     }
 
-    gl::texture *font = (olo == DE_MADO)    ? mado_font
-                      : (olo == DE_TENGWAR) ? tengwar_font
-                      :                       latin_font;
-    font->bind();
-
-
     char_prg->use();
+
+    font[olo]->bind();
+
+    static gl::texture *last_font;
+    if (last_font != font[olo]) {
+        last_font = font[olo];
+        char_prg->uniform<gl::texture>("font") = *font[olo];
+    }
+
     char_prg->uniform<vec2>("position") = position;
     char_prg->uniform<vec2>("char_size") = size;
+    char_prg->uniform<vec2>("font_char_fill_ratio") = font_fr[olo];
 
     char_va->set_elements(tt.size() * 5);
     char_va->draw(GL_TRIANGLE_STRIP);
