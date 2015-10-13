@@ -500,6 +500,8 @@ void ScenarioScript::initialize(WorldState &state)
 
 void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, const Input &input)
 {
+    (void)input;
+
     ShipState &ops = out_state.ships[out_state.player_ship];
     const ShipState &ips = in_state.ships[in_state.player_ship];
 
