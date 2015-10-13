@@ -2,6 +2,8 @@
     "name":         "mumeifune",
     "empty_mass":   500,
 
+    "cockpit_position": [0, 1, 0],
+
     "thrusters": [
         {
             "type":                 "THRUSTER_MAIN",
