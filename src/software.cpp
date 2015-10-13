@@ -297,25 +297,25 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
     lua_newtable(ls());
 
-    vec3 rotate(input.mapping_states.find("rotate.+x")->second - input.mapping_states.find("rotate.-x")->second,
-                input.mapping_states.find("rotate.+y")->second - input.mapping_states.find("rotate.-y")->second,
-                input.mapping_states.find("rotate.+z")->second - input.mapping_states.find("rotate.-z")->second);
+    vec3 rotate(input.get_mapping("rotate.+x") - input.get_mapping("rotate.-x"),
+                input.get_mapping("rotate.+y") - input.get_mapping("rotate.-y"),
+                input.get_mapping("rotate.+z") - input.get_mapping("rotate.-z"));
 
     lua_pushvector(ls(), rotate);
     lua_setfield(ls(), -2, "rotate");
 
-    vec3 strafe(input.mapping_states.find("strafe.+x")->second - input.mapping_states.find("strafe.-x")->second,
-                input.mapping_states.find("strafe.+y")->second - input.mapping_states.find("strafe.-y")->second,
-                input.mapping_states.find("strafe.+z")->second - input.mapping_states.find("strafe.-z")->second);
+    vec3 strafe(input.get_mapping("strafe.+x") - input.get_mapping("strafe.-x"),
+                input.get_mapping("strafe.+y") - input.get_mapping("strafe.-y"),
+                input.get_mapping("strafe.+z") - input.get_mapping("strafe.-z"));
 
     lua_pushvector(ls(), strafe);
     lua_setfield(ls(), -2, "strafe");
 
-    lua_pushnumber(ls(), input.mapping_states.find("+main_engine")->second -
-                         input.mapping_states.find("-main_engine")->second);
+    lua_pushnumber(ls(), input.get_mapping("+main_engine") -
+                         input.get_mapping("-main_engine"));
     lua_setfield(ls(), -2, "main_engine");
 
-    lua_pushboolean(ls(), input.mapping_states.find("kill_rotation")->second >= .5f);
+    lua_pushboolean(ls(), input.get_mapping("kill_rotation") >= .5f);
     lua_setfield(ls(), -2, "kill_rotation");
 
 

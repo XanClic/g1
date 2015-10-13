@@ -33,12 +33,25 @@ template<> struct hash<MouseDirection> {
 }
 
 
+struct Action {
+    Action(void) {}
+    Action(const std::string &n, bool s = false):
+        name(n), sticky(s) {}
+
+    Action &operator=(const std::string &n) { name = n; return *this; }
+
+    std::string name;
+    // No effects on mouse mappings!
+    bool sticky = false;
+};
+
+
 static SDL_Window *wnd;
 static int wnd_width, wnd_height;
 
 
-static std::unordered_map<SDL_Keycode, std::string> keyboard_mappings;
-static std::unordered_map<MouseDirection, std::string> mouse_mappings;
+static std::unordered_map<SDL_Keycode, Action> keyboard_mappings;
+static std::unordered_map<MouseDirection, Action> mouse_mappings;
 
 
 static void create_context(int w, int h, int major = 0, int minor = 0)
@@ -127,7 +140,7 @@ void init_ui(void)
 
     keyboard_mappings[SDLK_F5] = "kill_rotation";
 
-    keyboard_mappings[SDLK_j] = "time_acceleration";
+    keyboard_mappings[SDLK_j] = Action("time_acceleration", true);
 }
 
 
@@ -142,19 +155,23 @@ void ui_process_events(Input &input)
         float rel_x = 2.f * abs_x / wnd_width - 1.f;
         float rel_y = 1.f - 2.f * abs_y / wnd_height;
 
-        input.mapping_states[mouse_mappings[MOUSE_LEFT ]] = dake::helper::maximum(-rel_x, 0.f);
-        input.mapping_states[mouse_mappings[MOUSE_RIGHT]] = dake::helper::maximum( rel_x, 0.f);
-        input.mapping_states[mouse_mappings[MOUSE_DOWN ]] = dake::helper::maximum(-rel_y, 0.f);
-        input.mapping_states[mouse_mappings[MOUSE_UP   ]] = dake::helper::maximum( rel_y, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_LEFT ].name] =
+            dake::helper::maximum(-rel_x, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_RIGHT].name] =
+            dake::helper::maximum( rel_x, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_DOWN ].name] =
+            dake::helper::maximum(-rel_y, 0.f);
+        input.mapping_states[mouse_mappings[MOUSE_UP   ].name] =
+            dake::helper::maximum( rel_y, 0.f);
     } else {
         for (const auto &mm: mouse_mappings) {
-            input.mapping_states[mm.second] = 0.f;
+            input.mapping_states[mm.second.name] = 0.f;
         }
     }
 
     if (!input.initialized) {
         for (const auto &km: keyboard_mappings) {
-            input.mapping_states[km.second] = 0.f;
+            input.mapping_states[km.second.name] = 0.f;
         }
         input.initialized = true;
     }
@@ -193,7 +210,17 @@ void ui_process_events(Input &input)
             case SDL_KEYDOWN: {
                 auto mapping = keyboard_mappings.find(event.key.keysym.sym);
                 if (mapping != keyboard_mappings.end()) {
-                    input.mapping_states[mapping->second] = 1.f;
+                    Input::MappingState &s =
+                        input.mapping_states[mapping->second.name];
+
+                    if (mapping->second.sticky) {
+                        if (!s.registered) {
+                            s.state = s.state ? 0.f : 1.f;
+                        }
+                        s.registered = true;
+                    } else {
+                        s = 1.f;
+                    }
                 } else {
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE:
@@ -201,7 +228,8 @@ void ui_process_events(Input &input)
                             break;
 
                         case SDLK_F12:
-                            olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
+                            olo = static_cast<Localization>((olo + 1) %
+                                                            LOCALIZATIONS);
                     }
                 }
                 break;
@@ -210,7 +238,14 @@ void ui_process_events(Input &input)
             case SDL_KEYUP: {
                 auto mapping = keyboard_mappings.find(event.key.keysym.sym);
                 if (mapping != keyboard_mappings.end()) {
-                    input.mapping_states[mapping->second] = 0.f;
+                    Input::MappingState &s =
+                        input.mapping_states[mapping->second.name];
+
+                    if (mapping->second.sticky) {
+                        s.registered = false;
+                    } else {
+                        s = 0.f;
+                    }
                 }
                 break;
             }

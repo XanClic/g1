@@ -42,8 +42,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.real_timestamp = std::chrono::system_clock::now();
     output.real_interval  = time_interval(output.real_timestamp - input.real_timestamp);
 
-    float time_accel = 1.f +
-        9.f * user_input.mapping_states.find("time_acceleration")->second;
+    float time_accel = 1.f + 9.f * user_input.get_mapping("time_acceleration");
 
     output.interval  = output.real_interval * time_accel;
     output.timestamp = input.timestamp + interval_duration(output.interval);
