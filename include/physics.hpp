@@ -9,6 +9,7 @@
 
 #include "aurora.hpp"
 #include "json-structs.hpp"
+#include "particles.hpp"
 #include "ship.hpp"
 #include "software.hpp"
 #include "ui.hpp"
@@ -37,6 +38,8 @@ struct WorldState {
 
     Software *scenario;
     bool scenario_initialized;
+
+    Particles particles, new_particles;
 };
 
 

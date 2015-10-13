@@ -17,6 +17,7 @@
 #include "ship_types.hpp"
 #include "software.hpp"
 #include "ui.hpp"
+#include "weapons.hpp"
 
 
 Options global_options;
@@ -141,6 +142,7 @@ int main(int argc, char *argv[])
     init_game_graphics();
     load_software();
     load_ship_types();
+    load_weapons();
 
     main_loop(scenario);
 

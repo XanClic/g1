@@ -18,8 +18,7 @@ struct Input {
         bool registered;
     };
 
-    float get_mapping(const std::string &n) const
-    { return mapping_states.find(n)->second; }
+    float get_mapping(const std::string &n) const;
 
     bool initialized = false; // FIXME
     std::unordered_map<std::string, MappingState> mapping_states;

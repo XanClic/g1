@@ -19,6 +19,9 @@ struct ShipState {
     // normalized
     dake::math::vec3 forward, up, right;
 
+    // Can only be applied during the next frame
+    dake::math::vec3 weapon_force, weapon_torque;
+
     dake::math::vec3 local_velocity, local_acceleration;
     dake::math::vec3 local_rotational_velocity;
 
@@ -26,6 +29,7 @@ struct ShipState {
     float total_mass;
 
     std::vector<float> thruster_states;
+    std::vector<float> weapon_cooldowns;
 };
 
 #endif

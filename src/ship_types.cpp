@@ -23,8 +23,8 @@ void load_ship_types(void)
         const GDArray &ship_array = *ship_index;
         for (const GDData &ship: ship_array) {
             if (ship.type != GDData::STRING) {
-                throw std::runtime_error("assets/ships/index.json must contain an "
-                                         "array of strings");
+                throw std::runtime_error("assets/ships/index.json must contain "
+                                         "an array of strings");
             }
 
             const std::string &name = ship;
@@ -47,6 +47,7 @@ void load_ship_types(void)
         for (auto &p: ship_types) {
             delete p.second;
         }
+        ship_types.clear();
         delete ship_index;
         throw;
     }

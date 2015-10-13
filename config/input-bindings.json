@@ -19,5 +19,7 @@
     "F5": "kill_rotation",
 
     "j": { "target": "time_acceleration", "sticky": true },
-    "p": { "target": "pause", "sticky": true }
+    "p": { "target": "pause", "sticky": true },
+
+    "mouse.rbutton": "main_fire"
 }

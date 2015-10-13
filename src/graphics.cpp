@@ -5,6 +5,7 @@
 #include "environment.hpp"
 #include "graphics.hpp"
 #include "menu.hpp"
+#include "particles.hpp"
 #include "physics.hpp"
 #include "text.hpp"
 #include "ui.hpp"
@@ -51,6 +52,7 @@ void init_game_graphics(void)
 {
     init_environment();
     init_cockpit();
+    init_particles();
 
 
     in_menu = false;
@@ -216,7 +218,10 @@ void do_graphics(const WorldState &input)
     status.camera_position = input.ships[input.player_ship].position;
     status.camera_forward  = input.ships[input.player_ship].forward;
 
-    calculate_camera(status.world_to_camera, status.camera_position, status.camera_forward, input.ships[input.player_ship].up);
+    calculate_camera(status.world_to_camera, status.camera_position,
+                     status.camera_forward, input.ships[input.player_ship].up);
+    calculate_camera(status.relative_to_camera, vec3::zero(),
+                     status.camera_forward, input.ships[input.player_ship].up);
 
 
     glEnable(GL_BLEND);
@@ -229,6 +234,8 @@ void do_graphics(const WorldState &input)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     draw_environment(status, input);
+
+    draw_particles(status, input.particles);
 
     glDisable(GL_DEPTH_TEST);
 

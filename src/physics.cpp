@@ -10,6 +10,7 @@
 #include "physics.hpp"
 #include "ship_types.hpp"
 #include "software.hpp"
+#include "weapons.hpp"
 
 
 using namespace dake::math;
@@ -34,6 +35,44 @@ static inline std::chrono::system_clock::duration
     using namespace std::chrono;
 
     return duration_cast<system_clock::duration>(duration<float>(interval));
+}
+
+
+static void handle_weapons(WorldState &output, const WorldState &input,
+                           const Input &user_input,
+                           ShipState &ship_out, const ShipState &ship_in,
+                           vec3 *weapon_force, vec3 *weapon_torque)
+{
+    int weapon_count = static_cast<int>(ship_in.ship->weapons.size());
+    bool is_player_ship = &ship_in == &input.ships[input.player_ship];
+
+    for (int i = 0; i < weapon_count; i++) {
+        float new_cooldown = ship_in.weapon_cooldowns[i] - output.interval;
+
+        if (new_cooldown <= 0.f) {
+            bool fire = is_player_ship && user_input.get_mapping("main_fire");
+
+            if (fire) {
+                WeaponType wt = ship_in.ship->weapons[i].type;
+                const WeaponClass *wc = weapon_classes[wt];
+
+                spawn_particle(output, ship_out.position,
+                               ship_out.velocity + ship_out.forward * 1e3f);
+
+                new_cooldown += wc->cooldown;
+            }
+        }
+
+        if (new_cooldown < 0.f) {
+            new_cooldown = 0.f;
+        }
+
+        ship_out.weapon_cooldowns[i] = new_cooldown;
+    }
+
+    // TODO
+    *weapon_force = vec3::zero();
+    *weapon_torque = vec3::zero();
 }
 
 
@@ -132,10 +171,13 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             }
 
             if (in.position.length() > 6371.f) {
-                forces += -1.e3 * vec<3, double>(in.position) *
-                    6.67384e-11 * in.total_mass * 5.974e24
-                    / pow(1.e3 * in.position.length(), 3.);
+                forces += -1.e3 * in.position *
+                          6.67384e-11 * in.total_mass * 5.974e24
+                          / pow(1.e3 * in.position.length(), 3.);
             }
+
+            forces += in.weapon_force;
+            torque += in.weapon_torque;
 
             out.acceleration = forces / in.total_mass;
             out.torque       = torque;
@@ -209,7 +251,14 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         out.local_velocity            = local_mat * out.velocity;
         out.local_acceleration        = local_mat * out.acceleration;
         out.local_rotational_velocity = local_mat * out.rotational_velocity;
+
+
+        handle_weapons(output, input, user_input, out, in,
+                       &out.weapon_force, &out.weapon_torque);
     }
+
+
+    handle_particles(output.particles, input.particles, output, player);
 
 
     if (global_options.aurora) {

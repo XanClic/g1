@@ -6,5 +6,10 @@
     "thrusters": {
         "type": "array",
         "of":   "Thruster"
+    },
+
+    "weapons": {
+        "type": "array",
+        "of":   "Weapon"
     }
 }

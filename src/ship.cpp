@@ -24,6 +24,9 @@ ShipState::ShipState(const Ship *ship_type):
     up      = vec3(0.f, 1.f,  0.f);
     right   = vec3(1.f, 0.f,  0.f);
 
+    weapon_force    = vec3::zero();
+    weapon_torque   = vec3::zero();
+
     local_velocity      = vec3::zero();
     local_acceleration  = vec3::zero();
 
@@ -31,7 +34,6 @@ ShipState::ShipState(const Ship *ship_type):
 
     total_mass = ship->empty_mass;
 
-    thruster_states.resize(ship->thrusters.size());
-    memset(thruster_states.data(), 0,
-           thruster_states.size() * sizeof(thruster_states[0]));
+    thruster_states.resize(ship->thrusters.size(), 0.f);
+    weapon_cooldowns.resize(ship->weapons.size(), 0.f);
 }

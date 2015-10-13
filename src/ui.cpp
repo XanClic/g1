@@ -19,18 +19,22 @@
 using namespace dake::math;
 
 
-enum MouseDirection {
+enum MouseEvent {
+    MOUSE_UNKNOWN,
+
     MOUSE_LEFT,
     MOUSE_RIGHT,
     MOUSE_DOWN,
-    MOUSE_UP
+    MOUSE_UP,
+
+    MOUSE_RBUTTON,
 };
 
 
 namespace std
 {
-template<> struct hash<MouseDirection> {
-    size_t operator()(const MouseDirection &d) const { return hash<int>()(d); }
+template<> struct hash<MouseEvent> {
+    size_t operator()(const MouseEvent &d) const { return hash<int>()(d); }
 };
 }
 
@@ -53,7 +57,25 @@ static int wnd_width, wnd_height;
 
 
 static std::unordered_map<SDL_Keycode, Action> keyboard_mappings;
-static std::unordered_map<MouseDirection, Action> mouse_mappings;
+static std::unordered_map<MouseEvent, Action> mouse_mappings;
+
+
+static MouseEvent get_mouse_event_from_name(const char *name)
+{
+    if (!strcmp(name, "left")) {
+        return MOUSE_LEFT;
+    } else if (!strcmp(name, "right")) {
+        return MOUSE_RIGHT;
+    } else if (!strcmp(name, "down")) {
+        return MOUSE_DOWN;
+    } else if (!strcmp(name, "up")) {
+        return MOUSE_UP;
+    } else if (!strcmp(name, "rbutton")) {
+        return MOUSE_RBUTTON;
+    } else {
+        return MOUSE_UNKNOWN;
+    }
+}
 
 
 static void create_context(int w, int h, int major = 0, int minor = 0)
@@ -165,17 +187,11 @@ void init_ui(void)
         }
 
         if (!strncmp(m.first.c_str(), "mouse.", 6)) {
-            if (!strcmp(m.first.c_str() + 6, "left")) {
-                mouse_mappings[MOUSE_LEFT] = target;
-            } else if (!strcmp(m.first.c_str() + 6, "right")) {
-                mouse_mappings[MOUSE_RIGHT] = target;
-            } else if (!strcmp(m.first.c_str() + 6, "down")) {
-                mouse_mappings[MOUSE_DOWN] = target;
-            } else if (!strcmp(m.first.c_str() + 6, "up")) {
-                mouse_mappings[MOUSE_UP] = target;
-            } else {
+            MouseEvent me = get_mouse_event_from_name(m.first.c_str() + 6);
+            if (me == MOUSE_UNKNOWN) {
                 throw std::runtime_error("Unknown mapping “" + m.first + "”");
             }
+            mouse_mappings[me] = target;
         } else {
             SDL_Keycode kc = SDL_GetKeyFromName(m.first.c_str());
             if (kc == SDLK_UNKNOWN) {
@@ -207,8 +223,8 @@ void ui_process_events(Input &input)
         input.mapping_states[mouse_mappings[MOUSE_UP   ].name] =
             dake::helper::maximum( rel_y, 0.f);
     } else {
-        for (const auto &mm: mouse_mappings) {
-            input.mapping_states[mm.second.name] = 0.f;
+        for (MouseEvent me: {MOUSE_LEFT, MOUSE_RIGHT, MOUSE_DOWN, MOUSE_UP}) {
+            input.mapping_states[mouse_mappings[me].name] = 0.f;
         }
     }
 
@@ -238,17 +254,64 @@ void ui_process_events(Input &input)
                 }
                 break;
 
-            case SDL_MOUSEBUTTONDOWN:
+            case SDL_MOUSEBUTTONDOWN: {
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     capture_movement = true;
+                    break;
+                }
+
+                MouseEvent evt = MOUSE_UNKNOWN;
+                if (event.button.button == SDL_BUTTON_RIGHT) {
+                    evt = MOUSE_RBUTTON;
+                }
+                if (evt == MOUSE_UNKNOWN) {
+                    break;
+                }
+
+                auto mapping = mouse_mappings.find(evt);
+                if (mapping != mouse_mappings.end()) {
+                    Input::MappingState &s =
+                        input.mapping_states[mapping->second.name];
+
+                    if (mapping->second.sticky) {
+                        if (!s.registered) {
+                            s.state = s.state ? 0.f : 1.f;
+                        }
+                        s.registered = true;
+                    } else {
+                        s = 1.f;
+                    }
                 }
                 break;
+            }
 
-            case SDL_MOUSEBUTTONUP:
+            case SDL_MOUSEBUTTONUP: {
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     capture_movement = false;
+                    break;
+                }
+
+                MouseEvent evt = MOUSE_UNKNOWN;
+                if (event.button.button == SDL_BUTTON_RIGHT) {
+                    evt = MOUSE_RBUTTON;
+                }
+                if (evt == MOUSE_UNKNOWN) {
+                    break;
+                }
+
+                auto mapping = mouse_mappings.find(evt);
+                if (mapping != mouse_mappings.end()) {
+                    Input::MappingState &s =
+                        input.mapping_states[mapping->second.name];
+
+                    if (mapping->second.sticky) {
+                        s.registered = false;
+                    } else {
+                        s = 0.f;
+                    }
                 }
                 break;
+            }
 
             case SDL_KEYDOWN: {
                 auto mapping = keyboard_mappings.find(event.key.keysym.sym);
@@ -343,4 +406,15 @@ void ui_process_menu_events(bool &quit, bool &mouse_down, dake::math::vec2 &mous
 void ui_swap_buffers(void)
 {
     SDL_GL_SwapWindow(wnd);
+}
+
+
+float Input::get_mapping(const std::string &n) const
+{
+    auto it = mapping_states.find(n);
+    if (it == mapping_states.end()) {
+        return 0.f;
+    }
+
+    return it->second.state;
 }
