@@ -65,12 +65,12 @@ void handle_particles(Particles &output, const Particles &input,
             output.emplace_back();
         }
 
-        vec3 gravitation = -1.e3 * p.position *
+        vec3 gravitation = -p.position *
                            6.67384e-11 * 5.974e24
-                           / pow(1.e3 * p.position.length(), 3.);
+                           / pow(p.position.length(), 3.);
 
         Particle &op = output[out_i++];
-        op.position = p.position + movement * 1e-3f;
+        op.position = p.position + movement;
         op.velocity = p.velocity + gravitation * out_ws.interval;
         op.lifetime = new_lifetime;
 

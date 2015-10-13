@@ -107,9 +107,9 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     float moon_phase_angle = fmodf(moon_phase_time / 2551442.9f, 1.f) * 2.f * M_PIf;
 
     // FIXME: Perigee, apogee and vertical angle (against ecliptic)
-    output.moon_pos = 383397.7916f * vec3(cosf(year_angle + moon_phase_angle),
-                                          0.f,
-                                          sinf(year_angle + moon_phase_angle));
+    output.moon_pos = 383397.79163f * vec3(cosf(year_angle + moon_phase_angle),
+                                           0.f,
+                                           sinf(year_angle + moon_phase_angle));
 
     output.moon_angle_to_sun = moon_phase_angle;
 
@@ -122,7 +122,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.earth_angle  = second_of_day / 86164.09f * 2.f * M_PIf;
     output.earth_angle -= year_angle;
 
-    output.earth_mv = mat4::identity().scaled(vec3(6371.f, 6371.f, 6371.f))
+    output.earth_mv = mat4::identity().scaled(vec3(6371e3f, 6371e3f, 6371e3f))
                                       .rotated(.41f, vec3(1.f, 0.f, 0.f))
                                       .rotated(output.earth_angle, vec3(0.f, 1.f, 0.f));
     output.earth_inv_mv = output.earth_mv.inverse();
@@ -170,10 +170,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
                 torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);
             }
 
-            if (in.position.length() > 6371.f) {
-                forces += -1.e3 * in.position *
+            if (in.position.length() > 6371e3f) {
+                forces += -in.position *
                           6.67384e-11 * in.total_mass * 5.974e24
-                          / pow(1.e3 * in.position.length(), 3.);
+                          / pow(in.position.length(), 3.);
             }
 
             forces += in.weapon_force;
@@ -183,7 +183,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.torque       = torque;
 
             out.velocity = in.velocity + in.acceleration * output.interval;
-            out.position = in.position + in.velocity * 1e-3f * output.interval;
+            out.position = in.position + in.velocity * output.interval;
         } else {
             if (player_fixed_to_ground) {
                 vec3 tangent = vec3(input.earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(in.position).normalized();
@@ -211,10 +211,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             input.scenario->sub<ScenarioScript>().execute(output, input, user_input);
         }
 
-        if (physics_enabled && out.position.length() < 6371.f) {
+        if (physics_enabled && out.position.length() < 6371e3f) {
             vec3 earth_normal = out.position.normalized();
             out.velocity = .8f * (out.velocity - 2.f * out.velocity.dot(earth_normal) * earth_normal);
-            out.position = 6371.f / out.position.length() * out.position;
+            out.position = 6371e3f / out.position.length() * out.position;
         }
 
         if (physics_enabled) {

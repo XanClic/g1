@@ -22,8 +22,8 @@ void main(void)
     vec3 old_sample = texture(color, screen_pos).rgb;
     float stencil_val = texture(stencil, screen_pos).r;
 
-    float div = 1000.0 + (1.0 - stencil_val) * height *
-                (990.0 * (1.0 - length(gl_FragCoord.xy - 0.5 * screen_dim) / length(screen_dim)));
+    float div = 1000000.0 + (1.0 - stencil_val) * height *
+                (990000.0 * (1.0 - length(gl_FragCoord.xy - 0.5 * screen_dim) / length(screen_dim)));
     float exp = 3.0 - 2.7 * stencil_val;
 
     float strength = mix(pow(min(1.0, zb_a / div), exp), 0.7, (1.0 - stencil_val) * (1.0 - height));

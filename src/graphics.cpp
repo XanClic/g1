@@ -124,8 +124,8 @@ void init_game_graphics(void)
     avg_prg ->bind_frag("out_value", 0);
 
 
-    status.z_near =  .01f;
-    status.z_far  = 500.f;
+    status.z_near = 1.f;
+    status.z_far  = 500.e3f;
 
     status.yfov   = static_cast<float>(M_PI) / 4.f;
 
@@ -215,13 +215,15 @@ void do_graphics(const WorldState &input)
     }
 
 
-    status.camera_position = input.ships[input.player_ship].position;
-    status.camera_forward  = input.ships[input.player_ship].forward;
+    const ShipState &ps = input.ships[input.player_ship];
+
+    status.camera_position = ps.position;
+    status.camera_forward  = ps.forward;
 
     calculate_camera(status.world_to_camera, status.camera_position,
-                     status.camera_forward, input.ships[input.player_ship].up);
+                     status.camera_forward, ps.up);
     calculate_camera(status.relative_to_camera, vec3::zero(),
-                     status.camera_forward, input.ships[input.player_ship].up);
+                     status.camera_forward, ps.up);
 
 
     glEnable(GL_BLEND);

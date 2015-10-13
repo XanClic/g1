@@ -28,10 +28,10 @@ function step(interval, ship_state)
     elseif fixed_to_ground and ship_state.velocity:length() < 486 then -- up to ~150 kn (incl ~409 m/s orbital speed)
         -- accelerate
 
-        ship_state.position = ship_state.position + interval * ship_state.velocity / 1000.0
-        ship_state.position = 6371.01 / ship_state.position:length() * ship_state.position
+        ship_state.position = ship_state.position + interval * ship_state.velocity
+        ship_state.position = 6371.01e3 / ship_state.position:length() * ship_state.position
         ship_state.velocity = ship_state.velocity + 3.0 * interval * ship_state.forward
-    elseif ship_state.position:length() < 6386 then -- up to 15 km height
+    elseif ship_state.position:length() < 6386e3 then -- up to 15 km height
         -- launch from ground
 
         if fixed_to_ground then
@@ -42,7 +42,7 @@ function step(interval, ship_state)
 
         turn_time0 = turn_time0 + interval
 
-        ship_state.position = ship_state.position + interval * ship_state.velocity / 1000.0
+        ship_state.position = ship_state.position + interval * ship_state.velocity
 
         if acceleration > 0.0 then
             velocity_value = ship_state.velocity:length() + acceleration * interval
@@ -60,7 +60,7 @@ function step(interval, ship_state)
 
         turn_time1 = turn_time1 + interval
 
-        ship_state.position = ship_state.position + interval * ship_state.velocity / 1000.0
+        ship_state.position = ship_state.position + interval * ship_state.velocity
 
         if turn_time1 / 10.0 < math.pi then
             ship_state.velocity = ship_state.velocity:length() * ship_state.forward
@@ -72,14 +72,14 @@ function step(interval, ship_state)
 
         drop_time = drop_time + interval
 
-        ship_state.position = ship_state.position + interval * ship_state.velocity / 1000.0
+        ship_state.position = ship_state.position + interval * ship_state.velocity
         ship_state.velocity = ship_state.velocity - 9.81 * interval * ship_state.up
-    elseif ship_state.position:length() < 6471 then
+    elseif ship_state.position:length() < 6471e3 then
         -- ignite booster, accelerate
 
         turn_time2 = turn_time2 + interval
 
-        ship_state.position = ship_state.position + interval * ship_state.velocity / 1000.0
+        ship_state.position = ship_state.position + interval * ship_state.velocity
         ship_state.velocity = ship_state.velocity + 30.0 * interval * ship_state.forward
 
         if turn_time2 / 5.0 < math.pi then

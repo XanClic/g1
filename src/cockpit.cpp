@@ -178,9 +178,9 @@ static void draw_scratches(const GraphicsStatus &status,
 
     glDepthMask(GL_FALSE);
 
-    float earth_sun_angle = acosf(ship.position.normalized()
+    float earth_sun_angle = acosf(status.camera_position.normalized()
                                   .dot(world.sun_light_dir));
-    float earth_dim_angle = asinf(6371.f / ship.position.length());
+    float earth_dim_angle = asinf(6371e3f / status.camera_position.length());
 
     float sun_angle_ratio = earth_sun_angle / earth_dim_angle;
     float sun_strength       = smoothstep(.94f, 1.07f, sun_angle_ratio);
@@ -237,7 +237,8 @@ static void draw_cockpit_controls(const WorldState &world,
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
-              localize(static_cast<float>(ship.position.length()) - 6371.f));
+              localize((static_cast<float>(ship.position.length()) - 6371e3f)
+                       * 1e-3f));
 }
 
 
@@ -422,12 +423,12 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             continue;
         }
 
-        vec3 rel_pos = ship.position - player.position;
+        vec3 rel_pos = ship.position - status.camera_position;
         float distance = rel_pos.length();
         rel_pos.normalize();
 
         // TODO: Check whether obstructed by earth
-        if (distance > 1e3f) {
+        if (distance > 1e6f) {
             continue;
         }
 
@@ -440,7 +441,7 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         // (2) It is out of view, but far away (that is, it will be displayed
         //                                      constantly then)
         // (3) Otherwise (it is out of view, but close to us) it should blink
-        if (visible || distance > 50.f || blink_time < .5f) {
+        if (visible || distance > 50e3f || blink_time < .5f) {
             line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
                                                     visible ? 1.f : .3f);
 
@@ -454,7 +455,7 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             float rel_speed = rel_pos.dot(ship.velocity - player.velocity);
 
             draw_text(proj + vec2(0.f, 1.5f * sys), vec2(sxs * .25f, sys * .5f),
-                      localize(distance, 2, LS_UNIT_KM),
+                      localize(distance * 1e-3f, 2, LS_UNIT_KM),
                       ALIGN_CENTER, ALIGN_BOTTOM);
             draw_text(proj + vec2(0.f, 1.0f * sys), vec2(sxs * .25f, sys * .5f),
                       localize(rel_speed, 2, LS_UNIT_M_S),
