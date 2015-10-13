@@ -7,7 +7,19 @@
 Localization olo = DE_LATIN;
 
 
-static const char *translations[][3] = {
+static const std::string translations[][3] = {
+    {
+        "",
+        "",
+        "",
+    },
+
+    {
+        " ",
+        " ",
+        "\x0f",
+    },
+
     {
         "Orbitalgeschwindigkeit",
         "Orbitalgeschwindigkeit",
@@ -42,10 +54,25 @@ static const char *translations[][3] = {
     //  SOH  lä       t      EOF
         "\x02\xc2\xa5\xc3\xa8\x03",
     },
+
+
+    {
+        "km",
+        "km",
+    //   ka      e   m"
+        "\xc2\xb0\x2b\xc3\xb1",
+    },
+
+    {
+        "m/s",
+        "m/s",
+    //   e   m       /   e   s
+        "\x2b\xc3\xb1\x06\x2b\xc3\xb2",
+    },
 };
 
 
-std::string localize(int i)
+const std::string localize(int i)
 {
     if (olo != DE_TENGWAR) {
         return std::to_string(i);
@@ -73,7 +100,7 @@ std::string localize(int i)
 }
 
 
-std::string localize(float f, int prec)
+static const std::string localize_float(float f, int prec)
 {
     if (olo != DE_TENGWAR) {
         char bump[32];
@@ -86,7 +113,18 @@ std::string localize(float f, int prec)
 }
 
 
-std::string localize(LocalizedStrings str)
+const std::string localize(float f, int prec, LocalizedStrings unit)
+{
+    const std::string unit_str = localize(unit);
+    if (unit_str.empty()) {
+        return localize_float(f, prec);
+    } else {
+        return localize_float(f, prec) + localize(LS_SEPARATOR) + unit_str;
+    }
+}
+
+
+const std::string localize(LocalizedStrings str)
 {
     return translations[str][olo];
 }
