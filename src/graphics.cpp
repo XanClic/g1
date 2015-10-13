@@ -217,7 +217,10 @@ void do_graphics(const WorldState &input)
 
     const ShipState &ps = input.ships[input.player_ship];
 
-    status.camera_position = ps.position;
+    status.camera_position = ps.position
+                           + mat3(ps.right, ps.up, ps.forward) *
+                             ps.ship->cockpit_position;
+
     status.camera_forward  = ps.forward;
 
     calculate_camera(status.world_to_camera, status.camera_position,

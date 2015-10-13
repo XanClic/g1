@@ -53,6 +53,8 @@ void handle_particles(Particles &output, const Particles &input,
 {
     size_t out_i = 0;
 
+    vec<3, double> cam_pos = player.position + mat3(player.right, player.up, player.forward) * player.ship->cockpit_position;
+
     for (const Particle &p: input) {
         vec3 movement = p.velocity * out_ws.interval;
         float new_lifetime = p.lifetime - movement.length();
@@ -74,7 +76,7 @@ void handle_particles(Particles &output, const Particles &input,
         op.velocity = p.velocity + gravitation * out_ws.interval;
         op.lifetime = new_lifetime;
 
-        op.position_relative_to_viewer = vec3(op.position - player.position);
+        op.position_relative_to_viewer = vec3(op.position - cam_pos);
     }
 
     for (const Particle &p: out_ws.new_particles) {
@@ -87,7 +89,7 @@ void handle_particles(Particles &output, const Particles &input,
         op.velocity = p.velocity;
         op.lifetime = p.lifetime;
 
-        op.position_relative_to_viewer = vec3(op.position - player.position);
+        op.position_relative_to_viewer = vec3(op.position - cam_pos);
     }
 
     out_ws.new_particles.clear();

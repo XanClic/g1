@@ -3,6 +3,8 @@
 
     "empty_mass":   "single",
 
+    "cockpit_position": "vec3",
+
     "thrusters": {
         "type": "array",
         "of":   "Thruster"
