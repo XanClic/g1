@@ -1,0 +1,23 @@
+{
+    "a":        "strafe.-x",
+    "d":        "strafe.+x",
+    "s":        "strafe.-y",
+    "w":        "strafe.+y",
+    "PageDown": "strafe.-z",
+    "PageUp":   "strafe.+z",
+
+    "mouse.down":   "rotate.-x",
+    "mouse.up":     "rotate.+x",
+    "mouse.left":   "rotate.-y",
+    "mouse.right":  "rotate.+y",
+    "q":            "rotate.-z",
+    "e":            "rotate.+z",
+
+    "z": "-main_engine",
+    "x": "+main_engine",
+
+    "F5": "kill_rotation",
+
+    "j": { "target": "time_acceleration", "sticky": true },
+    "p": { "target": "pause", "sticky": true }
+}
