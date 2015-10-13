@@ -7,7 +7,9 @@
 #include <dake/dake.hpp>
 #include <SDL2/SDL.h>
 
+#include "generic-data.hpp"
 #include "graphics.hpp"
+#include "json.hpp"
 #include "localize.hpp"
 #include "main_loop.hpp"
 #include "physics.hpp"
@@ -121,27 +123,67 @@ void init_ui(void)
     wnd_height = 720;
 
 
-    keyboard_mappings[SDLK_a] = "strafe.-x";
-    keyboard_mappings[SDLK_d] = "strafe.+x";
-    keyboard_mappings[SDLK_s] = "strafe.-y";
-    keyboard_mappings[SDLK_w] = "strafe.+y";
-    keyboard_mappings[SDLK_PAGEDOWN] = "strafe.-z";
-    keyboard_mappings[SDLK_PAGEUP  ] = "strafe.+z";
+    GDData *map_config = json_parse_file("config/input-bindings.json");
+    if (map_config->type != GDData::OBJECT) {
+        throw std::runtime_error("config/input-bindings.json must contain an "
+                                 "object");
+    }
 
-    mouse_mappings[MOUSE_DOWN ] = "rotate.-x";
-    mouse_mappings[MOUSE_UP   ] = "rotate.+x";
-    mouse_mappings[MOUSE_LEFT ] = "rotate.-y";
-    mouse_mappings[MOUSE_RIGHT] = "rotate.+y";
-    keyboard_mappings[SDLK_q] = "rotate.-z";
-    keyboard_mappings[SDLK_e] = "rotate.+z";
+    for (const auto &m: (const GDObject &)*map_config) {
+        if (m.second->type != GDData::STRING &&
+            m.second->type != GDData::OBJECT)
+        {
+            throw std::runtime_error("Input mapping target for “" + m.first +
+                                     "” is not a string or object");
+        }
 
-    keyboard_mappings[SDLK_z] = "-main_engine";
-    keyboard_mappings[SDLK_x] = "+main_engine";
+        Action target;
+        if (m.second->type == GDData::STRING) {
+            target = (const GDString &)*m.second;
+        } else {
+            const GDObject &cm = *m.second;
+            auto target_it = cm.find("target");
+            if (target_it == cm.end() ||
+                target_it->second->type != GDData::STRING)
+            {
+                throw std::runtime_error("No or non-string target specified "
+                                         "for “" + m.first + "”");
+            }
 
-    keyboard_mappings[SDLK_F5] = "kill_rotation";
+            bool sticky = false;
+            auto sticky_it = cm.find("sticky");
+            if (sticky_it != cm.end()) {
+                if (sticky_it->second->type != GDData::BOOLEAN) {
+                    throw std::runtime_error("@sticky value given for “" +
+                                             m.first + "” not a boolean");
+                }
+                sticky = (GDBoolean)*sticky_it->second;
+            }
 
-    keyboard_mappings[SDLK_j] = Action("time_acceleration", true);
-    keyboard_mappings[SDLK_p] = Action("pause", true);
+            target.name = (const GDString &)*target_it->second;
+            target.sticky = sticky;
+        }
+
+        if (!strncmp(m.first.c_str(), "mouse.", 6)) {
+            if (!strcmp(m.first.c_str() + 6, "left")) {
+                mouse_mappings[MOUSE_LEFT] = target;
+            } else if (!strcmp(m.first.c_str() + 6, "right")) {
+                mouse_mappings[MOUSE_RIGHT] = target;
+            } else if (!strcmp(m.first.c_str() + 6, "down")) {
+                mouse_mappings[MOUSE_DOWN] = target;
+            } else if (!strcmp(m.first.c_str() + 6, "up")) {
+                mouse_mappings[MOUSE_UP] = target;
+            } else {
+                throw std::runtime_error("Unknown mapping “" + m.first + "”");
+            }
+        } else {
+            SDL_Keycode kc = SDL_GetKeyFromName(m.first.c_str());
+            if (kc == SDLK_UNKNOWN) {
+                throw std::runtime_error("Unknown mapping “" + m.first + "”");
+            }
+            keyboard_mappings[kc] = target;
+        }
+    }
 }
 
 
