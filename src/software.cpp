@@ -378,7 +378,7 @@ int ScenarioScript::luaw_set_ship_position(lua_State *ls)
     ShipState *ship = lua_toship(ls, 1);
     float lng = lua_tonumber(ls, 2) - M_PIf / 2.f;
     float lat = lua_tonumber(ls, 3);
-    float height = lua_tonumber(ls, 4) / 1e3f;
+    float height = lua_tonumber(ls, 4);
 
     ship->position = ss->current_world_state->earth_mv
                      * vec4(cosf(lat) * sinf(lng),

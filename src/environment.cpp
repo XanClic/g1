@@ -823,7 +823,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
                                                     return std::get<0>(x) > std::get<0>(y);
                                                 });
 
-    float cam_ground_dist = gstat.camera_position.length() - 6357.f;
+    float cam_ground_dist = (gstat.camera_position.length() - 6371e3f) * 1e-3f;
     int base_lod = log2f(cam_ground_dist / gstat.width) + 1.f;
 
     if (base_lod < min_lod) {
@@ -931,9 +931,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     }
 
 
-    mat4 cur_cloud_mv  = world.earth_mv.scaled(vec3(6381.f / 6371.f, 6381.f / 6371.f, 6381.f / 6371.f));
-    mat4 cur_atmo_mv   = world.earth_mv.scaled(vec3(6441.f / 6371.f, 6441.f / 6371.f, 6441.f / 6371.f));
-    mat4 cur_aurora_mv = world.earth_mv.scaled(vec3(6421.f / 6371.f, 6421.f / 6371.f, 6421.f / 6371.f));
+    mat4 cur_cloud_mv  = world.earth_mv.scaled(vec3(6381e3f / 6371e3f, 6381e3f / 6371e3f, 6381e3f / 6371e3f));
+    mat4 cur_atmo_mv   = world.earth_mv.scaled(vec3(6441e3f / 6371e3f, 6441e3f / 6371e3f, 6441e3f / 6371e3f));
+    mat4 cur_aurora_mv = world.earth_mv.scaled(vec3(6421e3f / 6371e3f, 6421e3f / 6371e3f, 6421e3f / 6371e3f));
 
 
     static float lod_update_timer;
@@ -943,8 +943,8 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     lod_update_timer = fmodf(lod_update_timer, .2f);
 
 
-    float sa_zn = (status.camera_position.length() - 6350.f) / 1.5f;
-    float sa_zf =  status.camera_position.length() + 7000.f;
+    float sa_zn = (status.camera_position.length() - 6350e3f) / 1.5f;
+    float sa_zf =  status.camera_position.length() + 7000e3f;
 
     mat4 sa_proj = mat4::projection(status.yfov, status.aspect, sa_zn, sa_zf);
 
@@ -955,7 +955,8 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     skybox_tex->bind();
 
-    mat4 skybox_proj = mat4::projection(status.yfov, status.aspect, 1000.f, 1500.f);
+    mat4 skybox_proj = mat4::projection(status.yfov, status.aspect,
+                                        1000e3f, 1500e3f);
     mat4 skybox_mv   = mat3(status.world_to_camera);
     skybox_mv[3][3] = 1.f;
 
@@ -966,12 +967,13 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     skybox->draw();
 
 
-    vec4 sun_pos = status.world_to_camera * vec4::position(149.6e6f * -world.sun_light_dir);
+    vec4 sun_pos = status.world_to_camera *
+                   vec4::position(149.6e9f * -world.sun_light_dir);
     vec4 projected_sun = status.projection * sun_pos;
     projected_sun /= projected_sun.w();
 
     if (sun_pos.z() < 0.f) {
-        float sun_radius = atanf(696.e3f / sun_pos.length()) * 2.f / status.yfov;
+        float sun_radius = atanf(696.e6f / sun_pos.length()) * 2.f / status.yfov;
 
         sun_prg->use();
         sun_prg->uniform<vec2>("sun_position") = projected_sun;
@@ -1049,13 +1051,13 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     sub_atmo_fbo->mask(1);
     sub_atmo_fbo->bind();
 
-    float height = status.camera_position.length() - 6371.f;
+    float height = status.camera_position.length() - 6371e3f;
 
     glDepthMask(GL_FALSE);
-    if (height < 10.f) {
+    if (height < 10e3f) {
         glCullFace(GL_FRONT);
     }
-    if (height > 8.f && height < 12.f) {
+    if (height > 8e3f && height < 12e3f) {
         glDisable(GL_CULL_FACE);
     }
 
@@ -1075,10 +1077,10 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     earth->draw();
 
-    if (height < 10.f) {
+    if (height < 10e3f) {
         glCullFace(GL_BACK);
     }
-    if (height > 8.f && height < 12.f) {
+    if (height > 8e3f && height < 12e3f) {
         glEnable(GL_CULL_FACE);
     }
     glDepthMask(GL_TRUE);
@@ -1091,7 +1093,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     sub_atmo_fbo->depth().bind();
     atmo_map->bind();
 
-    bool in_atmosphere = status.camera_position.length() <= 6441.f;
+    bool in_atmosphere = status.camera_position.length() <= 6441e3f;
 
     gl::program *draw_earth_prg = in_atmosphere ? atmoi_prg : atmof_prg;
 
@@ -1103,7 +1105,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     } else {
         draw_earth_prg->uniform<vec3>("cam_right") = ship.right;
         draw_earth_prg->uniform<vec3>("cam_up") = ship.up;
-        draw_earth_prg->uniform<float>("height") = height / 70.f;
+        draw_earth_prg->uniform<float>("height") = height / 70e3f;
         draw_earth_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
         draw_earth_prg->uniform<float>("yhfov") = status.yfov / 2.f;
     }
