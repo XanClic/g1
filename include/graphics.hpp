@@ -9,7 +9,7 @@
 
 struct GraphicsStatus {
     dake::math::vec3 camera_position, camera_forward;
-    dake::math::mat4 world_to_camera;
+    dake::math::mat4 world_to_camera, relative_to_camera;
     dake::math::mat4 projection;
 
     unsigned width, height;

@@ -1,0 +1,6 @@
+{
+    "type":         "WeaponType",
+    "full_name":    "string",
+
+    "cooldown": "single"
+}

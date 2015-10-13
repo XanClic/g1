@@ -106,5 +106,11 @@
             "force":                [0, -50, 0],
             "relative_position":    [-2, 0, 0]
         }
+    ],
+
+    "weapons": [
+        {
+            "type":     "PW"
+        }
     ]
 }
