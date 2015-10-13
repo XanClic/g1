@@ -395,9 +395,9 @@ int ScenarioScript::luaw_set_ship_velocity(lua_State *ls)
 {
     ShipState *ship = lua_toship(ls, 1);
 
-    ship->velocity = vec3(lua_tonumber(ls, 2),
-                          lua_tonumber(ls, 3),
-                          lua_tonumber(ls, 4));
+    ship->velocity = ship->right   * lua_tonumber(ls, 2)
+                   + ship->up      * lua_tonumber(ls, 3)
+                   + ship->forward * lua_tonumber(ls, 4);
 
     return 0;
 }

@@ -9,9 +9,19 @@ function initialize()
     ps:set_bearing(0)
 
     ns = spawn_ship("mumeifune")
-
-    ns:set_position(1.4, 0.49, 300000)
+    ns:set_position(1.407, 0.49530, 297500)
     ns:set_bearing(0)
+    ns:set_velocity(0, 20, 7720)
+
+    ns = spawn_ship("mumeifune")
+    ns:set_position(1.407, 0.49535, 297500)
+    ns:set_bearing(0)
+    ns:set_velocity(0, 20, 7720)
+
+    ns = spawn_ship("mumeifune")
+    ns:set_position(1.407, 0.49540, 297500)
+    ns:set_bearing(0)
+    ns:set_velocity(0, 20, 7720)
 end
 
 
