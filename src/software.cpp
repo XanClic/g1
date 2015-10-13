@@ -117,27 +117,27 @@ void Software::sg(const char *n, int v)
 }
 
 
-static vec3 lua_tovector(lua_State *ls, int index)
+static vec<3, double> lua_tovector(lua_State *ls, int index)
 {
-    vec3 vec;
+    vec<3, double> v;
 
     if (lua_isnil(ls, index)) {
-        return vec3::zero();
+        return vec<3, double>::zero();
     }
 
     lua_getfield(ls, index, "x");
-    vec.x() = lua_tonumber(ls, -1);
+    v.x() = lua_tonumber(ls, -1);
     lua_pop(ls, 1);
 
     lua_getfield(ls, index, "y");
-    vec.y() = lua_tonumber(ls, -1);
+    v.y() = lua_tonumber(ls, -1);
     lua_pop(ls, 1);
 
     lua_getfield(ls, index, "z");
-    vec.z() = lua_tonumber(ls, -1);
+    v.z() = lua_tonumber(ls, -1);
     lua_pop(ls, 1);
 
-    return vec;
+    return v;
 }
 
 
@@ -149,7 +149,7 @@ static int luaw_vecmul(lua_State *ls);
 static int luaw_vecdiv(lua_State *ls);
 
 
-static void lua_pushvector(lua_State *ls, const vec3 &vec)
+static void lua_pushvector(lua_State *ls, const vec<3, double> &vec)
 {
     lua_newtable(ls);
 
@@ -195,8 +195,9 @@ static int luaw_veclength(lua_State *ls)
 
 static int luaw_vecrotate(lua_State *ls)
 {
-    mat4 rot = mat4::identity().rotate(lua_tonumber(ls, 3), lua_tovector(ls, 2));
-    lua_pushvector(ls, vec3(rot * vec4::direction(lua_tovector(ls, 1))));
+    mat4 rot = mat4::identity().rotate(lua_tonumber(ls, 3),
+                                       lua_tovector(ls, 2));
+    lua_pushvector(ls, rot * vec4::direction(lua_tovector(ls, 1)));
     return 1;
 }
 
@@ -218,9 +219,9 @@ static int luaw_vecsub(lua_State *ls)
 static int luaw_vecmul(lua_State *ls)
 {
     if (lua_isnumber(ls, 1)) {
-        lua_pushvector(ls, static_cast<float>(lua_tonumber(ls, 1)) * lua_tovector(ls, 2));
+        lua_pushvector(ls, lua_tonumber(ls, 1) * lua_tovector(ls, 2));
     } else {
-        lua_pushvector(ls, static_cast<float>(lua_tonumber(ls, 2)) * lua_tovector(ls, 1));
+        lua_pushvector(ls, lua_tonumber(ls, 2) * lua_tovector(ls, 1));
     }
     return 1;
 }
@@ -511,11 +512,11 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
 
     lua_newtable(ls());
 
-    struct cvecval { const char *name; const vec3 &vec; };
-    for (const auto &vec: (cvecval[]){ { "velocity", ips.velocity },
+    struct cvecval { const char *name; const vec<3, double> &v; };
+    for (const auto &vec: (cvecval[]){ { "velocity", ips.velocity }, { "position", ips.position },
                                        { "up", ips.up }, { "forward", ips.forward }, { "right", ips.right } })
     {
-        lua_pushvector(ls(), vec.vec);
+        lua_pushvector(ls(), vec.v);
         lua_setfield(ls(), -2, vec.name);
     }
 
@@ -528,22 +529,28 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
         return;
     }
 
-    struct vecval { const char *name; vec3 &vec; };
-    for (const auto &vec: (vecval[]){ { "velocity", ops.velocity },
-                                      { "up", ops.up }, { "forward", ops.forward }, { "right", ops.right } })
+    vec<3, double> ovel, oup, ofwd, orgt;
+    struct vecval { const char *name; vec<3, double> &v; };
+    for (const auto &vec: (vecval[]){ { "velocity", ovel }, { "position", ops.position },
+                                      { "up", oup }, { "forward", ofwd }, { "right", orgt } })
     {
         lua_getfield(ls(), -1, vec.name);
-        vec.vec = lua_tovector(ls(), -1);
+        vec.v = lua_tovector(ls(), -1);
         lua_pop(ls(), 1);
     }
 
-    if (!ops.up.length()) {
-        ops.up = ops.right.cross(ops.forward);
-    } else if (!ops.forward.length()) {
-        ops.forward = ops.up.cross(ops.right);
-    } else if (!ops.right.length()) {
-        ops.right = ops.forward.cross(ops.up);
+    if (!oup.length()) {
+        oup = orgt.cross(ofwd);
+    } else if (!ofwd.length()) {
+        ofwd = oup.cross(orgt);
+    } else if (!orgt.length()) {
+        orgt = ofwd.cross(oup);
     }
+
+    ops.velocity = ovel;
+    ops.forward  = ofwd;
+    ops.right    = orgt;
+    ops.up       = oup;
 
     lua_pop(ls(), 1);
 }
