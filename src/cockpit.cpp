@@ -167,23 +167,10 @@ static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &ve
 }
 
 
-void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
+static void draw_scratches(const GraphicsStatus &status,
+                           const WorldState &world, gl::framebuffer *main_fb)
 {
-    // FIXME
-    static float cockpit_brightness = 1.f;
-    cockpit_brightness += .4f * world.interval * (status.luminance - cockpit_brightness);
-
-    if (cockpit_brightness < .2f) {
-        cockpit_brightness = .2f;
-    }
-
     const ShipState &ship = world.ships[world.player_ship];
-
-
-    gl::framebuffer *main_fb = gl::framebuffer::current();
-
-    cockpit_fb->bind();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     (*main_fb)[0].bind();
     scratch_tex->bind();
@@ -191,11 +178,13 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     glDepthMask(GL_FALSE);
 
-    float earth_sun_angle = acosf(ship.position.normalized().dot(world.sun_light_dir));
+    float earth_sun_angle = acosf(ship.position.normalized()
+                                  .dot(world.sun_light_dir));
     float earth_dim_angle = asinf(6371.f / ship.position.length());
 
-    float sun_strength       = smoothstep(.94f, 1.07f, earth_sun_angle / earth_dim_angle);
-    float sun_bloom_strength = smoothstep(.93f, 1.03f, earth_sun_angle / earth_dim_angle);
+    float sun_angle_ratio = earth_sun_angle / earth_dim_angle;
+    float sun_strength       = smoothstep(.94f, 1.07f, sun_angle_ratio);
+    float sun_bloom_strength = smoothstep(.93f, 1.03f, sun_angle_ratio);
 
     // TODO: Could reuse from draw_environment()
     vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
@@ -206,17 +195,23 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     projected_sun /= projected_sun.w();
 
     scratch_prg->use();
-    scratch_prg->uniform<vec3>("sun_dir")       = world.sun_light_dir * sun_strength;
-    scratch_prg->uniform<vec3>("sun_bloom_dir") = world.sun_light_dir * sun_bloom_strength;
+
+    scratch_prg->uniform<vec3>("sun_dir")
+        = world.sun_light_dir * sun_strength;
+    scratch_prg->uniform<vec3>("sun_bloom_dir")
+        = world.sun_light_dir * sun_bloom_strength;
+
     if (!global_options.uniform_scratch_map) {
         scratch_prg->uniform<vec2>("sun_position")  = projected_sun;
     }
     scratch_prg->uniform<vec3>("cam_fwd") = ship.forward;
     scratch_prg->uniform<vec3>("cam_right") = ship.right;
     scratch_prg->uniform<vec3>("cam_up") = ship.up;
-    scratch_prg->uniform<mat3>("normal_mat") = mat3(ship.right, ship.up, ship.forward);
+    scratch_prg->uniform<mat3>("normal_mat") = mat3(ship.right, ship.up,
+                                                    ship.forward);
     scratch_prg->uniform<float>("aspect") = status.aspect / (16.f / 9.f);
-    scratch_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
+    scratch_prg->uniform<float>("xhfov") = status.yfov / 2.f
+                                           * status.width / status.height;
     scratch_prg->uniform<float>("yhfov") = status.yfov / 2.f;
     scratch_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     scratch_prg->uniform<gl::texture>("scratches") = *scratch_tex;
@@ -225,7 +220,210 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
     glDepthMask(GL_TRUE);
+}
 
+
+static void draw_cockpit_controls(const WorldState &world,
+                                  float sxs, float sys)
+{
+    const ShipState &ship = world.ships[world.player_ship];
+    const vec3 &velocity = ship.velocity;
+
+    draw_text(vec2(-1.f + .5f * sxs, 1.f - 1.5f * sys), vec2(sxs, 2 * sys),
+              localize(LS_ORBITAL_VELOCITY));
+    draw_text(vec2(-1.f + .5f * sxs, 1.f - 3.5f * sys), vec2(sxs, 2 * sys),
+              localize(velocity.length()));
+
+    draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
+              localize(LS_HEIGHT_OVER_GROUND));
+    draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
+              localize(ship.position.length() - 6371.f));
+}
+
+
+static void draw_target_cross(const GraphicsStatus &status,
+                              const WorldState &world,
+                              float cockpit_brightness,
+                              float sxs, float sys)
+{
+    const ShipState &ship = world.ships[world.player_ship];
+
+    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
+
+    vec2 fwd_proj = project(status, ship.forward);
+    draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
+    draw_line(fwd_proj + vec2(0.f, -sys), fwd_proj + vec2(0.f, sys));
+}
+
+
+static void draw_velocity_indicators(const GraphicsStatus &status,
+                                     const WorldState &world,
+                                     float cockpit_brightness,
+                                     float sxs, float sys,
+                                     const vec2 &hbx, const vec2 &hby)
+{
+    const ShipState &ship = world.ships[world.player_ship];
+    const vec3 &velocity = ship.velocity;
+
+    if (!velocity.length()) {
+        return;
+    }
+
+
+    bool fwd_visible, bwd_visible;
+    vec2 proj_fwd_vlcty = project_clamp_to_border(status, velocity, hbx, hby,
+                                                  sxs, sys, &fwd_visible);
+    vec2 proj_bwd_vlcty = project_clamp_to_border(status, -velocity, hbx, hby,
+                                                  sxs, sys, &bwd_visible);
+
+    if (fwd_visible || !bwd_visible) {
+        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
+                                                fwd_visible ? 1.f : .3f);
+
+        draw_line(proj_fwd_vlcty + vec2(-sxs, -sys),
+                  proj_fwd_vlcty + vec2( sxs,  sys));
+        draw_line(proj_fwd_vlcty + vec2( sxs, -sys),
+                  proj_fwd_vlcty + vec2(-sxs,  sys));
+    }
+
+
+    if (bwd_visible || !fwd_visible) {
+        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
+                                                bwd_visible ? 1.f : .3f);
+
+        draw_line(proj_bwd_vlcty + vec2(-sxs,  sys),
+                  proj_bwd_vlcty + vec2(-sxs, -sys));
+        draw_line(proj_bwd_vlcty + vec2(-sxs, -sys),
+                  proj_bwd_vlcty + vec2( sxs, -sys));
+        draw_line(proj_bwd_vlcty + vec2( sxs, -sys),
+                  proj_bwd_vlcty + vec2( sxs,  sys));
+        draw_line(proj_bwd_vlcty + vec2( sxs,  sys),
+                  proj_bwd_vlcty + vec2(-sxs,  sys));
+    }
+}
+
+
+static void draw_orbit_grid(const GraphicsStatus &status,
+                            const WorldState &world,
+                            float cockpit_brightness,
+                            float aspect, float sxs, float sys,
+                            const vec2 &hbx, const vec2 &hby)
+{
+    const ShipState &ship = world.ships[world.player_ship];
+    const vec3 &velocity = ship.velocity;
+
+    if (!velocity.length()) {
+        return;
+    }
+
+    vec3 orbit_forward = velocity.normalized();
+    vec3 orbit_inward  = -ship.position.normalized();
+    vec3 orbit_upward  = orbit_forward.cross(orbit_inward).normalized();
+
+    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
+
+    vec3 zero = (status.camera_forward -
+                 status.camera_forward.dot(orbit_upward) * orbit_upward)
+                .normalized();
+    vec3 rvec = zero.cross(orbit_upward);
+    for (int angle = -90; angle <= 90; angle += 2) {
+        float ra = M_PIf * angle / 180.f;
+
+        vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * zero;
+        vec2 proj_vec = project(status, vec);
+
+        if (status.camera_forward.dot(vec) > 0.f &&
+            in_bounds(proj_vec, hbx, hby))
+        {
+            vec2 dvec = project(status,
+                                mat3(mat4::identity().rotated(ra + .01f, rvec))
+                                * zero);
+
+            dvec = ((angle % 10) ? .5f : 2.f) *
+                   vec2(-dvec.y(), dvec.x() * aspect).normalized();
+            vec2 pos[2] = {
+                proj_vec - vec2(dvec.x() * sxs, dvec.y() * sys),
+                proj_vec + vec2(dvec.x() * sxs, dvec.y() * sys)
+            };
+
+            draw_line(pos[0], pos[1]);
+
+            if (!(angle % 10)) {
+                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1])
+                          + vec2(sxs, 0.f),
+                          vec2(sxs, 2 * sys), localize(angle));
+            }
+        }
+    }
+}
+
+
+static void draw_artificial_horizon(const GraphicsStatus &status,
+                                    const WorldState &world,
+                                    float cockpit_brightness,
+                                    float aspect, float sxs, float sys,
+                                    const vec2 &hbx, const vec2 &hby)
+{
+    const ShipState &ship = world.ships[world.player_ship];
+
+    vec3 earth_upward = ship.position.normalized();
+    vec3 horizont = (status.camera_forward -
+                     status.camera_forward.dot(earth_upward) * earth_upward)
+                    .normalized();
+    vec3 rvec = horizont.cross(earth_upward);
+
+    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
+
+    for (int angle = -90; angle <= 90; angle += 5) {
+        float ra = M_PIf * angle / 180.f;
+
+        vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * horizont;
+        vec2 proj_vec = project(status, vec);
+
+        if (status.camera_forward.dot(vec) > 0.f &&
+            in_bounds(proj_vec, hbx, hby))
+        {
+            vec2 dvec = project(status,
+                                mat3(mat4::identity().rotated(ra + .01f, rvec))
+                                * horizont);
+
+            dvec = ((angle % 10) ? 1.5f : 10.f) *
+                   vec2(-dvec.y(), dvec.x() * aspect).normalized();
+            vec2 pos[2] = {
+                proj_vec - vec2(dvec.x() * sxs, dvec.y() * sys),
+                proj_vec + vec2(dvec.x() * sxs, dvec.y() * sys)
+            };
+
+            draw_line(pos[0], pos[1]);
+
+            if (!(angle % 10)) {
+                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1])
+                          + vec2(sxs, 0.f),
+                          vec2(sxs, 2 * sys), localize(angle));
+            }
+        }
+    }
+}
+
+
+void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
+{
+    // FIXME
+    static float cockpit_brightness = 1.f;
+    cockpit_brightness += .4f * world.interval
+                          * (status.luminance - cockpit_brightness);
+
+    if (cockpit_brightness < .2f) {
+        cockpit_brightness = .2f;
+    }
+
+
+    gl::framebuffer *main_fb = gl::framebuffer::current();
+
+    cockpit_fb->bind();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    draw_scratches(status, world, main_fb);
 
 #ifdef COCKPIT_SUPERSAMPLING
     cockpit_ms_fb->bind();
@@ -242,20 +440,14 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     set_text_color(vec4(0.f, cockpit_brightness, 0.f, 1.f));
 
-    const vec3 &velocity = ship.velocity;
-
-
-    draw_text(vec2(-1.f + .5f * sxs, 1.f - 1.5f * sys), vec2(sxs, 2 * sys), localize(LS_ORBITAL_VELOCITY));
-    draw_text(vec2(-1.f + .5f * sxs, 1.f - 3.5f * sys), vec2(sxs, 2 * sys), localize(velocity.length()));
-
-    draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys), localize(LS_HEIGHT_OVER_GROUND));
-    draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys), localize(ship.position.length() - 6371.f));
+    draw_cockpit_controls(world, sxs, sys);
 
 
     unsigned hud_height = height * 3 / 4;
 
     glEnable(GL_SCISSOR_TEST);
     glScissor((width - hud_height) / 2, height - hud_height, hud_height, hud_height);
+
 
     vec2 hbx, hby;
     hbx[0] = -.75f * status.height / status.width;
@@ -264,94 +456,15 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     hby[1] = 1.f;
 
 
-    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
+    draw_target_cross(status, world, cockpit_brightness, sxs, sys);
 
-    vec2 fwd_proj = project(status, ship.forward);
-    draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
-    draw_line(fwd_proj + vec2(0.f, -sys), fwd_proj + vec2(0.f, sys));
+    draw_velocity_indicators(status, world, cockpit_brightness, sxs, sys,
+                             hbx, hby);
 
-
-    if (velocity.length()) {
-        bool fwd_visible, bwd_visible;
-        vec2 proj_fwd_vlcty = project_clamp_to_border(status,  velocity, hbx, hby, sxs, sys, &fwd_visible);
-        vec2 proj_bwd_vlcty = project_clamp_to_border(status, -velocity, hbx, hby, sxs, sys, &bwd_visible);
-
-        if (fwd_visible || !bwd_visible) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, fwd_visible ? 1.f : .3f);
-            draw_line(proj_fwd_vlcty + vec2(-sxs, -sys), proj_fwd_vlcty + vec2( sxs,  sys));
-            draw_line(proj_fwd_vlcty + vec2( sxs, -sys), proj_fwd_vlcty + vec2(-sxs,  sys));
-        }
-
-
-        if (bwd_visible || !fwd_visible) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, bwd_visible ? 1.f : .3f);
-            draw_line(proj_bwd_vlcty + vec2(-sxs,  sys), proj_bwd_vlcty + vec2(-sxs, -sys));
-            draw_line(proj_bwd_vlcty + vec2(-sxs, -sys), proj_bwd_vlcty + vec2( sxs, -sys));
-            draw_line(proj_bwd_vlcty + vec2( sxs, -sys), proj_bwd_vlcty + vec2( sxs,  sys));
-            draw_line(proj_bwd_vlcty + vec2( sxs,  sys), proj_bwd_vlcty + vec2(-sxs,  sys));
-        }
-
-
-        vec3 orbit_forward = velocity.normalized();
-        vec3 orbit_inward  = -ship.position.normalized();
-        vec3 orbit_upward  = orbit_forward.cross(orbit_inward).normalized();
-
-        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
-
-        vec3 zero = (status.camera_forward - status.camera_forward.dot(orbit_upward) * orbit_upward).normalized();
-        vec3 rvec = zero.cross(orbit_upward);
-        for (int angle = -90; angle <= 90; angle += 2) {
-            float ra = M_PIf * angle / 180.f;
-
-            vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * zero;
-            vec2 proj_vec = project(status, vec);
-
-            if ((status.camera_forward.dot(vec) > 0.f) && in_bounds(proj_vec, hbx, hby)) {
-                vec2 dvec = project(status, mat3(mat4::identity().rotated(ra + .01f, rvec)) * zero);
-
-                dvec = ((angle % 10) ? .5f : 2.f) * vec2(-dvec.y(), dvec.x() * aspect).normalized();
-                vec2 pos[2] = {
-                    proj_vec - vec2(dvec.x() * sxs, dvec.y() * sys),
-                    proj_vec + vec2(dvec.x() * sxs, dvec.y() * sys)
-                };
-
-                draw_line(pos[0], pos[1]);
-
-                if (!(angle % 10)) {
-                    draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys),
-                              localize(angle));
-                }
-            }
-        }
-    }
-
-
-    vec3 earth_upward = ship.position.normalized();
-    vec3 horizont = (status.camera_forward - status.camera_forward.dot(earth_upward) * earth_upward).normalized();
-    vec3 rvec = horizont.cross(earth_upward);
-    for (int angle = -90; angle <= 90; angle += 5) {
-        float ra = M_PIf * angle / 180.f;
-
-        vec3 vec = mat3(mat4::identity().rotated(ra, rvec)) * horizont;
-        vec2 proj_vec = project(status, vec);
-
-        if ((status.camera_forward.dot(vec) > 0.f) && in_bounds(proj_vec, hbx, hby)) {
-            vec2 dvec = project(status, mat3(mat4::identity().rotated(ra + .01f, rvec)) * horizont);
-
-            dvec = ((angle % 10) ? 1.5f : 10.f) * vec2(-dvec.y(), dvec.x() * aspect).normalized();
-            vec2 pos[2] = {
-                proj_vec - vec2(dvec.x() * sxs, dvec.y() * sys),
-                proj_vec + vec2(dvec.x() * sxs, dvec.y() * sys)
-            };
-
-            draw_line(pos[0], pos[1]);
-
-            if (!(angle % 10)) {
-                draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1]) + vec2(sxs, 0.f), vec2(sxs, 2 * sys),
-                          localize(angle));
-            }
-        }
-    }
+    draw_orbit_grid(status, world, cockpit_brightness, aspect, sxs, sys,
+                    hbx, hby);
+    draw_artificial_horizon(status, world, cockpit_brightness, aspect, sxs, sys,
+                            hbx, hby);
 
 
     glDisable(GL_SCISSOR_TEST);
