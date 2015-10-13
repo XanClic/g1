@@ -105,7 +105,23 @@
             "general_direction":    "DOWN",
             "force":                [0, -50, 0],
             "relative_position":    [-2, 0, 0]
-        }
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "BACK",
+            "general_direction":    "BACK",
+            "force":                [0, 0, 50],
+            "relative_position":    [0, 0, 2]
+        },
+
+        {
+            "type":                 "THRUSTER_RCS",
+            "general_position":     "FRONT",
+            "general_direction":    "FRONT",
+            "force":                [0, 0, -50],
+            "relative_position":    [0, 0, -2]
+        },
     ],
 
     "weapons": [
