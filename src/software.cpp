@@ -512,7 +512,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
     lua_newtable(ls());
 
     struct cvecval { const char *name; const vec3 &vec; };
-    for (const auto &vec: (cvecval[]){ { "position", ips.position }, { "velocity", ips.velocity },
+    for (const auto &vec: (cvecval[]){ { "velocity", ips.velocity },
                                        { "up", ips.up }, { "forward", ips.forward }, { "right", ips.right } })
     {
         lua_pushvector(ls(), vec.vec);
@@ -529,7 +529,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
     }
 
     struct vecval { const char *name; vec3 &vec; };
-    for (const auto &vec: (vecval[]){ { "position", ops.position }, { "velocity", ops.velocity },
+    for (const auto &vec: (vecval[]){ { "velocity", ops.velocity },
                                       { "up", ops.up }, { "forward", ops.forward }, { "right", ops.right } })
     {
         lua_getfield(ls(), -1, vec.name);
