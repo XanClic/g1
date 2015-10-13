@@ -6,7 +6,7 @@ in uint va_char;
 
 out vec2 vf_pos;
 
-uniform vec2 position, char_size;
+uniform vec2 position, char_size, font_char_fill_ratio;
 
 
 void main(void)
@@ -15,6 +15,6 @@ void main(void)
     vf_pos = (vec2(float(va_char % uint(16)),
                    float(va_char / uint(16)))
             + vec2(mod(va_pos.x, 1.0),
-                   0.5 - va_pos.y))
+                   0.5 - va_pos.y) * font_char_fill_ratio)
            / 16.0;
 }
