@@ -207,6 +207,13 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.torque = vec3::zero();
         }
 
+        if (!physics_enabled) {
+            // FIXME if player_fixed_to_ground
+            out.forward = in.forward;
+            out.right   = in.right;
+            out.up      = in.up;
+        }
+
         if (!physics_enabled && input.scenario_initialized) {
             input.scenario->sub<ScenarioScript>().execute(output, input, user_input);
         }
