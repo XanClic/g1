@@ -453,14 +453,12 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         if (visible) {
             float rel_speed = rel_pos.dot(ship.velocity - player.velocity);
 
-            char info_l1[32], info_l2[32];
-            snprintf(info_l1, sizeof(info_l1), "%.2f km", distance);
-            snprintf(info_l2, sizeof(info_l2), "%.2f m/s", rel_speed);
-
             draw_text(proj + vec2(0.f, 1.5f * sys), vec2(sxs * .25f, sys * .5f),
-                      info_l1, ALIGN_CENTER, ALIGN_BOTTOM);
+                      localize(distance, 2, LS_UNIT_KM),
+                      ALIGN_CENTER, ALIGN_BOTTOM);
             draw_text(proj + vec2(0.f, 1.0f * sys), vec2(sxs * .25f, sys * .5f),
-                      info_l2, ALIGN_CENTER, ALIGN_BOTTOM);
+                      localize(rel_speed, 2, LS_UNIT_M_S),
+                      ALIGN_CENTER, ALIGN_BOTTOM);
         }
     }
 }

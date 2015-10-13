@@ -13,17 +13,25 @@ enum Localization {
 };
 
 enum LocalizedStrings {
+    LS_REALLY_NOTHING_AND_NOTHING_BUT,
+
+    LS_SEPARATOR,
+
     LS_ORBITAL_VELOCITY,
     LS_HEIGHT_OVER_GROUND,
     LS_TEST_ENVIRONMENT,
     LS_TEST_SCENARIO,
     LS_LOADING,
+
+    LS_UNIT_KM,
+    LS_UNIT_M_S,
 };
 
 
-std::string localize(int i);
-std::string localize(float f, int prec = 2);
-std::string localize(LocalizedStrings str);
+const std::string localize(int i);
+const std::string localize(float f, int prec = 2,
+    LocalizedStrings unit = LS_REALLY_NOTHING_AND_NOTHING_BUT);
+const std::string localize(LocalizedStrings str);
 
 
 extern Localization olo;
