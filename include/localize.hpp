@@ -8,6 +8,7 @@ enum Localization {
     DE_LATIN,
     DE_MADO,
     DE_TENGWAR,
+    EN_US_LATIN,
 
     LOCALIZATIONS
 };

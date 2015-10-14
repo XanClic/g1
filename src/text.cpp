@@ -64,6 +64,9 @@ void init_text(void)
     font_fr[DE_LATIN].x() = (lfi.width()  - 16.f) / lfi.width();
     font_fr[DE_LATIN].y() = (lfi.height() - 16.f) / lfi.height();
 
+    font[EN_US_LATIN] = font[DE_LATIN];
+    font_fr[EN_US_LATIN] = font_fr[DE_LATIN];
+
     gl::image mfi("assets/mado.png");
     font[DE_MADO] = new gl::texture(mfi);
     font[DE_MADO]->filter(GL_LINEAR);
