@@ -57,7 +57,8 @@ static void handle_weapons(WorldState &output, const WorldState &input,
                 const WeaponClass *wc = weapon_classes[wt];
 
                 spawn_particle(output, ship_out.position,
-                               ship_out.velocity + ship_out.forward * 1e3f);
+                               ship_out.velocity + ship_out.forward * 5e2f,
+                               ship_out.forward * 20.f);
 
                 new_cooldown += wc->cooldown;
             }
