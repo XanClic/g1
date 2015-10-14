@@ -788,6 +788,14 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
     mat3 norm_mat = mat3(cur_earth_mv).transposed_inverse();
     bool changed = false;
 
+    int eff_min_lod = min_lod, eff_max_lod = max_lod;
+    if (gstat.time_speed_up >= 50.f) {
+        // With high speed-up you can't see the earth very good anyway. Fix the
+        // LOD to a constant level so there are no load/unload spikes.
+        eff_min_lod = helper::minimum(max_lod, helper::maximum(min_lod, 3));
+        eff_max_lod = eff_min_lod;
+    }
+
     std::vector<std::tuple<float, int, int>> lod_list;
 
     for (int x = 0; x < 32; x++) {
@@ -809,7 +817,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
             } else {
                 if (tile_lods[x][y] == -1) {
                     changed = true;
-                    tile_lods[x][y] = max_lod; // will be fixed right away
+                    tile_lods[x][y] = eff_max_lod; // will be fixed right away
                 }
             }
 
@@ -826,10 +834,10 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
     float cam_ground_dist = (gstat.camera_position.length() - 6371e3f) * 1e-3f;
     int base_lod = log2f(cam_ground_dist / gstat.width) + 1.f;
 
-    if (base_lod < min_lod) {
-        base_lod = min_lod;
-    } else if (base_lod > max_lod) {
-        base_lod = max_lod;
+    if (base_lod < eff_min_lod) {
+        base_lod = eff_min_lod;
+    } else if (base_lod > eff_max_lod) {
+        base_lod = eff_max_lod;
     }
 
     int slots_to_keep;
@@ -877,7 +885,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
             --it;
             used_slots--;
 
-            if (base_lod < max_lod) {
+            if (base_lod < eff_max_lod) {
                 base_lod++;
             }
 

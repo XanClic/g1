@@ -10,12 +10,14 @@
 struct GraphicsStatus {
     dake::math::vec<3, double> camera_position;
     dake::math::vec3 camera_forward;
+
     dake::math::mat4 world_to_camera, relative_to_camera;
     dake::math::mat4 projection;
 
     unsigned width, height;
     float z_near, z_far;
     float yfov, aspect;
+    float time_speed_up;
 
     float luminance;
 };
