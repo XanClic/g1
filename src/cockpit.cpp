@@ -232,13 +232,21 @@ static void draw_cockpit_controls(const WorldState &world,
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 1.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_ORBITAL_VELOCITY));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 3.5f * sys), vec2(sxs, 2 * sys),
-              localize(velocity.length()));
+              localize(velocity.length(), 2, LS_UNIT_M_S));
 
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
               localize((static_cast<float>(ship.position.length()) - 6371e3f)
-                       * 1e-3f));
+                       * 1e-3f, 2, LS_UNIT_KM));
+
+    float time_factor = world.interval / world.real_interval;
+    if (time_factor > 1.f) {
+        draw_text(vec2(-1.f + .5f * sxs, 1.f -  9.5f * sys), vec2(sxs, 2 * sys),
+                  localize(LS_SPEED_UP));
+        draw_text(vec2(-1.f + .5f * sxs, 1.f - 11.5f * sys), vec2(sxs, 2 * sys),
+                  localize(time_factor, 0, LS_UNIT_TIMES));
+    }
 }
 
 
