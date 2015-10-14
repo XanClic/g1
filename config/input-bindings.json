@@ -18,8 +18,9 @@
 
     "F5": "kill_rotation",
 
-    "j": { "target": "time_acceleration", "sticky": true },
-    "p": { "target": "pause", "sticky": true },
+    "j": { "target": "time_acceleration", "translate": "one-shot" },
+    "k": { "target": "time_deceleration", "translate": "one-shot" },
+    "p": { "target": "pause", "translate": "sticky" },
 
     "mouse.rbutton": "main_fire"
 }

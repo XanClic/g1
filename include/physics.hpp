@@ -22,6 +22,7 @@ struct WorldState {
 
     std::chrono::system_clock::time_point timestamp, real_timestamp;
     float interval, real_interval;
+    int time_speed_up;
 
     dake::math::vec3 sun_light_dir;
     dake::math::vec3 moon_pos;

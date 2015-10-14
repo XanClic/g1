@@ -84,7 +84,20 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.real_timestamp = std::chrono::system_clock::now();
     output.real_interval  = time_interval(output.real_timestamp - input.real_timestamp);
 
-    float time_accel = 1.f + 9.f * user_input.get_mapping("time_acceleration");
+    output.time_speed_up = input.time_speed_up;
+
+    if (user_input.get_mapping("time_acceleration") &&
+        output.time_speed_up < 1000)
+    {
+        output.time_speed_up *= 10;
+    }
+    if (user_input.get_mapping("time_deceleration") &&
+        output.time_speed_up > 1)
+    {
+        output.time_speed_up /= 10;
+    }
+
+    float time_accel = static_cast<float>(output.time_speed_up);
     if (user_input.get_mapping("pause")) {
         time_accel = 0.f;
     }
@@ -310,6 +323,8 @@ void WorldState::initialize(const std::string &sn)
 {
     real_timestamp = std::chrono::system_clock::now();
     timestamp      = std::chrono::system_clock::now();
+
+    time_speed_up = 1;
 
     scenario = get_scenario(sn);
     if (!scenario) {
