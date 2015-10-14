@@ -789,7 +789,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
     bool changed = false;
 
     int eff_min_lod = min_lod, eff_max_lod = max_lod;
-    if (gstat.time_speed_up >= 50.f) {
+    if (gstat.time_speed_up >= 50) {
         // With high speed-up you can't see the earth very good anyway. Fix the
         // LOD to a constant level so there are no load/unload spikes.
         eff_min_lod = helper::minimum(max_lod, helper::maximum(min_lod, 3));

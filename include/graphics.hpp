@@ -17,7 +17,7 @@ struct GraphicsStatus {
     unsigned width, height;
     float z_near, z_far;
     float yfov, aspect;
-    float time_speed_up;
+    int time_speed_up;
 
     float luminance;
 };

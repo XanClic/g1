@@ -229,7 +229,7 @@ void do_graphics(const WorldState &input)
                      status.camera_forward, ps.up);
 
 
-    status.time_speed_up = input.interval / input.real_interval;
+    status.time_speed_up = input.time_speed_up;
 
 
     glEnable(GL_BLEND);
