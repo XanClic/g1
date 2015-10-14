@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <functional>
 
 #include <dake/math.hpp>
 
@@ -8,6 +9,7 @@
 #include "json.hpp"
 #include "options.hpp"
 #include "physics.hpp"
+#include "runge-kutta-4.hpp"
 #include "ship_types.hpp"
 #include "software.hpp"
 #include "weapons.hpp"
@@ -172,21 +174,29 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
                           .cross(force);
             }
 
-            if (in.position.length() > 6371e3f) {
-                forces += -in.position *
-                          6.67384e-11 * in.total_mass * 5.974e24
-                          / pow(in.position.length(), 3.);
-            }
-
             forces += in.weapon_force;
             torque += in.weapon_torque;
 
-            out.acceleration = forces / in.total_mass;
+            vec3 accel = forces / in.total_mass;
+
+            auto rk4_calc_accel = [&accel](const RK4State &state) -> vec3 {
+                vec3 total_accel = accel;
+                if (state.x.length() > 6371e3) {
+                    total_accel += state.x * (-6.67384e-11 * 5.974e24)
+                                   / pow(state.x.length(), 3.);
+                }
+                return total_accel;
+            };
+
+            RK4State rk4_initial(in.position, in.velocity);
+            RK4State rk4s = rk4_integrate(rk4_initial, output.interval,
+                                          rk4_calc_accel);
+
+            out.acceleration = (rk4s.v - in.velocity) / output.interval;
             out.torque       = torque;
 
-            // Symplectic euler (use newly calculated values)
-            out.velocity = in.velocity + out.acceleration * output.interval;
-            out.position = in.position + out.velocity * output.interval;
+            out.velocity = rk4s.v;
+            out.position = rk4s.x;
         } else {
             if (player_fixed_to_ground) {
                 vec3 tangent = vec3(input.earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(in.position).normalized();
