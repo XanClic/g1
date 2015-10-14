@@ -7,8 +7,9 @@
 Localization olo = DE_LATIN;
 
 
-static const std::string translations[][3] = {
+static const std::string translations[][LOCALIZATIONS] = {
     {
+        "",
         "",
         "",
         "",
@@ -18,6 +19,7 @@ static const std::string translations[][3] = {
         " ",
         " ",
         "\x0f",
+        " ",
     },
 
     {
@@ -25,6 +27,7 @@ static const std::string translations[][3] = {
         "Orbitalgeschwindigkeit",
     //   ō   r       bi  ta  l       ge      sch     wi  n       di  ch      ka      -i      t
         "\x24\xc3\xaa\x69\x30\xc3\xb4\xc2\xbb\xc3\xb3\x79\xc3\xab\x39\xc3\xb7\xc2\xb0\xc3\xba\xc3\xa8",
+        "Orbital velocity",
     },
 
     {
@@ -32,6 +35,7 @@ static const std::string translations[][3] = {
         "Höhe über Grund",
     //   hö  he  _   ü   be  r       _   g       ru  n       t
         "\x5e\x5b\x0f\x27\x6b\xc3\xaa\x0f\xc3\xb6\x42\xc3\xab\xc3\xa8",
+        "Height over ground",
     },
 
     {
@@ -39,6 +43,7 @@ static const std::string translations[][3] = {
         "Testumgebung",
     //  te   s       t       u   m       ge      bu  ng
         "\x33\xc3\xb2\xc3\xa8\x2a\xc3\xb1\xc2\xbb\x6a\xc3\xb0",
+        "Test environment",
     },
 
     {
@@ -46,6 +51,7 @@ static const std::string translations[][3] = {
         "Testszenario",
     //  te   s       t       se      na  ri  ō
         "\x33\xc3\xb2\xc3\xa8\xc2\x8b\x48\x41\x24",
+        "Test scenario",
     },
 
     {
@@ -53,6 +59,7 @@ static const std::string translations[][3] = {
         "Lädt...",
     //  SOH  lä       t      EOF
         "\x02\xc2\xa5\xc3\xa8\x03",
+        "Loading...",
     },
 
     {
@@ -60,6 +67,7 @@ static const std::string translations[][3] = {
         "Beschleunigung",
     //   be  sch     lo      -i      ni  gu      ng
         "\x6b\xc3\xb3\xc2\xa4\xc3\xba\x49\xc2\xba\xc3\xb0",
+        "Speed-up",
     },
 
 
@@ -68,6 +76,7 @@ static const std::string translations[][3] = {
         "km",
     //   ka      e   m"
         "\xc2\xb0\x2b\xc3\xb1",
+        "km",
     },
 
     {
@@ -75,6 +84,7 @@ static const std::string translations[][3] = {
         "m/s",
     //   e   m       /   e   s
         "\x2b\xc3\xb1\x06\x2b\xc3\xb2",
+        "m/s",
     },
 
     {
@@ -82,6 +92,7 @@ static const std::string translations[][3] = {
         "-fach",
     //   -   fa  ch
         "\x01\x70\xc3\xb7",
+        "x",
     },
 };
 
