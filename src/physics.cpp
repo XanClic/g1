@@ -182,8 +182,9 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.acceleration = forces / in.total_mass;
             out.torque       = torque;
 
-            out.velocity = in.velocity + in.acceleration * output.interval;
-            out.position = in.position + in.velocity * output.interval;
+            // Symplectic euler (use newly calculated values)
+            out.velocity = in.velocity + out.acceleration * output.interval;
+            out.position = in.position + out.velocity * output.interval;
         } else {
             if (player_fixed_to_ground) {
                 vec3 tangent = vec3(input.earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(in.position).normalized();
