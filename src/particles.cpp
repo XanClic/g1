@@ -25,7 +25,7 @@ void init_particles(void)
                                     gl::shader::frag("shaders/particle_frag.glsl")};
 
     particle_prg->bind_attrib("va_position", 0);
-    particle_prg->bind_attrib("va_velocity", 1);
+    particle_prg->bind_attrib("va_orientation", 1);
     particle_prg->bind_frag("out_col", 0);
 
     particle_data = new gl::vertex_array;
@@ -37,13 +37,14 @@ void init_particles(void)
 
 
 void spawn_particle(WorldState &output, const vec<3, double> &position,
-                    const vec3 &velocity)
+                    const vec3 &velocity, const vec3 &orientation)
 {
     output.new_particles.emplace_back();
 
     Particle &np = output.new_particles.back();
     np.position = position;
     np.velocity = velocity;
+    np.orientation = orientation;
     np.lifetime = 1e5f;
 }
 
@@ -74,6 +75,7 @@ void handle_particles(Particles &output, const Particles &input,
         Particle &op = output[out_i++];
         op.position = p.position + movement;
         op.velocity = p.velocity + gravitation * out_ws.interval;
+        op.orientation = p.orientation;
         op.lifetime = new_lifetime;
 
         op.position_relative_to_viewer = vec3(op.position - cam_pos);
@@ -87,6 +89,7 @@ void handle_particles(Particles &output, const Particles &input,
         Particle &op = output[out_i++];
         op.position = p.position;
         op.velocity = p.velocity;
+        op.orientation = p.orientation;
         op.lifetime = p.lifetime;
 
         op.position_relative_to_viewer = vec3(op.position - cam_pos);
@@ -103,7 +106,9 @@ void handle_particles(Particles &output, const Particles &input,
 void draw_particles(const GraphicsStatus &status, const Particles &input)
 {
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
 
     particle_data->set_elements(input.size());
 
@@ -115,7 +120,7 @@ void draw_particles(const GraphicsStatus &status, const Particles &input)
                                    offsetof(Particle,
                                             position_relative_to_viewer));
     particle_data->attrib(1)->load(sizeof(Particle),
-                                   offsetof(Particle, velocity));
+                                   offsetof(Particle, orientation));
 
     particle_prg->use();
 
@@ -124,4 +129,6 @@ void draw_particles(const GraphicsStatus &status, const Particles &input)
     particle_prg->uniform<float>("aspect") = status.aspect;
 
     particle_data->draw(GL_POINTS);
+
+    glEnable(GL_CULL_FACE);
 }
