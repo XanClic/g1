@@ -89,7 +89,12 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         time_accel = 0.f;
     }
 
-    output.interval  = output.real_interval * time_accel;
+    float limited_real_interval = output.real_interval;
+    if (limited_real_interval > .1f) {
+        limited_real_interval = .1f;
+    }
+
+    output.interval  = limited_real_interval * time_accel;
     output.timestamp = input.timestamp + interval_duration(output.interval);
 
     output.scenario = input.scenario;
