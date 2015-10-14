@@ -40,15 +40,21 @@ template<> struct hash<MouseEvent> {
 
 
 struct Action {
+    enum Translate {
+        NONE,
+        STICKY,
+        ONE_SHOT,
+    };
+
     Action(void) {}
-    Action(const std::string &n, bool s = false):
-        name(n), sticky(s) {}
+    Action(const std::string &n, Translate t = NONE):
+        name(n), trans(t) {}
 
     Action &operator=(const std::string &n) { name = n; return *this; }
 
     std::string name;
     // No effects on mouse mappings!
-    bool sticky = false;
+    Translate trans = NONE;
 };
 
 
@@ -172,18 +178,30 @@ void init_ui(void)
                                          "for “" + m.first + "”");
             }
 
-            bool sticky = false;
-            auto sticky_it = cm.find("sticky");
-            if (sticky_it != cm.end()) {
-                if (sticky_it->second->type != GDData::BOOLEAN) {
-                    throw std::runtime_error("@sticky value given for “" +
-                                             m.first + "” not a boolean");
+            Action::Translate trans = Action::NONE;
+            auto trans_it = cm.find("translate");
+            if (trans_it != cm.end()) {
+                if (trans_it->second->type != GDData::STRING) {
+                    throw std::runtime_error("@translate value given for “" +
+                                             m.first + "” not a string");
                 }
-                sticky = (GDBoolean)*sticky_it->second;
+
+                const GDString &trans_str = *trans_it->second;
+                if (trans_str == "none") {
+                    trans = Action::NONE;
+                } else if (trans_str == "sticky") {
+                    trans = Action::STICKY;
+                } else if (trans_str == "one-shot") {
+                    trans = Action::ONE_SHOT;
+                } else {
+                    throw std::runtime_error("Invalid value “" + trans_str +
+                                             "” given as @translate for “" +
+                                             m.first + "”");
+                }
             }
 
             target.name = (const GDString &)*target_it->second;
-            target.sticky = sticky;
+            target.trans = trans;
         }
 
         if (!strncmp(m.first.c_str(), "mouse.", 6)) {
@@ -235,6 +253,12 @@ void ui_process_events(Input &input)
         input.initialized = true;
     }
 
+    for (const auto &km: keyboard_mappings) {
+        if (km.second.trans == Action::ONE_SHOT) {
+            input.mapping_states[km.second.name] = 0.f;
+        }
+    }
+
 
     SDL_Event event;
 
@@ -273,14 +297,16 @@ void ui_process_events(Input &input)
                     Input::MappingState &s =
                         input.mapping_states[mapping->second.name];
 
-                    if (mapping->second.sticky) {
+                    if (mapping->second.trans == Action::STICKY) {
                         if (!s.registered) {
                             s.state = s.state ? 0.f : 1.f;
                         }
-                        s.registered = true;
+                    } else if (mapping->second.trans == Action::ONE_SHOT) {
+                        s.state = s.registered ? 0.f : 1.f;
                     } else {
                         s = 1.f;
                     }
+                    s.registered = true;
                 }
                 break;
             }
@@ -304,9 +330,8 @@ void ui_process_events(Input &input)
                     Input::MappingState &s =
                         input.mapping_states[mapping->second.name];
 
-                    if (mapping->second.sticky) {
-                        s.registered = false;
-                    } else {
+                    s.registered = false;
+                    if (mapping->second.trans != Action::STICKY) {
                         s = 0.f;
                     }
                 }
@@ -319,14 +344,16 @@ void ui_process_events(Input &input)
                     Input::MappingState &s =
                         input.mapping_states[mapping->second.name];
 
-                    if (mapping->second.sticky) {
+                    if (mapping->second.trans == Action::STICKY) {
                         if (!s.registered) {
                             s.state = s.state ? 0.f : 1.f;
                         }
-                        s.registered = true;
+                    } else if (mapping->second.trans == Action::ONE_SHOT) {
+                        s.state = s.registered ? 0.f : 1.f;
                     } else {
                         s = 1.f;
                     }
+                    s.registered = true;
                 } else {
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE:
@@ -347,9 +374,8 @@ void ui_process_events(Input &input)
                     Input::MappingState &s =
                         input.mapping_states[mapping->second.name];
 
-                    if (mapping->second.sticky) {
-                        s.registered = false;
-                    } else {
+                    s.registered = false;
+                    if (mapping->second.trans != Action::STICKY) {
                         s = 0.f;
                     }
                 }
