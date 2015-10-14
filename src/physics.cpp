@@ -156,18 +156,19 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         if (physics_enabled) {
             vec3 forces = vec3::zero(), torque = vec3::zero();
-            for (size_t j = 0; j < in.ship->thrusters.size(); j++) {
-                float state = in.thruster_states[j];
+            for (size_t j = 0; j < out.ship->thrusters.size(); j++) {
+                float state = out.thruster_states[j];
                 if (state < 0.f) {
                     state = 0.f;
                 } else if (state > 1.f) {
                     state = 1.f;
                 }
 
-                vec3 force = state * (local_mat * in.ship->thrusters[j].force);
+                vec3 force = state * (local_mat * out.ship->thrusters[j].force);
 
                 forces += force;
-                torque += (local_mat * in.ship->thrusters[j].relative_position).cross(force);
+                torque += (local_mat * out.ship->thrusters[j].relative_position)
+                          .cross(force);
             }
 
             if (in.position.length() > 6371e3f) {
