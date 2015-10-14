@@ -22,9 +22,11 @@ enum LocalizedStrings {
     LS_TEST_ENVIRONMENT,
     LS_TEST_SCENARIO,
     LS_LOADING,
+    LS_SPEED_UP,
 
     LS_UNIT_KM,
     LS_UNIT_M_S,
+    LS_UNIT_TIMES,
 };
 
 

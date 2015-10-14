@@ -55,6 +55,13 @@ static const std::string translations[][3] = {
         "\x02\xc2\xa5\xc3\xa8\x03",
     },
 
+    {
+        "Beschleunigung",
+        "Beschleunigung",
+    //   be  sch     lo      -i      ni  gu      ng
+        "\x6b\xc3\xb3\xc2\xa4\xc3\xba\x49\xc2\xba\xc3\xb0",
+    },
+
 
     {
         "km",
@@ -68,6 +75,13 @@ static const std::string translations[][3] = {
         "m/s",
     //   e   m       /   e   s
         "\x2b\xc3\xb1\x06\x2b\xc3\xb2",
+    },
+
+    {
+        "x",
+        "-fach",
+    //   -   fa  ch
+        "\x01\x70\xc3\xb7",
     },
 };
 
@@ -119,7 +133,11 @@ const std::string localize(float f, int prec, LocalizedStrings unit)
     if (unit_str.empty()) {
         return localize_float(f, prec);
     } else {
-        return localize_float(f, prec) + localize(LS_SEPARATOR) + unit_str;
+        if (unit == LS_UNIT_TIMES) {
+            return localize_float(f, prec) + unit_str;
+        } else {
+            return localize_float(f, prec) + localize(LS_SEPARATOR) + unit_str;
+        }
     }
 }
 
