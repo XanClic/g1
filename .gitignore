@@ -1,9 +1,3 @@
 build
-assets/from
-assets/earth/
-assets/night/
-assets/clouds/
-assets/*.xsmd
-assets/*.png
-assets/*.jpg
+assets
 cscope.*

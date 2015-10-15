@@ -11,22 +11,22 @@ std::vector<const WeaponClass *> weapon_classes;
 
 void load_weapons(void)
 {
-    GDData *weapon_type_index = json_parse_file("assets/weapons/index.json");
+    GDData *weapon_type_index = json_parse_file("config/weapons/index.json");
     try {
         if (weapon_type_index->type != GDData::ARRAY) {
-            throw std::runtime_error("assets/weapons/index.json must contain "
+            throw std::runtime_error("config/weapons/index.json must contain "
                                      "an array of strings");
         }
 
         const GDArray &weapon_type_array = *weapon_type_index;
         for (const GDData &weapon_type: weapon_type_array) {
             if (weapon_type.type != GDData::STRING) {
-                throw std::runtime_error("assets/weapons/index.json must "
+                throw std::runtime_error("config/weapons/index.json must "
                                          "contain an array of strings");
             }
 
             const std::string &type = weapon_type;
-            GDData *weapon_class_spec = json_parse_file("assets/weapons/" + type
+            GDData *weapon_class_spec = json_parse_file("config/weapons/" + type
                                                         + ".json");
             WeaponClass *wc = new WeaponClass;
             try {
