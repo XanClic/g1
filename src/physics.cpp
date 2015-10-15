@@ -149,15 +149,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.earth_inv_mv = output.earth_mv.inverse();
 
 
-    bool ship_list_changed = input.ships.size() != output.ships.size();
-    for (size_t i = 0; !ship_list_changed && (i < input.ships.size()); i++) {
-        // FIXME
-        ship_list_changed = input.ships[i].ship != output.ships[i].ship;
-    }
-
-    if (ship_list_changed) {
+    if (input.ship_list_changed) {
         output.ships = input.ships;
         output.player_ship = input.player_ship;
+        output.ship_list_changed = false;
     }
 
 
@@ -344,6 +339,7 @@ void WorldState::initialize(const std::string &sn)
 ShipState &WorldState::spawn_ship(const Ship *type)
 {
     ships.emplace_back(type);
+    ship_list_changed = true;
     return ships.back();
 }
 
