@@ -477,7 +477,13 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 {
     // FIXME
     static float cockpit_brightness = 1.f;
-    cockpit_brightness += .4f * world.interval
+
+    float brightness_adaption_interval = world.interval;
+    // With time speed-up, we need to limit this so we don't get flickering
+    if (brightness_adaption_interval > 1.f) {
+        brightness_adaption_interval = 1.f;
+    }
+    cockpit_brightness += .4f * brightness_adaption_interval
                           * (status.luminance - cockpit_brightness);
 
     if (cockpit_brightness < .2f) {
