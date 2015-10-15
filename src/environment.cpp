@@ -209,11 +209,11 @@ static void resize(unsigned w, unsigned h);
 static void init_lods(void)
 {
     if (!gl::glext.has_extension(gl::BINDLESS_TEXTURE) && (global_options.max_lod > 5)) {
-        if (global_options.min_lod > 5) {
-            throw std::runtime_error("Cannot use a min-lod > 5 without bindless texture support");
+        if (global_options.min_lod > 4) {
+            throw std::runtime_error("Cannot use a min-lod > 4 without bindless texture support");
         }
 
-        global_options.max_lod = 5;
+        global_options.max_lod = 4;
     }
 
     min_lod = global_options.min_lod;
