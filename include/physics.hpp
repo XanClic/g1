@@ -33,6 +33,7 @@ struct WorldState {
 
     std::vector<ShipState> ships;
     int player_ship;
+    bool ship_list_changed;
 
     std::vector<Aurora> auroras;
     Aurora::HotspotList aurora_hotspots;
