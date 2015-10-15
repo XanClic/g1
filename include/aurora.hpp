@@ -5,7 +5,7 @@
 
 #include <vector>
 
-class WorldState;
+struct WorldState;
 
 
 class Aurora {

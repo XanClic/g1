@@ -17,9 +17,9 @@ struct Particle {
 typedef std::vector<Particle> Particles;
 
 
-class WorldState;
-class GraphicsStatus;
-class ShipState;
+struct WorldState;
+struct GraphicsStatus;
+struct ShipState;
 
 
 void init_particles(void);

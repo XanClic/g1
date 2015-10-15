@@ -24,10 +24,6 @@ enum XSMDDataType {
     FLOAT
 };
 
-static const size_t XSMDDataTypeSize[] = {
-    sizeof(float)
-};
-
 struct XSMDHeader {
     char magic[8];
     char version[6];
