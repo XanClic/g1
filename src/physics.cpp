@@ -294,6 +294,11 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     handle_particles(output.particles, input.particles, output, player);
 
 
+    for (ShipState &ss: output.ships) {
+        ss.radar.update(ss, output);
+    }
+
+
     if (global_options.aurora) {
         if (!output.auroras.size()) {
             output.auroras.resize(input.auroras.size());

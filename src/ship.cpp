@@ -1,6 +1,9 @@
 #include <dake/math/matrix.hpp>
 
+#include <cassert>
+#include <cstdint>
 #include <cstring>
+#include <climits>
 
 #include "json-structs.hpp"
 #include "ship.hpp"
@@ -9,9 +12,16 @@
 using namespace dake::math;
 
 
+static int64_t id_counter;
+
+
 ShipState::ShipState(const Ship *ship_type):
     ship(ship_type)
 {
+    assert(id_counter < INT64_MAX);
+
+    id = id_counter++;
+
     position        = vec3::zero();
     velocity        = vec3::zero();
     acceleration    = vec3::zero();

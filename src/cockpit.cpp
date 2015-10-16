@@ -6,6 +6,7 @@
 #include "cockpit.hpp"
 #include "localize.hpp"
 #include "options.hpp"
+#include "radar.hpp"
 #include "text.hpp"
 
 
@@ -421,28 +422,15 @@ static void draw_radar_contacts(const GraphicsStatus &status,
                                 float sxs, float sys,
                                 const vec2 &hbx, const vec2 &hby)
 {
-    const ShipState &player = world.ships[world.player_ship];
-
     sxs *= 2.f;
     sys *= 2.f;
 
-    for (const ShipState &ship: world.ships) {
-        if (&ship == &player) {
-            continue;
-        }
-
-        vec3 rel_pos = ship.position - status.camera_position;
-        float distance = rel_pos.length();
-        rel_pos.normalize();
-
-        // TODO: Check whether obstructed by earth
-        if (distance > 1e6f) {
-            continue;
-        }
-
+    for (const RadarTarget &t: world.ships[world.player_ship].radar.targets) {
         bool visible;
-        vec2 proj = project_clamp_to_border(status, rel_pos, hbx, hby, sxs, sys,
-                                            &visible);
+        vec2 proj = project_clamp_to_border(status, t.relative_position,
+                                            hbx, hby, sxs, sys, &visible);
+
+        float distance = t.relative_position.length();
 
         // Display the marker if one of the following is true:
         // (1) It is in view
@@ -460,7 +448,8 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         }
 
         if (visible) {
-            float rel_speed = rel_pos.dot(ship.velocity - player.velocity);
+            float rel_speed = t.relative_position.normalized()
+                              .dot(t.relative_velocity);
 
             draw_text(proj + vec2(0.f, 1.5f * sys), vec2(sxs * .25f, sys * .5f),
                       localize(distance * 1e-3f, 2, LS_UNIT_KM),

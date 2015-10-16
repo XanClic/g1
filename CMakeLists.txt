@@ -50,7 +50,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/xsmd.cpp src/software.cpp src/localize.cpp src/text.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
                   src/ship_types.cpp src/ship.cpp src/weapons.cpp
-                  src/particles.cpp src/runge-kutta-4.cpp
+                  src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
