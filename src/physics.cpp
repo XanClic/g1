@@ -160,8 +160,8 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     execute_flight_control_software(player, user_input, output.interval);
 
 
-    for (int i = 0; i < static_cast<int>(input.ships.size()); i++) {
-        const ShipState &in = input.ships[i];
+    for (const ShipState &in: input.ships) {
+        int i = &in - input.ships.data();
         ShipState &out = output.ships[i];
 
         // Positive Z is backwards
@@ -294,8 +294,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     handle_particles(output.particles, input.particles, output, player);
 
 
-    for (ShipState &ss: output.ships) {
-        ss.radar.update(ss, output);
+    for (const ShipState &in: input.ships) {
+        ShipState &out = output.ships[&in - input.ships.data()];
+
+        out.radar.update(in.radar, out, output, user_input);
     }
 
 

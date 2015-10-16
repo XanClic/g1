@@ -12,7 +12,7 @@ struct ShipState {
 
     const Ship *ship;
 
-    int64_t id;
+    uint64_t id;
 
     // position in km, velocity in m/s, acceleration in m/s^2
     dake::math::vec<3, double> position;

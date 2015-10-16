@@ -12,13 +12,13 @@
 using namespace dake::math;
 
 
-static int64_t id_counter;
+static uint64_t id_counter;
 
 
 ShipState::ShipState(const Ship *ship_type):
     ship(ship_type)
 {
-    assert(id_counter < INT64_MAX);
+    assert(id_counter < UINT64_MAX);
 
     id = id_counter++;
 

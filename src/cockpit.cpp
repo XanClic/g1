@@ -425,7 +425,9 @@ static void draw_radar_contacts(const GraphicsStatus &status,
     sxs *= 2.f;
     sys *= 2.f;
 
-    for (const RadarTarget &t: world.ships[world.player_ship].radar.targets) {
+    const Radar &r = world.ships[world.player_ship].radar;
+
+    for (const RadarTarget &t: r.targets) {
         bool visible;
         vec2 proj = project_clamp_to_border(status, t.relative_position,
                                             hbx, hby, sxs, sys, &visible);
@@ -438,8 +440,15 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         //                                      constantly then)
         // (3) Otherwise (it is out of view, but close to us) it should blink
         if (visible || distance > 50e3f || blink_time < .5f) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
-                                                    visible ? 1.f : .3f);
+            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness,
+                                                    0.f, visible ? 1.f : .3f);
+
+            if (t.id == r.selected_id) {
+                draw_line(proj + vec2(-sxs,  sys), proj + vec2( sxs,  sys));
+                draw_line(proj + vec2( sxs,  sys), proj + vec2( sxs, -sys));
+                draw_line(proj + vec2( sxs, -sys), proj + vec2(-sxs, -sys));
+                draw_line(proj + vec2(-sxs, -sys), proj + vec2(-sxs,  sys));
+            }
 
             draw_line(proj + vec2( 0.f,  sys), proj + vec2( sxs,  0.f));
             draw_line(proj + vec2( sxs,  0.f), proj + vec2( 0.f, -sys));
