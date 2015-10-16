@@ -12,6 +12,10 @@
     "mouse.right":  "rotate.+y",
     "q":            "rotate.-z",
     "e":            "rotate.+z",
+    "Down":         "rotate.-x",
+    "Up":           "rotate.+x",
+    "Left":         "rotate.-y",
+    "Right":        "rotate.+y",
 
     "z": "-main_engine",
     "x": "+main_engine",
