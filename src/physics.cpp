@@ -334,7 +334,7 @@ void WorldState::initialize(const std::string &sn)
     }
     scenario_initialized = false;
 
-    ships.emplace_back(ship_types["mumeifune"]);
+    spawn_ship(ship_types["mumeifune"]);
     player_ship = 0;
 
     if (global_options.aurora) {
