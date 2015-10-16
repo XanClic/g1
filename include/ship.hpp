@@ -4,12 +4,15 @@
 #include <dake/math/matrix.hpp>
 
 #include "json-structs.hpp"
+#include "radar.hpp"
 
 
 struct ShipState {
     ShipState(const Ship *ship_type);
 
     const Ship *ship;
+
+    int64_t id;
 
     // position in km, velocity in m/s, acceleration in m/s^2
     dake::math::vec<3, double> position;
@@ -30,6 +33,8 @@ struct ShipState {
 
     std::vector<float> thruster_states;
     std::vector<float> weapon_cooldowns;
+
+    Radar radar;
 };
 
 #endif
