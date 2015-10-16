@@ -9,6 +9,7 @@
 
 struct WorldState;
 struct ShipState;
+struct Input;
 
 
 struct RadarTarget {
@@ -25,9 +26,13 @@ struct RadarTarget {
 
 class Radar {
     public:
-        void update(const ShipState &ship_new, const WorldState &ws_new);
+        void update(const Radar &radar_old, const ShipState &ship_new,
+                    const WorldState &ws_new, const Input &user_input);
 
         std::vector<RadarTarget> targets;
+
+        uint64_t selected_id = (uint64_t)-1;
+        RadarTarget *selected = nullptr;
 };
 
 #endif

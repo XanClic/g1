@@ -7,13 +7,18 @@
 #include "physics.hpp"
 #include "radar.hpp"
 #include "ship.hpp"
+#include "ui.hpp"
 
 
 using namespace dake::math;
 
 
-void Radar::update(const ShipState &ship_new, const WorldState &ws_new)
+void Radar::update(const Radar &radar_old, const ShipState &ship_new,
+                   const WorldState &ws_new, const Input &user_input)
 {
+    selected = nullptr;
+    selected_id = radar_old.selected_id;
+
     size_t oi = 0;
     for (const ShipState &ship: ws_new.ships) {
         if (&ship == &ship_new) {
@@ -48,10 +53,44 @@ void Radar::update(const ShipState &ship_new, const WorldState &ws_new)
         // skip it, too.
         targets[oi].relative_velocity = ship.velocity - ship_new.velocity;
 
+        if (ship.id == selected_id) {
+            selected = &targets[oi];
+        }
+
         oi++;
     }
 
     if (oi < targets.size()) {
         targets.resize(oi);
+    }
+
+    if (!selected) {
+        selected_id = (uint64_t)-1;
+    }
+
+    if (&ship_new != &ws_new.ships[ws_new.player_ship]) {
+        return;
+    }
+
+    if (&ship_new - ws_new.ships.data() == ws_new.player_ship) {
+        if (user_input.get_mapping("next_target")) {
+            if (!selected || selected == &targets.back()) {
+                selected = &targets.front();
+            } else {
+                selected++;
+            }
+
+            selected_id = selected->id;
+        }
+
+        if (user_input.get_mapping("previous_target")) {
+            if (!selected || selected == &targets.front()) {
+                selected = &targets.back();
+            } else {
+                selected--;
+            }
+
+            selected_id = selected->id;
+        }
     }
 }
