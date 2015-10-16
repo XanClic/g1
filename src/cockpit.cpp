@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "cockpit.hpp"
+#include "graphics.hpp"
 #include "localize.hpp"
 #include "options.hpp"
 #include "radar.hpp"
@@ -18,8 +19,12 @@ using namespace dake::math;
 
 
 static gl::vertex_array *line_va;
-static gl::program *line_prg, *scratch_prg;
+static gl::program *line_prg, *scratch_prg, *sprite_prg;
 static gl::texture *scratch_tex, *normals_tex;
+
+static gl::texture *prograde_sprite, *retrograde_sprite;
+static gl::texture *radar_contact_sprite, *radar_target_sprite;
+
 static gl::framebuffer *cockpit_fb;
 #ifdef COCKPIT_SUPERSAMPLING
 static gl::framebuffer *cockpit_ms_fb;
@@ -59,6 +64,12 @@ void init_cockpit(void)
     scratch_prg->bind_attrib("va_pos", 0);
     scratch_prg->bind_frag("out_col", 0);
 
+    sprite_prg = new gl::program {gl::shader::vert("shaders/sprite_vert.glsl"),
+                                  gl::shader::frag("shaders/sprite_frag.glsl")};
+
+    sprite_prg->bind_attrib("va_pos", 0);
+    sprite_prg->bind_frag("out_col", 0);
+
 
     scratch_tex = new gl::texture(std::string("assets/scratches-") +
                                   (global_options.uniform_scratch_map ? "uniform-" : "") +
@@ -76,6 +87,20 @@ void init_cockpit(void)
 #ifdef COCKPIT_SUPERSAMPLING
     cockpit_ms_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F, gl::framebuffer::DEPTH_ONLY, 4);
 #endif
+
+
+    prograde_sprite = new gl::texture("assets/hud/prograde.png");
+    prograde_sprite->filter(GL_LINEAR);
+
+    retrograde_sprite = new gl::texture("assets/hud/retrograde.png");
+    retrograde_sprite->filter(GL_LINEAR);
+
+    radar_contact_sprite = new gl::texture("assets/hud/radar-contact.png");
+    radar_contact_sprite->filter(GL_LINEAR);
+
+    radar_target_sprite = new gl::texture("assets/hud/radar-target.png");
+    radar_target_sprite->filter(GL_LINEAR);
+
 
     register_resize_handler(resize);
 }
@@ -101,6 +126,23 @@ static void draw_line(const vec2 &start, const vec2 &end)
     line_prg->uniform<vec2>("end")   = end;
 
     line_va->draw(GL_LINES);
+}
+
+
+static void draw_sprite(const vec2 &position, const vec2 &size,
+                        const gl::texture &sprite, const vec4 &color)
+{
+    sprite_prg->use();
+
+    // TODO: Bindless support
+    sprite.bind();
+
+    sprite_prg->uniform<vec2>("center") = position;
+    sprite_prg->uniform<vec2>("size") = size;
+    sprite_prg->uniform<gl::texture>("sprite") = sprite;
+    sprite_prg->uniform<vec4>("color") = color;
+
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
 }
 
 
@@ -165,6 +207,16 @@ static vec2 project_clamp_to_border(const GraphicsStatus &status, const vec3 &ve
                                     float sxs, float sys, bool *visible = nullptr)
 {
     return project_clamp_to_border(status, vec4::direction(vector), bx, by, sxs, sys, visible);
+}
+
+
+static vec2 project_clamp_to_border(const GraphicsStatus &status,
+                                    const vec3 &vector,
+                                    const vec2 &bx, const vec2 &by,
+                                    const vec2 &size, bool *visible = nullptr)
+{
+    return project_clamp_to_border(status, vector, bx, by, size.x(), size.y(),
+                                   visible);
 }
 
 
@@ -280,35 +332,26 @@ static void draw_velocity_indicators(const GraphicsStatus &status,
     }
 
 
+    vec2 indicator_size = 2.f * vec2(sxs, sys);
+
+
     bool fwd_visible, bwd_visible;
     vec2 proj_fwd_vlcty = project_clamp_to_border(status, velocity, hbx, hby,
-                                                  sxs, sys, &fwd_visible);
+                                                  indicator_size, &fwd_visible);
     vec2 proj_bwd_vlcty = project_clamp_to_border(status, -velocity, hbx, hby,
-                                                  sxs, sys, &bwd_visible);
+                                                  indicator_size, &bwd_visible);
 
     if (fwd_visible || !bwd_visible) {
-        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
-                                                fwd_visible ? 1.f : .3f);
-
-        draw_line(proj_fwd_vlcty + vec2(-sxs, -sys),
-                  proj_fwd_vlcty + vec2( sxs,  sys));
-        draw_line(proj_fwd_vlcty + vec2( sxs, -sys),
-                  proj_fwd_vlcty + vec2(-sxs,  sys));
+        draw_sprite(proj_fwd_vlcty, indicator_size, *prograde_sprite,
+                    vec4(0.f, cockpit_brightness, 0.f,
+                         fwd_visible ? 1.f : .3f));
     }
 
 
     if (bwd_visible || !fwd_visible) {
-        line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f,
-                                                bwd_visible ? 1.f : .3f);
-
-        draw_line(proj_bwd_vlcty + vec2(-sxs,  sys),
-                  proj_bwd_vlcty + vec2(-sxs, -sys));
-        draw_line(proj_bwd_vlcty + vec2(-sxs, -sys),
-                  proj_bwd_vlcty + vec2( sxs, -sys));
-        draw_line(proj_bwd_vlcty + vec2( sxs, -sys),
-                  proj_bwd_vlcty + vec2( sxs,  sys));
-        draw_line(proj_bwd_vlcty + vec2( sxs,  sys),
-                  proj_bwd_vlcty + vec2(-sxs,  sys));
+        draw_sprite(proj_bwd_vlcty, indicator_size, *retrograde_sprite,
+                    vec4(0.f, cockpit_brightness, 0.f,
+                         bwd_visible ? 1.f : .3f));
     }
 }
 
@@ -422,15 +465,14 @@ static void draw_radar_contacts(const GraphicsStatus &status,
                                 float sxs, float sys,
                                 const vec2 &hbx, const vec2 &hby)
 {
-    sxs *= 2.f;
-    sys *= 2.f;
+    vec2 sprite_size = 2.f * vec2(sxs, sys);
 
     const Radar &r = world.ships[world.player_ship].radar;
 
     for (const RadarTarget &t: r.targets) {
         bool visible;
         vec2 proj = project_clamp_to_border(status, t.relative_position,
-                                            hbx, hby, sxs, sys, &visible);
+                                            hbx, hby, sprite_size, &visible);
 
         float distance = t.relative_position.length();
 
@@ -440,30 +482,23 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         //                                      constantly then)
         // (3) Otherwise (it is out of view, but close to us) it should blink
         if (visible || distance > 50e3f || blink_time < .5f) {
-            line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness,
-                                                    0.f, visible ? 1.f : .3f);
+            vec4 color(0.f, cockpit_brightness, 0.f, visible ? 1.f : .3f);
 
             if (t.id == r.selected_id) {
-                draw_line(proj + vec2(-sxs,  sys), proj + vec2( sxs,  sys));
-                draw_line(proj + vec2( sxs,  sys), proj + vec2( sxs, -sys));
-                draw_line(proj + vec2( sxs, -sys), proj + vec2(-sxs, -sys));
-                draw_line(proj + vec2(-sxs, -sys), proj + vec2(-sxs,  sys));
+                draw_sprite(proj, sprite_size, *radar_target_sprite, color);
+            } else {
+                draw_sprite(proj, sprite_size, *radar_contact_sprite, color);
             }
-
-            draw_line(proj + vec2( 0.f,  sys), proj + vec2( sxs,  0.f));
-            draw_line(proj + vec2( sxs,  0.f), proj + vec2( 0.f, -sys));
-            draw_line(proj + vec2( 0.f, -sys), proj + vec2(-sxs,  0.f));
-            draw_line(proj + vec2(-sxs,  0.f), proj + vec2( 0.f,  sys));
         }
 
         if (visible) {
             float rel_speed = t.relative_position.normalized()
                               .dot(t.relative_velocity);
 
-            draw_text(proj + vec2(0.f, 1.5f * sys), vec2(sxs * .25f, sys * .5f),
+            draw_text(proj + vec2(0.f, 3.f * sys), vec2(sxs * .5f, sys),
                       localize(distance * 1e-3f, 2, LS_UNIT_KM),
                       ALIGN_CENTER, ALIGN_BOTTOM);
-            draw_text(proj + vec2(0.f, 1.0f * sys), vec2(sxs * .25f, sys * .5f),
+            draw_text(proj + vec2(0.f, 2.f * sys), vec2(sxs * .5f, sys),
                       localize(rel_speed, 2, LS_UNIT_M_S),
                       ALIGN_CENTER, ALIGN_BOTTOM);
         }
