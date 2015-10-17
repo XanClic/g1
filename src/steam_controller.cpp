@@ -203,13 +203,8 @@ void SteamController::usb_update(SteamController *self)
             continue;
         }
 
-        uint32_t old_button_state = self->raw_button_state;
-
         self->raw_button_state =  self->raw_state.buttons_0
                                | (self->raw_state.buttons_1 << 8);
-
-        self->button_down_events |= self->raw_button_state;
-        self->button_up_events |= old_button_state & ~self->raw_button_state;
 
         if (self->lpad_valid()) {
             self->lpad_status.x() = self->raw_state.lpad_x / 32767.f;
@@ -256,24 +251,4 @@ bool SteamController::rpad_valid(void) const
 bool SteamController::analog_valid(void) const
 {
     return !lpad_valid();
-}
-
-
-SteamController::Button SteamController::next_button_down(void)
-{
-    int b = ffs(button_down_events) - 1;
-    if (b >= 0) {
-        button_down_events &= ~(1 << b);
-    }
-    return static_cast<Button>(b);
-}
-
-
-SteamController::Button SteamController::next_button_up(void)
-{
-    int b = ffs(button_up_events) - 1;
-    if (b >= 0) {
-        button_up_events &= ~(1 << b);
-    }
-    return static_cast<Button>(b);
 }
