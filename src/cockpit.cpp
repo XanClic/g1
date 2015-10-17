@@ -240,7 +240,7 @@ static void draw_scratches(const GraphicsStatus &status,
     float sun_bloom_strength = smoothstep(.93f, 1.03f, sun_angle_ratio);
 
     // TODO: Could reuse from draw_environment()
-    vec4 sun_pos = 149.6e6f * -world.sun_light_dir;
+    vec4 sun_pos = 149.6e9f * -world.sun_light_dir;
     sun_pos.w() = 1.f;
     sun_pos = status.world_to_camera * sun_pos;
 
