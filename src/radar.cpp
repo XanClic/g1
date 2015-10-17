@@ -74,23 +74,35 @@ void Radar::update(const Radar &radar_old, const ShipState &ship_new,
 
     if (&ship_new - ws_new.ships.data() == ws_new.player_ship) {
         if (user_input.get_mapping("next_target")) {
-            if (!selected || selected == &targets.back()) {
+            if (targets.empty()) {
+                selected = nullptr;
+            } else if (!selected || selected == &targets.back()) {
                 selected = &targets.front();
             } else {
                 selected++;
             }
 
-            selected_id = selected->id;
+            if (selected) {
+                selected_id = selected->id;
+            } else {
+                selected_id = (uint64_t)-1;
+            }
         }
 
         if (user_input.get_mapping("previous_target")) {
-            if (!selected || selected == &targets.front()) {
+            if (targets.empty()) {
+                selected = nullptr;
+            } else if (!selected || selected == &targets.front()) {
                 selected = &targets.back();
             } else {
                 selected--;
             }
 
-            selected_id = selected->id;
+            if (selected) {
+                selected_id = selected->id;
+            } else {
+                selected_id = (uint64_t)-1;
+            }
         }
     }
 }
