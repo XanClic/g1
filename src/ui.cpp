@@ -409,8 +409,7 @@ static void update_1way_axis(Input &input, GamepadAxis axis, float state)
     auto it = gamepad_axis_mappings.find(axis);
     if (it != gamepad_axis_mappings.end()) {
         float &ns = input.mapping_states[it->second.name].state;
-        // Respect dead zone and sensitivity (FIXME: This should be
-        // configurable)
+        // Respect dead zone (FIXME: This should be configurable)
         ns = clamp(ns + (state - .1f) / .9f);
     }
 }
@@ -424,7 +423,7 @@ static void update_4way_axis(Input &input, GamepadAxis left, const vec2 &state)
             value = -value;
         }
 
-        update_1way_axis(input, left, pow(clamp(value), 2.f));
+        update_1way_axis(input, left, value);
 
         left = static_cast<GamepadAxis>(left + 1);
     }
