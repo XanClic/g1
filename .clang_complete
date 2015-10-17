@@ -1,4 +1,5 @@
 -Iinclude
 -Ibuild/include
 -Ibuild/dake/include
+-I/usr/include/libusb-1.0
 -std=c++11

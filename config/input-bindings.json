@@ -1,4 +1,7 @@
 {
+    "Escape":   "quit",
+    "F12":      { "target": "next_localization", "translate": "one-shot" },
+
     "a":        "strafe.-x",
     "d":        "strafe.+x",
     "s":        "strafe.-y",
@@ -6,28 +9,54 @@
     "PageDown": "strafe.-z",
     "PageUp":   "strafe.+z",
 
-    "mouse.down":   "rotate.-x",
-    "mouse.up":     "rotate.+x",
-    "mouse.left":   "rotate.-y",
-    "mouse.right":  "rotate.+y",
+    "Gamepad.Analog.-x":   "strafe.-x",
+    "Gamepad.Analog.+x":   "strafe.+x",
+    "Gamepad.Analog.-y":   "strafe.-y",
+    "Gamepad.Analog.+y":   "strafe.+y",
+
+    "Mouse.Down":   "rotate.-x",
+    "Mouse.Up":     "rotate.+x",
+    "Mouse.Left":   "rotate.-y",
+    "Mouse.Right":  "rotate.+y",
     "q":            "rotate.-z",
     "e":            "rotate.+z",
+
     "Down":         "rotate.-x",
     "Up":           "rotate.+x",
     "Left":         "rotate.-y",
     "Right":        "rotate.+y",
 
+    "Gamepad.RightPad.-x":  "rotate.-y",
+    "Gamepad.RightPad.+x":  "rotate.+y",
+    "Gamepad.RightPad.-y":  "rotate.-x",
+    "Gamepad.RightPad.+y":  "rotate.+x",
+
+    "Gamepad.BottomLeftShoulder.+z":    "rotate.-z",
+    "Gamepad.BottomRightShoulder.+z":   "rotate.+z",
+
     "z": "-main_engine",
     "x": "+main_engine",
 
+    "Gamepad.X":    "+main_engine",
+
     "F5": "kill_rotation",
+
+    "Gamepad.B":    "kill_rotation",
 
     "j": { "target": "time_acceleration", "translate": "one-shot" },
     "k": { "target": "time_deceleration", "translate": "one-shot" },
     "p": { "target": "pause", "translate": "sticky" },
 
-    "mouse.rbutton": "main_fire",
+    "Gamepad.TopLeftShoulder":  { "target": "time_acceleration", "translate": "one-shot" },
+    "Gamepad.TopRightShoulder": { "target": "time_deceleration", "translate": "one-shot" },
 
-    "Tab":      { "target": "next_target", "translate": "one-shot" },
-    "CapsLock": { "target": "previous_target", "translate": "one-shot" }
+    "Mouse.RButton": "main_fire",
+
+    "Gamepad.LeftPad":  "main_fire",
+
+    "Tab":      { "target": "next_target",     "translate": "one-shot" },
+    "CapsLock": { "target": "previous_target", "translate": "one-shot" },
+
+    "Gamepad.Next":     { "target": "next_target",     "translate": "one-shot" },
+    "Gamepad.Previous": { "target": "previous_target", "translate": "one-shot" }
 }
