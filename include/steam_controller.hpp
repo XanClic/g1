@@ -49,8 +49,6 @@ class SteamController {
         dake::math::vec2 analog_status = dake::math::vec2::zero();
         float lshoulder_status = 0.f, rshoulder_status = 0.f;
 
-        uint32_t button_down_events = 0, button_up_events = 0;
-
         std::thread *usb_thread = nullptr;
         bool usb_thread_quit = false;
 
@@ -87,14 +85,12 @@ class SteamController {
             LEFT_PAD_TOUCH,
             RIGHT_PAD_TOUCH,
 
-            NONE = -1
+            NONE = -1,
+            MAX_VISIBLE = RIGHT_PAD
         };
 
         SteamController(void);
         ~SteamController(void);
-
-        Button next_button_down(void);
-        Button next_button_up(void);
 
         bool lpad_valid(void) const;
         bool rpad_valid(void) const;
@@ -105,6 +101,12 @@ class SteamController {
         const dake::math::vec2 &analog(void) const { return analog_status; }
         float lshoulder(void) const { return lshoulder_status; }
         float rshoulder(void) const { return rshoulder_status; }
+
+        uint32_t buttons(void) const
+        { return raw_button_state & ((1 << RIGHT_PAD) - 1); }
+
+        bool button_state(Button b) const
+        { return buttons() & (1 << b); }
 };
 
 #endif

@@ -20,16 +20,13 @@
 using namespace dake::math;
 
 
-enum MouseEvent {
+enum MouseAxis {
     MOUSE_UNKNOWN,
 
     MOUSE_LEFT,
     MOUSE_RIGHT,
     MOUSE_DOWN,
     MOUSE_UP,
-
-    MOUSE_RBUTTON,
-    MOUSE_MBUTTON,
 };
 
 
@@ -55,23 +52,25 @@ enum GamepadAxis {
 
 namespace std
 {
-template<> struct hash<MouseEvent> {
-    size_t operator()(const MouseEvent &d) const { return hash<int>()(d); }
-};
+#define int_hash(type) \
+    template<> struct hash<type> { \
+        size_t operator()(const type &v) const { return hash<int>()(v); } \
+    }
 
-template<> struct hash<SteamController::Button> {
-    size_t operator()(const SteamController::Button &b) const { return hash<int>()(b); }
-};
+int_hash(SDL_Scancode);
+int_hash(MouseAxis);
+int_hash(SteamController::Button);
+int_hash(GamepadAxis);
 
-template<> struct hash<GamepadAxis> {
-    size_t operator()(const GamepadAxis &a) const { return hash<int>()(a); }
-};
+#undef int_hash
 }
 
 
 struct Action {
     enum Translate {
         NONE,
+
+        // Button translations
         STICKY,
         ONE_SHOT,
     };
@@ -83,8 +82,9 @@ struct Action {
     Action &operator=(const std::string &n) { name = n; return *this; }
 
     std::string name;
-    // No effects on mouse mappings!
     Translate trans = NONE;
+
+    bool registered = false, sticky_state = false;
 };
 
 
@@ -93,14 +93,29 @@ static SteamController *gamepad;
 static int wnd_width, wnd_height;
 
 
-static std::unordered_map<SDL_Keycode, Action> keyboard_mappings;
-static std::unordered_map<MouseEvent, Action> mouse_mappings;
+static std::unordered_map<SDL_Scancode, Action> keyboard_mappings;
+static std::unordered_map<int, Action> mouse_button_mappings;
+static std::unordered_map<MouseAxis, Action> mouse_axis_mappings;
 static std::unordered_map<SteamController::Button, Action>
     gamepad_button_mappings;
 static std::unordered_map<GamepadAxis, Action> gamepad_axis_mappings;
 
 
-static MouseEvent get_mouse_event_from_name(const char *name)
+static int get_mouse_button_from_name(const char *name)
+{
+    if (!strcmp(name, "LButton")) {
+        return SDL_BUTTON_LEFT;
+    } else if (!strcmp(name, "RButton")) {
+        return SDL_BUTTON_RIGHT;
+    } else if (!strcmp(name, "MButton")) {
+        return SDL_BUTTON_MIDDLE;
+    } else {
+        return -1;
+    }
+}
+
+
+static MouseAxis get_mouse_axis_from_name(const char *name)
 {
     if (!strcmp(name, "Left")) {
         return MOUSE_LEFT;
@@ -110,10 +125,6 @@ static MouseEvent get_mouse_event_from_name(const char *name)
         return MOUSE_DOWN;
     } else if (!strcmp(name, "Up")) {
         return MOUSE_UP;
-    } else if (!strcmp(name, "RButton")) {
-        return MOUSE_RBUTTON;
-    } else if (!strcmp(name, "MButton")) {
-        return MOUSE_MBUTTON;
     } else {
         return MOUSE_UNKNOWN;
     }
@@ -235,6 +246,26 @@ static void destroy_gamepad(void)
 }
 
 
+static void verify_axis_target(const std::string &name, const Action &a)
+{
+    if (a.trans != Action::NONE) {
+        throw std::runtime_error("Invalid translation for an axis event (for “"
+                                 + name + "”");
+    }
+}
+
+
+static void verify_button_target(const std::string &name, const Action &a)
+{
+    if (a.trans != Action::NONE && a.trans != Action::STICKY &&
+        a.trans != Action::ONE_SHOT)
+    {
+        throw std::runtime_error("Invalid translation for an axis event (for “"
+                                 + name + "”");
+    }
+}
+
+
 void init_ui(void)
 {
     SDL_Init(SDL_INIT_VIDEO);
@@ -340,19 +371,30 @@ void init_ui(void)
         }
 
         if (!strncmp(m.first.c_str(), "Mouse.", 6)) {
-            MouseEvent me = get_mouse_event_from_name(m.first.c_str() + 6);
-            if (me == MOUSE_UNKNOWN) {
-                throw std::runtime_error("Unknown mapping “" + m.first + "”");
+            MouseAxis a = get_mouse_axis_from_name(m.first.c_str() + 6);
+            if (a != MOUSE_UNKNOWN) {
+                verify_axis_target(m.first, target);
+                mouse_axis_mappings[a] = target;
+            } else {
+                int b = get_mouse_button_from_name(m.first.c_str() + 6);
+                if (b >= 0) {
+                    verify_button_target(m.first, target);
+                    mouse_button_mappings[b] = target;
+                } else {
+                    throw std::runtime_error("Unknown mapping “" + m.first +
+                                             "”");
+                }
             }
-            mouse_mappings[me] = target;
         } else if (!strncmp(m.first.c_str(), "Gamepad.", 8)) {
             GamepadAxis a = get_gamepad_axis_from_name(m.first.c_str() + 8);
             if (a != AXIS_UNKNOWN) {
+                verify_axis_target(m.first, target);
                 gamepad_axis_mappings[a] = target;
             } else {
                 SteamController::Button b =
                     get_gamepad_button_from_name(m.first.c_str() + 8);
                 if (b != SteamController::NONE) {
+                    verify_button_target(m.first, target);
                     gamepad_button_mappings[b] = target;
                 } else {
                     throw std::runtime_error("Unknown mapping “" + m.first +
@@ -360,41 +402,43 @@ void init_ui(void)
                 }
             }
         } else {
-            SDL_Keycode kc = SDL_GetKeyFromName(m.first.c_str());
-            if (kc == SDLK_UNKNOWN) {
+            SDL_Scancode sc = SDL_GetScancodeFromName(m.first.c_str());
+            if (sc == SDL_SCANCODE_UNKNOWN) {
                 throw std::runtime_error("Unknown mapping “" + m.first + "”");
             }
-            keyboard_mappings[kc] = target;
+            verify_button_target(m.first, target);
+            keyboard_mappings[sc] = target;
         }
     }
 }
 
 
-static void button_down(Input &input, const Action &action)
+static void button_down(Input &input, Action &action)
 {
-    Input::MappingState &s = input.mapping_states[action.name];
+    float &s = input.mapping_states[action.name];
 
     if (action.trans == Action::STICKY) {
-        if (!s.registered) {
-            s.state = s.state ? 0.f : 1.f;
+        if (!action.registered) {
+            action.sticky_state = !action.sticky_state;
         }
+        s = action.sticky_state;
     } else if (action.trans == Action::ONE_SHOT) {
-        s.state = s.registered ? 0.f : 1.f;
+        s = action.registered ? 0.f : 1.f;
     } else {
         s = 1.f;
     }
-    s.registered = true;
+
+    action.registered = true;
 }
 
 
-static void button_up(Input &input, const Action &action)
+static void button_up(Input &input, Action &action)
 {
-    Input::MappingState &s = input.mapping_states[action.name];
-
-    s.registered = false;
-    if (action.trans != Action::STICKY) {
-        s = 0.f;
+    if (action.trans == Action::STICKY) {
+        input.mapping_states[action.name] = action.sticky_state;
     }
+
+    action.registered = false;
 }
 
 
@@ -408,7 +452,7 @@ static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 {
     auto it = gamepad_axis_mappings.find(axis);
     if (it != gamepad_axis_mappings.end()) {
-        float &ns = input.mapping_states[it->second.name].state;
+        float &ns = input.mapping_states[it->second.name];
         // Respect dead zone (FIXME: This should be configurable)
         ns = clamp(ns + (state - .1f) / .9f);
     }
@@ -446,67 +490,28 @@ void process_gamepad_events(Input &input, SteamController *gp)
     update_1way_axis(input, AXIS_RSHOULDER, gp->rshoulder());
 
 
-    SteamController::Button button;
-    while ((button = gp->next_button_down()) != SteamController::NONE) {
-        auto it = gamepad_button_mappings.find(button);
-        if (it != gamepad_button_mappings.end()) {
-            button_down(input, it->second);
-        }
-    }
-
-    while ((button = gp->next_button_up()) != SteamController::NONE) {
-        auto it = gamepad_button_mappings.find(button);
-        if (it != gamepad_button_mappings.end()) {
-            button_up(input, it->second);
+    for (auto &gbm: gamepad_button_mappings) {
+        if (gp->button_state(gbm.first)) {
+            button_down(input, gbm.second);
+        } else {
+            button_up(input, gbm.second);
         }
     }
 }
 
 
-static void update_mouse_axis(Input &input, MouseEvent evt, float state)
+static void update_mouse_axis(Input &input, MouseAxis axis, float state)
 {
-    auto it = mouse_mappings.find(evt);
-    if (it != mouse_mappings.end()) {
-        input.mapping_states[it->second.name] = clamp(state);
+    auto it = mouse_axis_mappings.find(axis);
+    if (it != mouse_axis_mappings.end()) {
+        float &ns = input.mapping_states[it->second.name];
+        ns = clamp(ns + state);
     }
 }
 
 
 void ui_process_events(Input &input)
 {
-    static bool capture_movement;
-
-    if (capture_movement) {
-        int abs_x, abs_y;
-        SDL_GetMouseState(&abs_x, &abs_y);
-
-        float rel_x = 2.f * abs_x / wnd_width - 1.f;
-        float rel_y = 1.f - 2.f * abs_y / wnd_height;
-
-        update_mouse_axis(input, MOUSE_LEFT,  -rel_x);
-        update_mouse_axis(input, MOUSE_RIGHT,  rel_x);
-        update_mouse_axis(input, MOUSE_DOWN,  -rel_y);
-        update_mouse_axis(input, MOUSE_UP,     rel_y);
-    } else {
-        for (MouseEvent me: {MOUSE_LEFT, MOUSE_RIGHT, MOUSE_DOWN, MOUSE_UP}) {
-            input.mapping_states[mouse_mappings[me].name] = 0.f;
-        }
-    }
-
-    if (!input.initialized) {
-        for (const auto &km: keyboard_mappings) {
-            input.mapping_states[km.second.name] = 0.f;
-        }
-        input.initialized = true;
-    }
-
-    for (const auto &km: keyboard_mappings) {
-        if (km.second.trans == Action::ONE_SHOT) {
-            input.mapping_states[km.second.name] = 0.f;
-        }
-    }
-
-
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
@@ -524,62 +529,43 @@ void ui_process_events(Input &input)
                        break;
                 }
                 break;
+        }
+    }
 
-            case SDL_MOUSEBUTTONDOWN: {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    capture_movement = true;
-                    break;
-                }
 
-                MouseEvent evt = MOUSE_UNKNOWN;
-                if (event.button.button == SDL_BUTTON_RIGHT) {
-                    evt = MOUSE_RBUTTON;
-                } else if (event.button.button == SDL_BUTTON_MIDDLE) {
-                    evt = MOUSE_MBUTTON;
-                }
+    for (auto &p: input.mapping_states) {
+        p.second = 0.f;
+    }
 
-                auto mapping = mouse_mappings.find(evt);
-                if (mapping != mouse_mappings.end()) {
-                    button_down(input, mapping->second);
-                }
-                break;
-            }
+    int abs_x, abs_y;
+    uint32_t mouse_state = SDL_GetMouseState(&abs_x, &abs_y);
 
-            case SDL_MOUSEBUTTONUP: {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    capture_movement = false;
-                    break;
-                }
+    float rel_x = 2.f * abs_x / wnd_width - 1.f;
+    float rel_y = 1.f - 2.f * abs_y / wnd_height;
 
-                MouseEvent evt = MOUSE_UNKNOWN;
-                if (event.button.button == SDL_BUTTON_RIGHT) {
-                    evt = MOUSE_RBUTTON;
-                } else if (event.button.button == SDL_BUTTON_MIDDLE) {
-                    evt = MOUSE_MBUTTON;
-                }
+    if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+        update_mouse_axis(input, MOUSE_LEFT,  -rel_x);
+        update_mouse_axis(input, MOUSE_RIGHT,  rel_x);
+        update_mouse_axis(input, MOUSE_DOWN,  -rel_y);
+        update_mouse_axis(input, MOUSE_UP,     rel_y);
+    }
 
-                auto mapping = mouse_mappings.find(evt);
-                if (mapping != mouse_mappings.end()) {
-                    button_up(input, mapping->second);
-                }
-                break;
-            }
+    for (auto &mbm: mouse_button_mappings) {
+        if (mouse_state & SDL_BUTTON(mbm.first)) {
+            button_down(input, mbm.second);
+        } else {
+            button_up(input, mbm.second);
+        }
+    }
 
-            case SDL_KEYDOWN: {
-                auto mapping = keyboard_mappings.find(event.key.keysym.sym);
-                if (mapping != keyboard_mappings.end()) {
-                    button_down(input, mapping->second);
-                }
-                break;
-            }
 
-            case SDL_KEYUP: {
-                auto mapping = keyboard_mappings.find(event.key.keysym.sym);
-                if (mapping != keyboard_mappings.end()) {
-                    button_up(input, mapping->second);
-                }
-                break;
-            }
+    const uint8_t *kbd_map = SDL_GetKeyboardState(nullptr);
+
+    for (auto &km: keyboard_mappings) {
+        if (kbd_map[km.first]) {
+            button_down(input, km.second);
+        } else {
+            button_up(input, km.second);
         }
     }
 
@@ -654,5 +640,5 @@ float Input::get_mapping(const std::string &n) const
         return 0.f;
     }
 
-    return it->second.state;
+    return it->second;
 }
