@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <functional>
@@ -37,14 +38,20 @@ enum GamepadAxis {
     AXIS_L_RIGHT,
     AXIS_L_DOWN,
     AXIS_L_UP,
+    AXIS_L_CW,
+    AXIS_L_CCW,
     AXIS_R_LEFT,
     AXIS_R_RIGHT,
     AXIS_R_DOWN,
     AXIS_R_UP,
+    AXIS_R_CW,
+    AXIS_R_CCW,
     AXIS_ANALOG_LEFT,
     AXIS_ANALOG_RIGHT,
     AXIS_ANALOG_DOWN,
     AXIS_ANALOG_UP,
+    AXIS_ANALOG_CW,
+    AXIS_ANALOG_CCW,
     AXIS_LSHOULDER,
     AXIS_RSHOULDER,
 };
@@ -73,6 +80,10 @@ struct Action {
         // Button translations
         STICKY,
         ONE_SHOT,
+
+        // Axis translations
+        DIFFERENCE,
+        CIRCLE_DIFFERENCE,
     };
 
     Action(void) {}
@@ -83,8 +94,10 @@ struct Action {
 
     std::string name;
     Translate trans = NONE;
+    float multiplier = 1.f;
 
     bool registered = false, sticky_state = false;
+    float previous_state = NAN;
 };
 
 
@@ -187,6 +200,10 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_L_DOWN;
     } else if (!strcmp(name, "LeftPad.+y")) {
         return AXIS_L_UP;
+    } else if (!strcmp(name, "LeftPad.-z")) {
+        return AXIS_L_CW;
+    } else if (!strcmp(name, "LeftPad.+z")) {
+        return AXIS_L_CCW;
     } else if (!strcmp(name, "RightPad.-x")) {
         return AXIS_R_LEFT;
     } else if (!strcmp(name, "RightPad.+x")) {
@@ -195,6 +212,10 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_R_DOWN;
     } else if (!strcmp(name, "RightPad.+y")) {
         return AXIS_R_UP;
+    } else if (!strcmp(name, "RightPad.-z")) {
+        return AXIS_R_CW;
+    } else if (!strcmp(name, "RightPad.+z")) {
+        return AXIS_R_CCW;
     } else if (!strcmp(name, "Analog.-x")) {
         return AXIS_ANALOG_LEFT;
     } else if (!strcmp(name, "Analog.+x")) {
@@ -203,6 +224,10 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_ANALOG_DOWN;
     } else if (!strcmp(name, "Analog.+y")) {
         return AXIS_ANALOG_UP;
+    } else if (!strcmp(name, "Analog.-z")) {
+        return AXIS_ANALOG_CW;
+    } else if (!strcmp(name, "Analog.+z")) {
+        return AXIS_ANALOG_CCW;
     } else if (!strcmp(name, "BottomLeftShoulder.+z")) {
         return AXIS_LSHOULDER;
     } else if (!strcmp(name, "BottomRightShoulder.+z")) {
@@ -248,7 +273,9 @@ static void destroy_gamepad(void)
 
 static void verify_axis_target(const std::string &name, const Action &a)
 {
-    if (a.trans != Action::NONE) {
+    if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
+        a.trans != Action::CIRCLE_DIFFERENCE)
+    {
         throw std::runtime_error("Invalid translation for an axis event (for “"
                                  + name + "”");
     }
@@ -359,6 +386,10 @@ void init_ui(void)
                     trans = Action::STICKY;
                 } else if (trans_str == "one-shot") {
                     trans = Action::ONE_SHOT;
+                } else if (trans_str == "difference") {
+                    trans = Action::DIFFERENCE;
+                } else if (trans_str == "circle_difference") {
+                    trans = Action::CIRCLE_DIFFERENCE;
                 } else {
                     throw std::runtime_error("Invalid value “" + trans_str +
                                              "” given as @translate for “" +
@@ -366,8 +397,27 @@ void init_ui(void)
                 }
             }
 
+            float multiplier = 1.f;
+            auto multiplier_it = cm.find("multiplier");
+            if (multiplier_it != cm.end()) {
+                if (multiplier_it->second->type != GDData::FLOAT &&
+                    multiplier_it->second->type != GDData::INTEGER)
+                {
+                    throw std::runtime_error("@multiplier value given for “" +
+                                             m.first + "” not a float or "
+                                             "integer");
+                }
+
+                if (multiplier_it->second->type == GDData::FLOAT) {
+                    multiplier = (GDFloat)*multiplier_it->second;
+                } else {
+                    multiplier = (GDInteger)*multiplier_it->second;
+                }
+            }
+
             target.name = (const GDString &)*target_it->second;
             target.trans = trans;
+            target.multiplier = multiplier;
         }
 
         if (!strncmp(m.first.c_str(), "Mouse.", 6)) {
@@ -413,6 +463,12 @@ void init_ui(void)
 }
 
 
+static float clamp(float x)
+{
+    return x < 0.f ? 0.f : x > 1.f ? 1.f : x;
+}
+
+
 static void button_down(Input &input, Action &action)
 {
     float &s = input.mapping_states[action.name];
@@ -421,11 +477,11 @@ static void button_down(Input &input, Action &action)
         if (!action.registered) {
             action.sticky_state = !action.sticky_state;
         }
-        s = action.sticky_state;
+        s = clamp(action.sticky_state ? action.multiplier : 0.f);
     } else if (action.trans == Action::ONE_SHOT) {
-        s = action.registered ? 0.f : 1.f;
+        s = clamp(action.registered ? 0.f : action.multiplier);
     } else {
-        s = 1.f;
+        s = clamp(action.multiplier);
     }
 
     action.registered = true;
@@ -434,17 +490,11 @@ static void button_down(Input &input, Action &action)
 
 static void button_up(Input &input, Action &action)
 {
-    if (action.trans == Action::STICKY) {
-        input.mapping_states[action.name] = action.sticky_state;
+    if (action.trans == Action::STICKY && action.sticky_state) {
+        input.mapping_states[action.name] = clamp(action.multiplier);
     }
 
     action.registered = false;
-}
-
-
-static float clamp(float x)
-{
-    return x < 0.f ? 0.f : x > 1.f ? 1.f : x;
 }
 
 
@@ -453,37 +503,111 @@ static void update_1way_axis(Input &input, GamepadAxis axis, float state)
     auto it = gamepad_axis_mappings.find(axis);
     if (it != gamepad_axis_mappings.end()) {
         float &ns = input.mapping_states[it->second.name];
-        // Respect dead zone (FIXME: This should be configurable)
-        ns = clamp(ns + (state - .1f) / .9f);
+        if (it->second.trans == Action::DIFFERENCE) {
+            float s = state;
+            if (isnanf(it->second.previous_state)) {
+                state = 0.f;
+            } else {
+                state -= it->second.previous_state;
+            }
+            it->second.previous_state = s;
+        } else if (it->second.trans == Action::CIRCLE_DIFFERENCE) {
+            // Has been taken care of already
+        } else {
+            // Respect dead zone (FIXME: This should be configurable)
+            state = (state - .1f) / .9f;
+        }
+
+        ns = clamp(ns + state * it->second.multiplier);
     }
 }
 
 
-static void update_4way_axis(Input &input, GamepadAxis left, const vec2 &state)
+static void update_6way_axis(Input &input, GamepadAxis left, const vec2 &state,
+                             vec2 &prev_state)
 {
-    for (int i = 0; i < 4; i++) {
-        float value = state[i / 2];
-        if (!(i % 2)) {
-            value = -value;
-        }
+    vec2 difference;
+    if (isnanf(prev_state.x())) {
+        difference = vec2::zero();
+    } else {
+        difference = state - prev_state;
+    }
+    prev_state = state;
 
-        update_1way_axis(input, left, value);
+    float nrm = difference.length() * state.length();
+    if (!nrm) {
+        nrm = 1e-3f;
+    }
+
+    vec2 state_left_ortho(-state.y(), state.x());
+
+    float straight_part = fabsf(difference.dot(state)) / nrm;
+    float circle_part = difference.dot(state_left_ortho) / nrm;
+
+    vec3 circle_difference;
+    circle_difference.x() = straight_part * difference.x();
+    circle_difference.y() = straight_part * difference.y();
+    circle_difference.z() = circle_part * difference.length();
+
+    for (int i = 0; i < 6; i++) {
+        auto it = gamepad_axis_mappings.find(left);
+        if (it != gamepad_axis_mappings.end()) {
+            float value;
+
+            if (it->second.trans == Action::CIRCLE_DIFFERENCE) {
+                value = circle_difference[i / 2];
+            } else {
+                value = i < 4 ? state[i / 2] : 0.f;
+            }
+
+            if (!(i % 2)) {
+                value = -value;
+            }
+
+            update_1way_axis(input, left, value);
+        }
 
         left = static_cast<GamepadAxis>(left + 1);
     }
 }
 
 
+static void invalidate_6way_axis(GamepadAxis left, vec2 &prev_state)
+{
+    for (int i = 0; i < 6; i++) {
+        auto it = gamepad_axis_mappings.find(left);
+        if (it != gamepad_axis_mappings.end()) {
+            it->second.previous_state = NAN;
+        }
+
+        left = static_cast<GamepadAxis>(left + 1);
+    }
+
+    prev_state.x() = NAN;
+    prev_state.y() = NAN;
+}
+
+
 void process_gamepad_events(Input &input, SteamController *gp)
 {
+    static vec2 prev_lpad(NAN, NAN);
+    static vec2 prev_rpad(NAN, NAN);
+    static vec2 prev_analog(NAN, NAN);
+
     if (gp->lpad_valid()) {
-        update_4way_axis(input, AXIS_L_LEFT, gp->lpad());
+        update_6way_axis(input, AXIS_L_LEFT, gp->lpad(), prev_lpad);
+    } else {
+        invalidate_6way_axis(AXIS_L_LEFT, prev_lpad);
     }
     if (gp->rpad_valid()) {
-        update_4way_axis(input, AXIS_R_LEFT, gp->rpad());
+        update_6way_axis(input, AXIS_R_LEFT, gp->rpad(), prev_rpad);
+    } else {
+        invalidate_6way_axis(AXIS_R_LEFT, prev_rpad);
     }
     if (gp->analog_valid()) {
-        update_4way_axis(input, AXIS_ANALOG_LEFT, gp->analog());
+        update_6way_axis(input, AXIS_ANALOG_LEFT, gp->analog(), prev_analog);
+    } else {
+        invalidate_6way_axis(AXIS_ANALOG_LEFT, prev_analog);
     }
 
     update_1way_axis(input, AXIS_LSHOULDER, gp->lshoulder());
@@ -505,7 +629,17 @@ static void update_mouse_axis(Input &input, MouseAxis axis, float state)
     auto it = mouse_axis_mappings.find(axis);
     if (it != mouse_axis_mappings.end()) {
         float &ns = input.mapping_states[it->second.name];
-        ns = clamp(ns + state);
+        if (it->second.trans == Action::DIFFERENCE) {
+            float s = state;
+            if (isnanf(it->second.previous_state)) {
+                state = 0.f;
+            } else {
+                state -= it->second.previous_state;
+            }
+            it->second.previous_state = s;
+        }
+
+        ns = clamp(ns + state * it->second.multiplier);
     }
 }
 
