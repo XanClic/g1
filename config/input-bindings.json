@@ -9,15 +9,27 @@
     "PageDown": "strafe.-z",
     "PageUp":   "strafe.+z",
 
-    "Gamepad.Analog.-x":   "strafe.-x",
-    "Gamepad.Analog.+x":   "strafe.+x",
-    "Gamepad.Analog.-y":   "strafe.-y",
-    "Gamepad.Analog.+y":   "strafe.+y",
+    "Gamepad.Analog":   "modifier.strafe_z",
 
-    "Mouse.Down":   "rotate.-x",
-    "Mouse.Up":     "rotate.+x",
-    "Mouse.Left":   "rotate.-y",
-    "Mouse.Right":  "rotate.+y",
+    "Gamepad.Analog.-x":   { "target": "strafe.-x", "deadzone": 0.1, "unless": "modifier.strafe_z" },
+    "Gamepad.Analog.+x":   { "target": "strafe.+x", "deadzone": 0.1, "unless": "modifier.strafe_z" },
+
+    "Gamepad.Analog.-y": [
+        { "target": "strafe.-y", "deadzone": 0.1, "unless": "modifier.strafe_z" },
+        { "target": "strafe.-z", "deadzone": 0.1, "if": "modifier.strafe_z" }
+    ],
+
+    "Gamepad.Analog.+y": [
+        { "target": "strafe.+y", "deadzone": 0.1, "unless": "modifier.strafe_z" },
+        { "target": "strafe.+z", "deadzone": 0.1, "if": "modifier.strafe_z" }
+    ],
+
+    "Mouse.LButton":    "modifier.mouse_rotate",
+
+    "Mouse.Down":   { "target": "rotate.-x", "if": "modifier.mouse_rotate" },
+    "Mouse.Up":     { "target": "rotate.+x", "if": "modifier.mouse_rotate" },
+    "Mouse.Left":   { "target": "rotate.-y", "if": "modifier.mouse_rotate" },
+    "Mouse.Right":  { "target": "rotate.+y", "if": "modifier.mouse_rotate" },
     "q":            "rotate.-z",
     "e":            "rotate.+z",
 
@@ -26,12 +38,30 @@
     "Left":         "rotate.-y",
     "Right":        "rotate.+y",
 
-    "Gamepad.RightPad.-x":  { "target": "rotate.-y", "translate": "circle_difference", "multiplier": 5 },
-    "Gamepad.RightPad.+x":  { "target": "rotate.+y", "translate": "circle_difference", "multiplier": 5 },
-    "Gamepad.RightPad.-y":  { "target": "rotate.-x", "translate": "circle_difference", "multiplier": 5 },
-    "Gamepad.RightPad.+y":  { "target": "rotate.+x", "translate": "circle_difference", "multiplier": 5 },
-    "Gamepad.RightPad.-z":  { "target": "rotate.+z", "translate": "circle_difference", "multiplier": 5 },
-    "Gamepad.RightPad.+z":  { "target": "rotate.-z", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad": "modifier.rpad_absolute",
+
+    "Gamepad.RightPad.-x": [
+        { "target": "rotate.-y", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
+        { "target": "rotate.-y", "deadzone": 0.1, "if": "modifier.rpad_absolute" }
+    ],
+
+    "Gamepad.RightPad.+x": [
+        { "target": "rotate.+y", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
+        { "target": "rotate.+y", "deadzone": 0.1, "if": "modifier.rpad_absolute" }
+    ],
+
+    "Gamepad.RightPad.-y": [
+        { "target": "rotate.-x", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
+        { "target": "rotate.-x", "deadzone": 0.1, "if": "modifier.rpad_absolute" }
+    ],
+
+    "Gamepad.RightPad.+y": [
+        { "target": "rotate.+x", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
+        { "target": "rotate.+x", "deadzone": 0.1, "if": "modifier.rpad_absolute" }
+    ],
+
+    "Gamepad.RightPad.-z":  { "target": "rotate.+z", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
+    "Gamepad.RightPad.+z":  { "target": "rotate.-z", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
 
     "z": "-main_engine",
     "x": "+main_engine",

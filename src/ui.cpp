@@ -87,17 +87,18 @@ struct Action {
     };
 
     Action(void) {}
-    Action(const std::string &n, Translate t = NONE):
-        name(n), trans(t) {}
+    Action(const std::string &n): name(n) {}
 
     Action &operator=(const std::string &n) { name = n; return *this; }
 
     std::string name;
     Translate trans = NONE;
-    float multiplier = 1.f;
+    float multiplier = 1.f, deadzone = 0.f;
+    bool is_modifier = false;
 
     bool registered = false, sticky_state = false;
     float previous_state = NAN;
+    std::string only_if, only_unless;
 };
 
 
@@ -106,12 +107,13 @@ static SteamController *gamepad;
 static int wnd_width, wnd_height;
 
 
-static std::unordered_map<SDL_Scancode, Action> keyboard_mappings;
-static std::unordered_map<int, Action> mouse_button_mappings;
-static std::unordered_map<MouseAxis, Action> mouse_axis_mappings;
-static std::unordered_map<SteamController::Button, Action>
+static std::unordered_map<SDL_Scancode, std::vector<Action>> keyboard_mappings;
+static std::unordered_map<int, std::vector<Action>> mouse_button_mappings;
+static std::unordered_map<MouseAxis, std::vector<Action>> mouse_axis_mappings;
+static std::unordered_map<SteamController::Button, std::vector<Action>>
     gamepad_button_mappings;
-static std::unordered_map<GamepadAxis, Action> gamepad_axis_mappings;
+static std::unordered_map<GamepadAxis, std::vector<Action>>
+    gamepad_axis_mappings;
 
 
 static int get_mouse_button_from_name(const char *name)
@@ -184,6 +186,8 @@ static SteamController::Button get_gamepad_button_from_name(const char *name)
         return SteamController::LEFT_PAD;
     } else if (!strcmp(name, "RightPad")) {
         return SteamController::RIGHT_PAD;
+    } else if (!strcmp(name, "Analog")) {
+        return SteamController::ANALOG_STICK;
     } else {
         return SteamController::NONE;
     }
@@ -271,24 +275,147 @@ static void destroy_gamepad(void)
 }
 
 
-static void verify_axis_target(const std::string &name, const Action &a)
+static void verify_axis_actions(const std::string &name,
+                                const std::vector<Action> &al)
 {
-    if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
-        a.trans != Action::CIRCLE_DIFFERENCE)
-    {
-        throw std::runtime_error("Invalid translation for an axis event (for “"
-                                 + name + "”");
+    for (const Action &a: al) {
+        if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
+            a.trans != Action::CIRCLE_DIFFERENCE)
+        {
+            throw std::runtime_error("Invalid translation for an axis event "
+                                     "(for “" + name + "”");
+        }
     }
 }
 
 
-static void verify_button_target(const std::string &name, const Action &a)
+static void verify_button_actions(const std::string &name,
+                                  const std::vector<Action> &al)
 {
-    if (a.trans != Action::NONE && a.trans != Action::STICKY &&
-        a.trans != Action::ONE_SHOT)
-    {
-        throw std::runtime_error("Invalid translation for an axis event (for “"
-                                 + name + "”");
+    for (const Action &a: al) {
+        if (a.trans != Action::NONE && a.trans != Action::STICKY &&
+            a.trans != Action::ONE_SHOT)
+        {
+            throw std::runtime_error("Invalid translation for an axis event "
+                                     "(for “" + name + "”");
+        }
+    }
+}
+
+
+static void fill_action(std::vector<Action> *al, const GDString &cm)
+{
+    al->emplace_back(cm);
+
+    if (!strncmp(cm.c_str(), "modifier.", 9)) {
+        al->back().is_modifier = true;
+    }
+}
+
+
+static void fill_action(std::vector<Action> *al, const GDObject &cm,
+                        const std::string &event)
+{
+    al->emplace_back();
+    Action &a = al->back();
+
+    auto it = cm.find("target");
+    if (it == cm.end() || it->second->type != GDData::STRING) {
+        throw std::runtime_error("No or non-string target specified for “" +
+                                 event + "”");
+    }
+    a.name = (const GDString &)*it->second;
+
+    if (!strncmp(a.name.c_str(), "modifier.", 9)) {
+        a.is_modifier = true;
+    }
+
+    it = cm.find("translate");
+    if (it != cm.end()) {
+        if (it->second->type != GDData::STRING) {
+            throw std::runtime_error("@translate value given for “" +
+                                     event + "” not a string");
+        }
+
+        const GDString &trans_str = *it->second;
+        if (trans_str == "none") {
+            a.trans = Action::NONE;
+        } else if (trans_str == "sticky") {
+            a.trans = Action::STICKY;
+        } else if (trans_str == "one-shot") {
+            a.trans = Action::ONE_SHOT;
+        } else if (trans_str == "difference") {
+            a.trans = Action::DIFFERENCE;
+        } else if (trans_str == "circle_difference") {
+            a.trans = Action::CIRCLE_DIFFERENCE;
+        } else {
+            throw std::runtime_error("Invalid value “" + trans_str + "” given "
+                                     "as @translate for “" + event + "”");
+        }
+    }
+
+    it = cm.find("multiplier");
+    if (it != cm.end()) {
+        if (it->second->type != GDData::FLOAT &&
+            it->second->type != GDData::INTEGER)
+        {
+            throw std::runtime_error("@multiplier value given for “" + event +
+                                     "” not a float or integer");
+        }
+
+        if (it->second->type == GDData::FLOAT) {
+            a.multiplier = (GDFloat)*it->second;
+        } else {
+            a.multiplier = (GDInteger)*it->second;
+        }
+    }
+
+    it = cm.find("deadzone");
+    if (it != cm.end()) {
+        if (it->second->type != GDData::FLOAT) {
+            throw std::runtime_error("@deadzone value given for “" + event +
+                                     "” not a float");
+        }
+
+        a.deadzone = (GDFloat)*it->second;
+    }
+
+    it = cm.find("if");
+    if (it != cm.end()) {
+        if (it->second->type != GDData::STRING) {
+            throw std::runtime_error("@if value given for “" + event +
+                                     "” not a string");
+        }
+
+        a.only_if = (const GDString &)*it->second;
+    }
+
+    it = cm.find("unless");
+    if (it != cm.end()) {
+        if (it->second->type != GDData::STRING) {
+            throw std::runtime_error("@unless value given for “" + event +
+                                     "” not a string");
+        }
+
+        a.only_unless = (const GDString &)*it->second;
+    }
+}
+
+
+static void fill_action_list(std::vector<Action> *al, const GDArray &cml,
+                             const std::string &event)
+{
+    for (const GDData &element: cml) {
+        if (element.type != GDData::STRING && element.type != GDData::OBJECT) {
+            throw std::runtime_error("Input mapping list element given for “" +
+                                     event + "” is not a string or object");
+        }
+
+        if (element.type == GDData::STRING) {
+            fill_action(al, (const GDString &)element);
+        } else {
+            fill_action(al, (const GDObject &)element, event);
+        }
     }
 }
 
@@ -352,84 +479,33 @@ void init_ui(void)
 
     for (const auto &m: (const GDObject &)*map_config) {
         if (m.second->type != GDData::STRING &&
-            m.second->type != GDData::OBJECT)
+            m.second->type != GDData::OBJECT &&
+            m.second->type != GDData::ARRAY)
         {
             throw std::runtime_error("Input mapping target for “" + m.first +
-                                     "” is not a string or object");
+                                     "” is not a string, object or array");
         }
 
-        Action target;
+        std::vector<Action> action_list;
         if (m.second->type == GDData::STRING) {
-            target = (const GDString &)*m.second;
+            fill_action(&action_list, (const GDString &)*m.second);
+        } else if (m.second->type == GDData::OBJECT) {
+            fill_action(&action_list, (const GDObject &)*m.second,
+                        m.first);
         } else {
-            const GDObject &cm = *m.second;
-            auto target_it = cm.find("target");
-            if (target_it == cm.end() ||
-                target_it->second->type != GDData::STRING)
-            {
-                throw std::runtime_error("No or non-string target specified "
-                                         "for “" + m.first + "”");
-            }
-
-            Action::Translate trans = Action::NONE;
-            auto trans_it = cm.find("translate");
-            if (trans_it != cm.end()) {
-                if (trans_it->second->type != GDData::STRING) {
-                    throw std::runtime_error("@translate value given for “" +
-                                             m.first + "” not a string");
-                }
-
-                const GDString &trans_str = *trans_it->second;
-                if (trans_str == "none") {
-                    trans = Action::NONE;
-                } else if (trans_str == "sticky") {
-                    trans = Action::STICKY;
-                } else if (trans_str == "one-shot") {
-                    trans = Action::ONE_SHOT;
-                } else if (trans_str == "difference") {
-                    trans = Action::DIFFERENCE;
-                } else if (trans_str == "circle_difference") {
-                    trans = Action::CIRCLE_DIFFERENCE;
-                } else {
-                    throw std::runtime_error("Invalid value “" + trans_str +
-                                             "” given as @translate for “" +
-                                             m.first + "”");
-                }
-            }
-
-            float multiplier = 1.f;
-            auto multiplier_it = cm.find("multiplier");
-            if (multiplier_it != cm.end()) {
-                if (multiplier_it->second->type != GDData::FLOAT &&
-                    multiplier_it->second->type != GDData::INTEGER)
-                {
-                    throw std::runtime_error("@multiplier value given for “" +
-                                             m.first + "” not a float or "
-                                             "integer");
-                }
-
-                if (multiplier_it->second->type == GDData::FLOAT) {
-                    multiplier = (GDFloat)*multiplier_it->second;
-                } else {
-                    multiplier = (GDInteger)*multiplier_it->second;
-                }
-            }
-
-            target.name = (const GDString &)*target_it->second;
-            target.trans = trans;
-            target.multiplier = multiplier;
+            fill_action_list(&action_list, (const GDArray &)*m.second, m.first);
         }
 
         if (!strncmp(m.first.c_str(), "Mouse.", 6)) {
             MouseAxis a = get_mouse_axis_from_name(m.first.c_str() + 6);
             if (a != MOUSE_UNKNOWN) {
-                verify_axis_target(m.first, target);
-                mouse_axis_mappings[a] = target;
+                verify_axis_actions(m.first, action_list);
+                mouse_axis_mappings[a] = action_list;
             } else {
                 int b = get_mouse_button_from_name(m.first.c_str() + 6);
                 if (b >= 0) {
-                    verify_button_target(m.first, target);
-                    mouse_button_mappings[b] = target;
+                    verify_button_actions(m.first, action_list);
+                    mouse_button_mappings[b] = action_list;
                 } else {
                     throw std::runtime_error("Unknown mapping “" + m.first +
                                              "”");
@@ -438,14 +514,14 @@ void init_ui(void)
         } else if (!strncmp(m.first.c_str(), "Gamepad.", 8)) {
             GamepadAxis a = get_gamepad_axis_from_name(m.first.c_str() + 8);
             if (a != AXIS_UNKNOWN) {
-                verify_axis_target(m.first, target);
-                gamepad_axis_mappings[a] = target;
+                verify_axis_actions(m.first, action_list);
+                gamepad_axis_mappings[a] = action_list;
             } else {
                 SteamController::Button b =
                     get_gamepad_button_from_name(m.first.c_str() + 8);
                 if (b != SteamController::NONE) {
-                    verify_button_target(m.first, target);
-                    gamepad_button_mappings[b] = target;
+                    verify_button_actions(m.first, action_list);
+                    gamepad_button_mappings[b] = action_list;
                 } else {
                     throw std::runtime_error("Unknown mapping “" + m.first +
                                              "”");
@@ -456,8 +532,8 @@ void init_ui(void)
             if (sc == SDL_SCANCODE_UNKNOWN) {
                 throw std::runtime_error("Unknown mapping “" + m.first + "”");
             }
-            verify_button_target(m.first, target);
-            keyboard_mappings[sc] = target;
+            verify_button_actions(m.first, action_list);
+            keyboard_mappings[sc] = action_list;
         }
     }
 }
@@ -466,6 +542,13 @@ void init_ui(void)
 static float clamp(float x)
 {
     return x < 0.f ? 0.f : x > 1.f ? 1.f : x;
+}
+
+
+static bool modifiers_present(const Input &i, const Action &a)
+{
+    return (a.only_if.empty() || i.get_mapping(a.only_if)) &&
+           (a.only_unless.empty() || !i.get_mapping(a.only_unless));
 }
 
 
@@ -498,27 +581,47 @@ static void button_up(Input &input, Action &action)
 }
 
 
+static void update_button(Input &input, Action &action, bool down)
+{
+    if (down && modifiers_present(input, action)) {
+        button_down(input, action);
+    } else {
+        button_up(input, action);
+    }
+}
+
+
+static void update_axis(Input &input, Action &a, float state)
+{
+    if (!modifiers_present(input, a)) {
+        return;
+    }
+
+    float &ns = input.mapping_states[a.name];
+    if (a.trans == Action::DIFFERENCE) {
+        float s = state;
+        if (isnanf(a.previous_state)) {
+            state = 0.f;
+        } else {
+            state -= a.previous_state;
+        }
+        a.previous_state = s;
+    } else if (a.trans == Action::CIRCLE_DIFFERENCE) {
+        // Has been taken care of already
+    } else {
+        state = (state - (a.deadzone)) / (1.f - a.deadzone);
+    }
+
+    ns = clamp(ns + state * a.multiplier);
+}
+
 static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 {
     auto it = gamepad_axis_mappings.find(axis);
     if (it != gamepad_axis_mappings.end()) {
-        float &ns = input.mapping_states[it->second.name];
-        if (it->second.trans == Action::DIFFERENCE) {
-            float s = state;
-            if (isnanf(it->second.previous_state)) {
-                state = 0.f;
-            } else {
-                state -= it->second.previous_state;
-            }
-            it->second.previous_state = s;
-        } else if (it->second.trans == Action::CIRCLE_DIFFERENCE) {
-            // Has been taken care of already
-        } else {
-            // Respect dead zone (FIXME: This should be configurable)
-            state = (state - .1f) / .9f;
+        for (Action &a: it->second) {
+            update_axis(input, a, state);
         }
-
-        ns = clamp(ns + state * it->second.multiplier);
     }
 }
 
@@ -552,19 +655,21 @@ static void update_6way_axis(Input &input, GamepadAxis left, const vec2 &state,
     for (int i = 0; i < 6; i++) {
         auto it = gamepad_axis_mappings.find(left);
         if (it != gamepad_axis_mappings.end()) {
-            float value;
+            for (Action &a: it->second) {
+                float value;
 
-            if (it->second.trans == Action::CIRCLE_DIFFERENCE) {
-                value = circle_difference[i / 2];
-            } else {
-                value = i < 4 ? state[i / 2] : 0.f;
+                if (a.trans == Action::CIRCLE_DIFFERENCE) {
+                    value = circle_difference[i / 2];
+                } else {
+                    value = i < 4 ? state[i / 2] : 0.f;
+                }
+
+                if (!(i % 2)) {
+                    value = -value;
+                }
+
+                update_axis(input, a, value);
             }
-
-            if (!(i % 2)) {
-                value = -value;
-            }
-
-            update_1way_axis(input, left, value);
         }
 
         left = static_cast<GamepadAxis>(left + 1);
@@ -577,7 +682,9 @@ static void invalidate_6way_axis(GamepadAxis left, vec2 &prev_state)
     for (int i = 0; i < 6; i++) {
         auto it = gamepad_axis_mappings.find(left);
         if (it != gamepad_axis_mappings.end()) {
-            it->second.previous_state = NAN;
+            for (Action &a: it->second) {
+                a.previous_state = NAN;
+            }
         }
 
         left = static_cast<GamepadAxis>(left + 1);
@@ -588,37 +695,40 @@ static void invalidate_6way_axis(GamepadAxis left, vec2 &prev_state)
 }
 
 
-void process_gamepad_events(Input &input, SteamController *gp)
+void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
 {
     static vec2 prev_lpad(NAN, NAN);
     static vec2 prev_rpad(NAN, NAN);
     static vec2 prev_analog(NAN, NAN);
 
-    if (gp->lpad_valid()) {
-        update_6way_axis(input, AXIS_L_LEFT, gp->lpad(), prev_lpad);
-    } else {
-        invalidate_6way_axis(AXIS_L_LEFT, prev_lpad);
-    }
-    if (gp->rpad_valid()) {
-        update_6way_axis(input, AXIS_R_LEFT, gp->rpad(), prev_rpad);
-    } else {
-        invalidate_6way_axis(AXIS_R_LEFT, prev_rpad);
-    }
-    if (gp->analog_valid()) {
-        update_6way_axis(input, AXIS_ANALOG_LEFT, gp->analog(), prev_analog);
-    } else {
-        invalidate_6way_axis(AXIS_ANALOG_LEFT, prev_analog);
-    }
+    if (!modifiers) {
+        if (gp->lpad_valid()) {
+            update_6way_axis(input, AXIS_L_LEFT, gp->lpad(), prev_lpad);
+        } else {
+            invalidate_6way_axis(AXIS_L_LEFT, prev_lpad);
+        }
+        if (gp->rpad_valid()) {
+            update_6way_axis(input, AXIS_R_LEFT, gp->rpad(), prev_rpad);
+        } else {
+            invalidate_6way_axis(AXIS_R_LEFT, prev_rpad);
+        }
+        if (gp->analog_valid()) {
+            update_6way_axis(input, AXIS_ANALOG_LEFT, gp->analog(),
+                             prev_analog);
+        } else {
+            invalidate_6way_axis(AXIS_ANALOG_LEFT, prev_analog);
+        }
 
-    update_1way_axis(input, AXIS_LSHOULDER, gp->lshoulder());
-    update_1way_axis(input, AXIS_RSHOULDER, gp->rshoulder());
+        update_1way_axis(input, AXIS_LSHOULDER, gp->lshoulder());
+        update_1way_axis(input, AXIS_RSHOULDER, gp->rshoulder());
+    }
 
 
     for (auto &gbm: gamepad_button_mappings) {
-        if (gp->button_state(gbm.first)) {
-            button_down(input, gbm.second);
-        } else {
-            button_up(input, gbm.second);
+        for (Action &a: gbm.second) {
+            if (modifiers == a.is_modifier) {
+                update_button(input, a, gp->button_state(gbm.first));
+            }
         }
     }
 }
@@ -628,18 +738,51 @@ static void update_mouse_axis(Input &input, MouseAxis axis, float state)
 {
     auto it = mouse_axis_mappings.find(axis);
     if (it != mouse_axis_mappings.end()) {
-        float &ns = input.mapping_states[it->second.name];
-        if (it->second.trans == Action::DIFFERENCE) {
-            float s = state;
-            if (isnanf(it->second.previous_state)) {
-                state = 0.f;
-            } else {
-                state -= it->second.previous_state;
-            }
-            it->second.previous_state = s;
+        for (Action &a: it->second) {
+            update_axis(input, a, state);
         }
+    }
+}
 
-        ns = clamp(ns + state * it->second.multiplier);
+
+static void process_mouse_events(Input &input, bool modifiers)
+{
+    int abs_x, abs_y;
+    uint32_t mouse_state = SDL_GetMouseState(&abs_x, &abs_y);
+
+    if (!modifiers) {
+        float rel_x = 2.f * abs_x / wnd_width - 1.f;
+        float rel_y = 1.f - 2.f * abs_y / wnd_height;
+
+        update_mouse_axis(input, MOUSE_LEFT,  -rel_x);
+        update_mouse_axis(input, MOUSE_RIGHT,  rel_x);
+        update_mouse_axis(input, MOUSE_DOWN,  -rel_y);
+        update_mouse_axis(input, MOUSE_UP,     rel_y);
+    }
+
+    for (auto &mbm: mouse_button_mappings) {
+        for (Action &a: mbm.second) {
+            if (modifiers == a.is_modifier) {
+                update_button(input, a, mouse_state & SDL_BUTTON(mbm.first));
+            }
+        }
+    }
+}
+
+
+static void process_keyboard_events(Input &input, bool modifiers)
+{
+    static const uint8_t *kbd_map;
+    if (!kbd_map) {
+        kbd_map = SDL_GetKeyboardState(nullptr);
+    }
+
+    for (auto &km: keyboard_mappings) {
+        for (Action &a: km.second) {
+            if (modifiers == a.is_modifier) {
+                update_button(input, a, kbd_map[km.first]);
+            }
+        }
     }
 }
 
@@ -671,41 +814,16 @@ void ui_process_events(Input &input)
         p.second = 0.f;
     }
 
-    int abs_x, abs_y;
-    uint32_t mouse_state = SDL_GetMouseState(&abs_x, &abs_y);
-
-    float rel_x = 2.f * abs_x / wnd_width - 1.f;
-    float rel_y = 1.f - 2.f * abs_y / wnd_height;
-
-    if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        update_mouse_axis(input, MOUSE_LEFT,  -rel_x);
-        update_mouse_axis(input, MOUSE_RIGHT,  rel_x);
-        update_mouse_axis(input, MOUSE_DOWN,  -rel_y);
-        update_mouse_axis(input, MOUSE_UP,     rel_y);
-    }
-
-    for (auto &mbm: mouse_button_mappings) {
-        if (mouse_state & SDL_BUTTON(mbm.first)) {
-            button_down(input, mbm.second);
-        } else {
-            button_up(input, mbm.second);
-        }
-    }
-
-
-    const uint8_t *kbd_map = SDL_GetKeyboardState(nullptr);
-
-    for (auto &km: keyboard_mappings) {
-        if (kbd_map[km.first]) {
-            button_down(input, km.second);
-        } else {
-            button_up(input, km.second);
-        }
-    }
-
-
+    process_mouse_events(input, true);
+    process_keyboard_events(input, true);
     if (gamepad) {
-        process_gamepad_events(input, gamepad);
+        process_gamepad_events(input, gamepad, true);
+    }
+
+    process_mouse_events(input, false);
+    process_keyboard_events(input, false);
+    if (gamepad) {
+        process_gamepad_events(input, gamepad, false);
     }
 
 
