@@ -26,18 +26,18 @@
     "Left":         "rotate.-y",
     "Right":        "rotate.+y",
 
-    "Gamepad.RightPad.-x":  "rotate.-y",
-    "Gamepad.RightPad.+x":  "rotate.+y",
-    "Gamepad.RightPad.-y":  "rotate.-x",
-    "Gamepad.RightPad.+y":  "rotate.+x",
-
-    "Gamepad.BottomLeftShoulder.+z":    "rotate.-z",
-    "Gamepad.BottomRightShoulder.+z":   "rotate.+z",
+    "Gamepad.RightPad.-x":  { "target": "rotate.-y", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad.+x":  { "target": "rotate.+y", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad.-y":  { "target": "rotate.-x", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad.+y":  { "target": "rotate.+x", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad.-z":  { "target": "rotate.+z", "translate": "circle_difference", "multiplier": 5 },
+    "Gamepad.RightPad.+z":  { "target": "rotate.-z", "translate": "circle_difference", "multiplier": 5 },
 
     "z": "-main_engine",
     "x": "+main_engine",
 
-    "Gamepad.X":    "+main_engine",
+    "Gamepad.BottomLeftShoulder.+z":    "-main_engine",
+    "Gamepad.BottomRightShoulder.+z":   "+main_engine",
 
     "F5": "kill_rotation",
 
