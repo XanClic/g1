@@ -206,6 +206,11 @@ void SteamController::usb_update(SteamController *self)
         self->raw_button_state =  self->raw_state.buttons_0
                                | (self->raw_state.buttons_1 << 8);
 
+        if (self->analog_valid() && self->button_state(LEFT_PAD)) {
+            self->raw_button_state &= ~(1 << LEFT_PAD);
+            self->raw_button_state |= 1 << ANALOG_STICK;
+        }
+
         if (self->lpad_valid()) {
             self->lpad_status.x() = self->raw_state.lpad_x / 32767.f;
             self->lpad_status.y() = self->raw_state.lpad_y / 32767.f;

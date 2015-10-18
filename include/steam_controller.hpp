@@ -80,13 +80,12 @@ class SteamController {
             LEFT_PAD,
             RIGHT_PAD,
 
-            // These are never returned by next_button_{down,up}(). Use the
-            // *_valid() functions to obtain their status.
             LEFT_PAD_TOUCH,
             RIGHT_PAD_TOUCH,
 
+            ANALOG_STICK,
+
             NONE = -1,
-            MAX_VISIBLE = RIGHT_PAD
         };
 
         SteamController(void);
@@ -102,11 +101,9 @@ class SteamController {
         float lshoulder(void) const { return lshoulder_status; }
         float rshoulder(void) const { return rshoulder_status; }
 
-        uint32_t buttons(void) const
-        { return raw_button_state & ((1 << RIGHT_PAD) - 1); }
+        uint32_t buttons(void) const { return raw_button_state; }
 
-        bool button_state(Button b) const
-        { return buttons() & (1 << b); }
+        bool button_state(Button b) const { return buttons() & (1 << b); }
 };
 
 #endif
