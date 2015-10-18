@@ -24,6 +24,7 @@ static gl::texture *scratch_tex, *normals_tex;
 
 static gl::texture *prograde_sprite, *retrograde_sprite;
 static gl::texture *radar_contact_sprite, *radar_target_sprite;
+static gl::texture *delta_positive_sprite, *delta_negative_sprite;
 
 static gl::framebuffer *cockpit_fb;
 #ifdef COCKPIT_SUPERSAMPLING
@@ -100,6 +101,12 @@ void init_cockpit(void)
 
     radar_target_sprite = new gl::texture("assets/hud/radar-target.png");
     radar_target_sprite->filter(GL_LINEAR);
+
+    delta_positive_sprite = new gl::texture("assets/hud/delta-positive.png");
+    delta_positive_sprite->filter(GL_LINEAR);
+
+    delta_negative_sprite = new gl::texture("assets/hud/delta-negative.png");
+    delta_negative_sprite->filter(GL_LINEAR);
 
 
     register_resize_handler(resize);
@@ -501,6 +508,41 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             draw_text(proj + vec2(0.f, 2.f * sys), vec2(sxs * .5f, sys),
                       localize(rel_speed, 2, LS_UNIT_M_S),
                       ALIGN_CENTER, ALIGN_BOTTOM);
+        }
+
+        if (t.id == r.selected_id) {
+            bool dvelp_visible, dveln_visible;
+            vec2 dvelp_proj, dveln_proj;
+
+            dvelp_proj = project_clamp_to_border(status, t.relative_velocity,
+                                                 hbx, hby, sprite_size,
+                                                 &dvelp_visible);
+            dveln_proj = project_clamp_to_border(status, -t.relative_velocity,
+                                                 hbx, hby, sprite_size,
+                                                 &dveln_visible);
+
+            draw_sprite(dvelp_proj, sprite_size, *delta_positive_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f,
+                             dvelp_visible ? 1.f : .3f));
+            draw_sprite(dveln_proj, sprite_size, *delta_negative_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f,
+                             dveln_visible ? 1.f : .3f));
+
+            if (dvelp_visible) {
+                draw_text(dvelp_proj + vec2(0.f, 2.f * sys),
+                          vec2(sxs * .5f, sys),
+                          localize(t.relative_velocity.length(), 2,
+                                   LS_UNIT_M_S),
+                          ALIGN_CENTER, ALIGN_BOTTOM);
+            }
+
+            if (dveln_visible) {
+                draw_text(dveln_proj + vec2(0.f, 2.f * sys),
+                          vec2(sxs * .5f, sys),
+                          localize(-t.relative_velocity.length(), 2,
+                                   LS_UNIT_M_S),
+                          ALIGN_CENTER, ALIGN_BOTTOM);
+            }
         }
     }
 }
