@@ -246,8 +246,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         if (physics_enabled && out.position.length() < 6371e3f) {
             vec3 earth_normal = out.position.normalized();
-            out.velocity = .8f * (out.velocity - 2.f * out.velocity.dot(earth_normal) * earth_normal);
-            out.position = 6371e3f / out.position.length() * out.position;
+            out.velocity = .8 * (out.velocity -
+                                 2. * out.velocity.dot(earth_normal) *
+                                vec<3, double>(earth_normal));
+            out.position = 6371e3 / out.position.length() * out.position;
         }
 
         if (physics_enabled) {
