@@ -66,8 +66,8 @@
     "z": "-main_engine",
     "x": "+main_engine",
 
-    "Gamepad.BottomLeftShoulder.+z":    "-main_engine",
-    "Gamepad.BottomRightShoulder.+z":   "+main_engine",
+    "Gamepad.BottomLeftShoulder.+z":    { "target": "-main_engine", "deadzone": 0.1 },
+    "Gamepad.BottomRightShoulder.+z":   { "target": "+main_engine", "deadzone": 0.1 },
 
     "F5": "kill_rotation",
 
