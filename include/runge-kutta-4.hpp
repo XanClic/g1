@@ -7,12 +7,11 @@
 
 struct RK4State {
     RK4State(const dake::math::vec<3, double> &pos,
-             const dake::math::vec3 &vel):
+             const dake::math::vec<3, double> &vel):
         x(pos), v(vel)
     {}
 
-    dake::math::vec<3, double> x;
-    dake::math::vec3 v;
+    dake::math::vec<3, double> x, v;
 };
 
 
