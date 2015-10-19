@@ -71,7 +71,7 @@ TODO
 
 - ~~Get cockpit scratches right (need a normal map for the cockpit glass)~~
 - ~~Border for the HUD~~
-- Cockpit instruments
+- ~~Cockpit instruments~~ (scrapped for MFDs, see below)
 - ~~In-atmospheric graphical display; physics doesn’t matter so far, it just
   needs to support live-rendered scripted cinematics~~
     - ~~Preferably sub-clouds~~
@@ -92,24 +92,25 @@ TODO
 - ~~Stars and moon~~
 - ~~Write script for automatically downloading and building the assets from NASA
   or get a server~~
-- English translation (although I’d rather recommend you learn German)
-- Allow IGS to exhibit arbitrary commands which can be bound to key strokes
-  (probably with the IGS defining a default)
+- ~~English translation (although I’d rather recommend you learn German)~~
+- ~~Allow IGS to exhibit arbitrary commands which can be bound to key strokes
+  (probably with the IGS defining a default)~~
 - Write better flight control software
-    - L2
+    - ~~L2~~
         - ~~Kill Rotation~~
-        - Prograde
-        - Retrograde
-        - Orbit Normal
-        - Orbit Antinormal
-    - L3
+    - ~~L3~~
+        - ~~Prograde~~
+        - ~~Retrograde~~
+        - ~~Orbit Normal~~
+        - ~~Orbit Antinormal~~
+    - L4
         - Plane-like mode
     - Plus variants (?)
         - Arbitrary thruster placement
           (linear optimization *shudder*)
 - Other ships
     - Ship models
-- Radar
+- ~~Radar~~
 - Weapons
     - Models
     - IGS
@@ -118,6 +119,7 @@ TODO
     - Physical interaction
 - Multifunctional displays
     - Orbit control
+    - Orbit alignment
     - Software selection
     - Hardware control
 - Design HUD IGS interface
