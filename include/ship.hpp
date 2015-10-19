@@ -22,11 +22,14 @@ struct ShipState {
     // normalized
     dake::math::vec3 forward, up, right;
 
+    dake::math::vec3 orbit_normal;
+
     // Can only be applied during the next frame
     dake::math::vec3 weapon_force, weapon_torque;
 
     dake::math::vec3 local_velocity, local_acceleration;
     dake::math::vec3 local_rotational_velocity;
+    dake::math::vec3 local_orbit_normal;
 
     // kg
     float total_mass;

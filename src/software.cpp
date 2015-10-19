@@ -33,6 +33,7 @@ static std::vector<Software *> software[Software::TYPE_MAX];
 
 static int luaw_crossp(lua_State *ls);
 static int luaw_dotp(lua_State *ls);
+static int luaw_vec3(lua_State *ls);
 
 
 Software::Software(const std::string &n, const std::string &filename):
@@ -52,23 +53,15 @@ Software::Software(const std::string &n, const std::string &filename):
     sg("THRUSTER_RCS",  THRUSTER_RCS);
     sg("THRUSTER_MAIN", THRUSTER_MAIN);
 
-    sg("RIGHT",    RIGHT);
-    sg("LEFT",     LEFT);
-    sg("UP",       UP);
-    sg("DOWN",     DOWN);
-    sg("FORWARD",  FORWARD);
-    sg("BACKWARD", BACKWARD);
-    sg("TOP",      TOP);
-    sg("BOTTOM",   BOTTOM);
-    sg("FRONT",    FRONT);
-    sg("BACK",     BACK);
-
 
     lua_pushcfunction(ls, luaw_crossp);
     lua_setglobal(ls, "crossp");
 
     lua_pushcfunction(ls, luaw_dotp);
     lua_setglobal(ls, "dotp");
+
+    lua_pushcfunction(ls, luaw_vec3);
+    lua_setglobal(ls, "vec3");
 
 
     lua_call(ls, 0, LUA_MULTRET);
@@ -143,10 +136,12 @@ static vec<3, double> lua_tovector(lua_State *ls, int index)
 
 static int luaw_veclength(lua_State *ls);
 static int luaw_vecrotate(lua_State *ls);
+static int luaw_vecnorm(lua_State *ls);
 static int luaw_vecadd(lua_State *ls);
 static int luaw_vecsub(lua_State *ls);
 static int luaw_vecmul(lua_State *ls);
 static int luaw_vecdiv(lua_State *ls);
+static int luaw_vecunm(lua_State *ls);
 
 
 static void lua_pushvector(lua_State *ls, const vec<3, double> &vec)
@@ -168,6 +163,9 @@ static void lua_pushvector(lua_State *ls, const vec<3, double> &vec)
     lua_pushcfunction(ls, luaw_vecrotate);
     lua_setfield(ls, -2, "rotate");
 
+    lua_pushcfunction(ls, luaw_vecnorm);
+    lua_setfield(ls, -2, "normalized");
+
     lua_newtable(ls);
 
     lua_pushcfunction(ls, luaw_vecadd);
@@ -181,6 +179,9 @@ static void lua_pushvector(lua_State *ls, const vec<3, double> &vec)
 
     lua_pushcfunction(ls, luaw_vecdiv);
     lua_setfield(ls, -2, "__div");
+
+    lua_pushcfunction(ls, luaw_vecunm);
+    lua_setfield(ls, -2, "__unm");
 
     lua_setmetatable(ls, -2);
 }
@@ -198,6 +199,13 @@ static int luaw_vecrotate(lua_State *ls)
     mat4 rot = mat4::identity().rotate(lua_tonumber(ls, 3),
                                        lua_tovector(ls, 2));
     lua_pushvector(ls, rot * vec4::direction(lua_tovector(ls, 1)));
+    return 1;
+}
+
+
+static int luaw_vecnorm(lua_State *ls)
+{
+    lua_pushvector(ls, lua_tovector(ls, 1).normalized());
     return 1;
 }
 
@@ -234,6 +242,13 @@ static int luaw_vecdiv(lua_State *ls)
 }
 
 
+static int luaw_vecunm(lua_State *ls)
+{
+    lua_pushvector(ls, -lua_tovector(ls, 1));
+    return 1;
+}
+
+
 static int luaw_crossp(lua_State *ls)
 {
     lua_pushvector(ls, lua_tovector(ls, 1).cross(lua_tovector(ls, 2)));
@@ -248,6 +263,15 @@ static int luaw_dotp(lua_State *ls)
 }
 
 
+static int luaw_vec3(lua_State *ls)
+{
+    lua_pushvector(ls, vec3(lua_tonumber(ls, 1),
+                            lua_tonumber(ls, 2),
+                            lua_tonumber(ls, 3)));
+    return 1;
+}
+
+
 void FlightControlSoftware::execute(ShipState &ship, const Input &input, float interval)
 {
     lua_getglobal(ls(), "flight_control");
@@ -258,6 +282,9 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
     lua_newtable(ls());
 
+    lua_pushvector(ls(), ship.local_velocity);
+    lua_setfield(ls(), -2, "velocity");
+
     lua_pushvector(ls(), ship.local_acceleration);
     lua_setfield(ls(), -2, "acceleration");
 
@@ -266,6 +293,9 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
     lua_pushnumber(ls(), ship.total_mass);
     lua_setfield(ls(), -2, "total_mass");
+
+    lua_pushvector(ls(), ship.local_orbit_normal);
+    lua_setfield(ls(), -2, "orbit_normal");
 
     lua_newtable(ls());
 
@@ -283,12 +313,6 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
         lua_pushinteger(ls(), thr.type);
         lua_setfield(ls(), -2, "type");
-
-        lua_pushinteger(ls(), thr.general_position);
-        lua_setfield(ls(), -2, "general_position");
-
-        lua_pushinteger(ls(), thr.general_direction);
-        lua_setfield(ls(), -2, "general_direction");
 
         lua_settable(ls(), -3);
     }
@@ -318,6 +342,18 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
     lua_pushboolean(ls(), input.get_mapping("kill_rotation") >= .5f);
     lua_setfield(ls(), -2, "kill_rotation");
+
+    lua_pushboolean(ls(), input.get_mapping("prograde") >= .5f);
+    lua_setfield(ls(), -2, "prograde");
+
+    lua_pushboolean(ls(), input.get_mapping("retrograde") >= .5f);
+    lua_setfield(ls(), -2, "retrograde");
+
+    lua_pushboolean(ls(), input.get_mapping("orbit_normal") >= .5f);
+    lua_setfield(ls(), -2, "orbit_normal");
+
+    lua_pushboolean(ls(), input.get_mapping("orbit_antinormal") >= .5f);
+    lua_setfield(ls(), -2, "orbit_antinormal");
 
 
     lua_pushnumber(ls(), interval);

@@ -25,6 +25,7 @@ static gl::texture *scratch_tex, *normals_tex;
 static gl::texture *prograde_sprite, *retrograde_sprite;
 static gl::texture *radar_contact_sprite, *radar_target_sprite;
 static gl::texture *delta_positive_sprite, *delta_negative_sprite;
+static gl::texture *orbit_normal_sprite, *orbit_antinormal_sprite;
 
 static gl::framebuffer *cockpit_fb;
 #ifdef COCKPIT_SUPERSAMPLING
@@ -107,6 +108,12 @@ void init_cockpit(void)
 
     delta_negative_sprite = new gl::texture("assets/hud/delta-negative.png");
     delta_negative_sprite->filter(GL_LINEAR);
+
+    orbit_normal_sprite = new gl::texture("assets/hud/normal.png");
+    orbit_normal_sprite->filter(GL_LINEAR);
+
+    orbit_antinormal_sprite = new gl::texture("assets/hud/antinormal.png");
+    orbit_antinormal_sprite->filter(GL_LINEAR);
 
 
     register_resize_handler(resize);
@@ -312,12 +319,9 @@ static void draw_cockpit_controls(const WorldState &world,
 
 static void draw_target_cross(const GraphicsStatus &status,
                               const WorldState &world,
-                              float cockpit_brightness,
                               float sxs, float sys)
 {
     const ShipState &ship = world.ships[world.player_ship];
-
-    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
 
     vec2 fwd_proj = project(status, ship.forward);
     draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
@@ -376,16 +380,28 @@ static void draw_orbit_grid(const GraphicsStatus &status,
         return;
     }
 
-    vec3 orbit_forward = velocity.normalized();
-    vec3 orbit_inward  = -ship.position.normalized();
-    vec3 orbit_upward  = orbit_forward.cross(orbit_inward).normalized();
+    float cfdon = status.camera_forward.dot(ship.orbit_normal);
 
-    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
+    vec3 zero = status.camera_forward - cfdon * ship.orbit_normal;
+    if (zero.length() < 1e-3f) {
+        vec2 size;
+        size.y() = (M_PIf / 45.f) / status.yfov;
+        size.x() = size.y() / status.aspect;
 
-    vec3 zero = (status.camera_forward -
-                 status.camera_forward.dot(orbit_upward) * orbit_upward)
-                .normalized();
-    vec3 rvec = zero.cross(orbit_upward);
+        if (cfdon > 0.f) {
+            draw_sprite(project(status, ship.orbit_normal), size,
+                        *orbit_normal_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
+        } else {
+            draw_sprite(project(status, -ship.orbit_normal), size,
+                        *orbit_antinormal_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
+        }
+        return;
+    }
+    zero.normalize();
+
+    vec3 rvec = zero.cross(ship.orbit_normal);
     for (int angle = -90; angle <= 90; angle += 2) {
         float ra = M_PIf * angle / 180.f;
 
@@ -420,7 +436,6 @@ static void draw_orbit_grid(const GraphicsStatus &status,
 
 static void draw_artificial_horizon(const GraphicsStatus &status,
                                     const WorldState &world,
-                                    float cockpit_brightness,
                                     float aspect, float sxs, float sys,
                                     const vec2 &hbx, const vec2 &hby)
 {
@@ -431,8 +446,6 @@ static void draw_artificial_horizon(const GraphicsStatus &status,
                      status.camera_forward.dot(earth_upward) * earth_upward)
                     .normalized();
     vec3 rvec = horizont.cross(earth_upward);
-
-    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
 
     for (int angle = -90; angle <= 90; angle += 5) {
         float ra = M_PIf * angle / 180.f;
@@ -514,19 +527,25 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             bool dvelp_visible, dveln_visible;
             vec2 dvelp_proj, dveln_proj;
 
-            dvelp_proj = project_clamp_to_border(status, t.relative_velocity,
+            // Negate, since t.relative_velocity is the velocity of the target
+            // relative to us; but we want it the other way around
+            dvelp_proj = project_clamp_to_border(status, -t.relative_velocity,
                                                  hbx, hby, sprite_size,
                                                  &dvelp_visible);
-            dveln_proj = project_clamp_to_border(status, -t.relative_velocity,
+            dveln_proj = project_clamp_to_border(status,  t.relative_velocity,
                                                  hbx, hby, sprite_size,
                                                  &dveln_visible);
 
-            draw_sprite(dvelp_proj, sprite_size, *delta_positive_sprite,
-                        vec4(0.f, cockpit_brightness, 0.f,
-                             dvelp_visible ? 1.f : .3f));
-            draw_sprite(dveln_proj, sprite_size, *delta_negative_sprite,
-                        vec4(0.f, cockpit_brightness, 0.f,
-                             dveln_visible ? 1.f : .3f));
+            if (dvelp_visible || !dveln_visible) {
+                draw_sprite(dvelp_proj, sprite_size, *delta_positive_sprite,
+                            vec4(0.f, cockpit_brightness, 0.f,
+                                 dvelp_visible ? 1.f : .3f));
+            }
+            if (dveln_visible || !dvelp_visible) {
+                draw_sprite(dveln_proj, sprite_size, *delta_negative_sprite,
+                            vec4(0.f, cockpit_brightness, 0.f,
+                                 dveln_visible ? 1.f : .3f));
+            }
 
             if (dvelp_visible) {
                 draw_text(dvelp_proj + vec2(0.f, 2.f * sys),
@@ -587,6 +606,7 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     blink_time = fmodf(blink_time + world.interval, 1.f);
 
     set_text_color(vec4(0.f, cockpit_brightness, 0.f, 1.f));
+    line_prg->uniform<vec4>("color") = vec4(0.f, cockpit_brightness, 0.f, 1.f);
 
     draw_cockpit_controls(world, sxs, sys);
 
@@ -604,15 +624,14 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     hby[1] = 1.f;
 
 
-    draw_target_cross(status, world, cockpit_brightness, sxs, sys);
+    draw_target_cross(status, world, sxs, sys);
 
     draw_velocity_indicators(status, world, cockpit_brightness, sxs, sys,
                              hbx, hby);
 
     draw_orbit_grid(status, world, cockpit_brightness, aspect, sxs, sys,
                     hbx, hby);
-    draw_artificial_horizon(status, world, cockpit_brightness, aspect, sxs, sys,
-                            hbx, hby);
+    draw_artificial_horizon(status, world, aspect, sxs, sys, hbx, hby);
 
 
     draw_radar_contacts(status, world, cockpit_brightness, blink_time, sxs, sys,

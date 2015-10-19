@@ -2,8 +2,5 @@
     "force":                "vec3",
     "relative_position":    "vec3",
 
-    "type":                 "ThrusterType",
-
-    "general_position":     "DirectionPosition",
-    "general_direction":    "DirectionPosition"
+    "type":                 "ThrusterType"
 }
