@@ -10,7 +10,6 @@
 struct Input {
     float get_mapping(const std::string &n) const;
 
-    bool initialized = false; // FIXME
     std::unordered_map<std::string, float> mapping_states;
 };
 
