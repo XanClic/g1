@@ -36,9 +36,12 @@ class SteamController {
 
         static void usb_update(SteamController *self);
 
+        void send_rumble(uint8_t index, uint16_t intensity);
+
         libusb_device *dev = nullptr;
         libusb_device_handle *handle = nullptr;
         int interface = -1, ep = -1;
+        bool wireless = false;
 
         InputData raw_state;
 
@@ -51,6 +54,9 @@ class SteamController {
 
         std::thread *usb_thread = nullptr;
         bool usb_thread_quit = false;
+
+        uint16_t left_rumble = 0, right_rumble = 0;
+        int rumble_index = 0;
 
 
     public:
@@ -104,6 +110,12 @@ class SteamController {
         uint32_t buttons(void) const { return raw_button_state; }
 
         bool button_state(Button b) const { return buttons() & (1 << b); }
+
+        void set_left_rumble(float intensity)
+        { left_rumble = static_cast<uint16_t>(intensity * 65535.f); }
+
+        void set_right_rumble(float intensity)
+        { right_rumble = static_cast<uint16_t>(intensity * 65535.f); }
 };
 
 #endif
