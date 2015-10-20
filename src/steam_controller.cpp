@@ -39,6 +39,7 @@ SteamController::SteamController(void)
     handle = libusb_open_device_with_vid_pid(libusb_ctx, 0x28de, 0x1102);
     if (!handle) {
         handle = libusb_open_device_with_vid_pid(libusb_ctx, 0x28de, 0x1142);
+        wireless = true;
     }
 
     if (!handle) {
@@ -98,6 +99,40 @@ SteamController::SteamController(void)
 
 
     usb_thread = new std::thread(&SteamController::usb_update, this);
+
+
+    // No error handling here, because, well, sometimes errors do occur here,
+    // but ignoring them is apparently completely fine (??!??!)
+
+    static uint8_t init_0[64] = { 0x83 };
+    libusb_control_transfer(handle, 0x21, 0x09, 0x0300, wireless ? 1 : 2,
+                            init_0, 64, 0);
+
+    uint8_t received[64];
+    libusb_control_transfer(handle, 0xa1, 0x01, 0x0300, wireless ? 1 : 2,
+                            received, 64, 0);
+
+    received[0] = 0xae;
+    received[1] = 0x15;
+    received[2] = 0x01;
+    memset(received + 23, 0, 64 - 23);
+    libusb_control_transfer(handle, 0x21, 0x09, 0x0300, wireless ? 1 : 2,
+                            received, 64, 0);
+
+    libusb_control_transfer(handle, 0xa1, 0x01, 0x0300, wireless ? 1 : 2,
+                            received, 64, 0);
+
+    static uint8_t init_1[64] = { 0x81 };
+    libusb_control_transfer(handle, 0x21, 0x09, 0x0300, wireless ? 1 : 2,
+                            init_1, 64, 0);
+
+    static uint8_t init_2[64] = {
+        0x87, 0x15, 0x32, 0x84, 0x03, 0x18, 0x00, 0x00,
+        0x31, 0x02, 0x00, 0x08, 0x07, 0x00, 0x07, 0x07,
+        0x00, 0x30, 0x00, 0x00, 0x2f, 0x01, 0x00, 0x00
+    };
+    libusb_control_transfer(handle, 0x21, 0x09, 0x0300, wireless ? 1 : 2,
+                            init_2, 64, 0);
 }
 
 
@@ -184,6 +219,20 @@ const libusb_endpoint_descriptor *
 }
 
 
+void SteamController::send_rumble(uint8_t index, uint16_t intensity)
+{
+    uint8_t cmd[64] = {
+        0x8f, 0x07, index,
+        static_cast<uint8_t>(intensity & 0xff),
+        static_cast<uint8_t>(intensity >> 8),
+        0x00, 0x00, 0x01
+    };
+
+    libusb_control_transfer(handle, 0x21, 0x09, 0x0300, wireless ? 1 : 2,
+                            cmd, 64, 0);
+}
+
+
 void SteamController::usb_update(SteamController *self)
 {
     while (!self->usb_thread_quit) {
@@ -237,6 +286,19 @@ void SteamController::usb_update(SteamController *self)
 
         self->lshoulder_status = self->raw_state.lshoulder / 255.f;
         self->rshoulder_status = self->raw_state.rshoulder / 255.f;
+
+        if (self->left_rumble && self->right_rumble) {
+            if (self->rumble_index) {
+                self->send_rumble(1, self->left_rumble);
+            } else {
+                self->send_rumble(0, self->right_rumble);
+            }
+            self->rumble_index ^= 1;
+        } else if (self->right_rumble) {
+            self->send_rumble(0, self->right_rumble);
+        } else if (self->left_rumble) {
+            self->send_rumble(1, self->left_rumble);
+        }
     }
 }
 
