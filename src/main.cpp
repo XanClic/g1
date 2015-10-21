@@ -19,6 +19,8 @@
 #include "ui.hpp"
 #include "weapons.hpp"
 
+#include "json.hpp"
+
 
 Options global_options;
 

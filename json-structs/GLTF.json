@@ -1,0 +1,21 @@
+{
+    "accessors": {
+        "type": "map",
+        "of":   "GLTFAccessor"
+    },
+
+    "bufferViews": {
+        "type": "map",
+        "of":   "GLTFBufferView"
+    },
+
+    "buffers": {
+        "type": "map",
+        "of":   "GLTFBuffer"
+    },
+
+    "meshes": {
+        "type": "map",
+        "of":   "GLTFMesh"
+    }
+}

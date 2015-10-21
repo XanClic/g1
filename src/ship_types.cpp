@@ -32,7 +32,7 @@ void load_ship_types(void)
                                                 + ".json");
             Ship *s = new Ship;
             try {
-                Ship_parse(s, ship_spec);
+                parse(s, ship_spec);
             } catch (...) {
                 delete s;
                 delete ship_spec;

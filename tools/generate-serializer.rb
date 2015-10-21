@@ -26,12 +26,23 @@ def interpret_array(type)
     "std::vector<#{ctype(type['of'])}>"
 end
 
-$builtin = ['single', 'vec3', 'string', 'array']
+def interpret_map(type)
+    if !type.kind_of?(Hash) || !type['of']
+        throw 'The map type needs an enclosed type'
+    end
+
+    "std::unordered_map<#{ctype('string')}, #{ctype(type['of'])}>"
+end
+
+$builtin = ['single', 'vec3', 'string', 'array', 'map', 'u64', 'u32']
 $builtin_type_map = {
     'single' => 'float',
     'vec3'   => 'dake::math::vec3',
     'string' => 'std::string',
-    'array'  => :interpret_array
+    'array'  => :interpret_array,
+    'map'    => :interpret_map,
+    'u64'    => 'uint64_t',
+    'u32'    => 'uint32_t'
 }
 
 
@@ -40,7 +51,7 @@ def get_complex_type_dependencies(type)
         deps = [type]
     elsif type.kind_of?(Hash)
         deps = get_complex_type_dependencies(type['type'])
-        if type['type'] == 'array'
+        if type['type'] == 'array' || type['type'] == 'map'
             deps += get_complex_type_dependencies(type['of'])
         end
     else
@@ -69,7 +80,7 @@ while struct_order.size < structs.size
     structs_added = 0
     struct_dependencies.each do |struct, depends|
         if !struct_order.include?(struct) &&
-           (struct_order & depends) == depends
+           (depends - (struct_order & depends)).empty?
             struct_order << struct
             structs_added += 1
         end
@@ -82,8 +93,11 @@ if struct_order.size < structs.size
     $stderr.puts <<EOF
 Unfulfilled dependencies!
 Cannot fulfill:
-#{structs.keys * ', '}
+#{(structs.keys - struct_order) * ', '}
+Unfulfilled:
+#{(structs.keys - struct_order).map { |s| '- ' + (struct_dependencies[s] - (struct_order & struct_dependencies[s])) * ', ' } * "\n"}
 EOF
+    exit 1
 end
 
 
@@ -128,16 +142,6 @@ def first_level_type(type)
     end
 end
 
-def array_type_and_level(type)
-    flt = first_level_type(type)
-    if flt != 'array'
-        return [0, flt]
-    else
-        atl = array_type_and_level(type['of'])
-        return [atl[0] + 1, atl[1]]
-    end
-end
-
 def ctype(type)
     actual_type = first_level_type(type)
 
@@ -158,12 +162,19 @@ def ctype(type)
 end
 
 def struct_to_cxx(fields)
+    optional_regex = /^\[(.*)\]$/
+
     fields.map { |name, type|
         ct = ctype(type)
-        array_depth = ct.count('<')
-        $max_array_depth = array_depth if array_depth > $max_array_depth
-        "    #{ct} #{name};"
-    } * "\n"
+        plain_name = name.sub(optional_regex, '\1')
+
+        ret = ["    #{ct} #{plain_name};"]
+        if name =~ optional_regex
+            ret << ["    bool has_#{plain_name};"]
+        end
+
+        ret
+    }.flatten * "\n"
 end
 
 def structs_to_cxx(structs, order)
@@ -179,7 +190,6 @@ end
 
 cxxenums = enums_to_cxx(enums)
 
-$max_array_depth = 0
 cxxstructs = structs_to_cxx(structs, struct_order)
 
 
@@ -210,11 +220,7 @@ header.write <<EOF
 
 // functions
 
-#{
-    (enums.keys + structs.keys).map { |t|
-        "void #{t}_parse(#{t} *output, const GDData *input);"
-    } * "\n"
-}
+template<typename T> void parse(T *output, const GDData *input);
 
 #endif
 EOF
@@ -255,7 +261,7 @@ EOF
     end
     serializer.write("};\n\n")
     serializer.write <<EOF
-void #{name}_parse(#{name} *obj, const GDData *d)
+template<> void parse<#{name}>(#{name} *obj, const GDData *d)
 {
     if (d->type != GDData::STRING) {
         throw std::runtime_error("Enum values (#{name}) must be strings");
@@ -278,8 +284,7 @@ serializer.write <<EOF
 
 
 
-static void single_parse(float *obj, const GDData *d) __attribute__((unused));
-static void single_parse(float *obj, const GDData *d)
+template<> void parse<float>(float *obj, const GDData *d)
 {
     if (d->type != GDData::FLOAT && d->type != GDData::INTEGER) {
         throw std::runtime_error("Value given for a single is not a float or "
@@ -294,8 +299,7 @@ static void single_parse(float *obj, const GDData *d)
 }
 
 
-static void vec3_parse(dake::math::vec3 *obj, const GDData *d) __attribute__((unused));
-static void vec3_parse(dake::math::vec3 *obj, const GDData *d)
+template<> void parse<dake::math::vec3>(dake::math::vec3 *obj, const GDData *d)
 {
     if (d->type != GDData::ARRAY) {
         throw std::runtime_error("Value given for vec3 is not an array");
@@ -308,14 +312,13 @@ static void vec3_parse(dake::math::vec3 *obj, const GDData *d)
                                  "three arguments");
     }
 
-    single_parse(&obj->x(), &a[0]);
-    single_parse(&obj->y(), &a[1]);
-    single_parse(&obj->z(), &a[2]);
+    parse(&obj->x(), &a[0]);
+    parse(&obj->y(), &a[1]);
+    parse(&obj->z(), &a[2]);
 }
 
 
-static void string_parse(std::string *obj, const GDData *d) __attribute__((unused));
-static void string_parse(std::string *obj, const GDData *d)
+template<> void parse<std::string>(std::string *obj, const GDData *d)
 {
     if (d->type != GDData::STRING) {
         throw std::runtime_error("Value given for string is not a string");
@@ -323,21 +326,29 @@ static void string_parse(std::string *obj, const GDData *d)
 
     *obj = (GDString)*d;
 }
-EOF
-
-$max_array_depth.times do |ad|
-    type = 'std::vector<' * (ad + 1) + 'T' + '>' * (ad + 1)
-
-    serializer.write <<EOF
 
 
-template<typename T>
-static void array_parse_#{ad}(#{type} *obj,
-    const GDData *d, void (*parse_element)(T *obj, const GDData *d))
-    __attribute__((unused));
-template<typename T>
-static void array_parse_#{ad}(#{type} *obj,
-    const GDData *d, void (*parse_element)(T *obj, const GDData *d))
+template<> void parse<uint64_t>(uint64_t *obj, const GDData *d)
+{
+    if (d->type != GDData::INTEGER) {
+        throw std::runtime_error("Value given for u64 is not an integer");
+    }
+
+    *obj = (GDInteger)*d;
+}
+
+
+template<> void parse<uint32_t>(uint32_t *obj, const GDData *d)
+{
+    if (d->type != GDData::INTEGER) {
+        throw std::runtime_error("Value given for u32 is not an integer");
+    }
+
+    *obj = (GDInteger)*d;
+}
+
+
+template<typename T> void parse(std::vector<T> *obj, const GDData *d)
 {
     if (d->type != GDData::ARRAY) {
         throw std::runtime_error("Value given for an array is not an array");
@@ -345,25 +356,38 @@ static void array_parse_#{ad}(#{type} *obj,
 
     const GDArray &a = *d;
     size_t element_count = a.size();
-    new (obj) #{type}(element_count);
+    new (obj) std::vector<T>(element_count);
 
     for (size_t i = 0; i < element_count; i++) {
-        #{
-            ad == 0 \
-                ? "parse_element(&(*obj)[i], &a[i]);" \
-                : "array_parse_#{ad - 1}(&(*obj)[i], &a[i], parse_element"
-        }
+        parse(&(*obj)[i], &a[i]);
+    }
+}
+
+
+template<typename T> void parse(std::unordered_map<std::string, T> *obj,
+                                const GDData *d)
+{
+    if (d->type != GDData::OBJECT) {
+        throw std::runtime_error("Value given for a map is not an object");
+    }
+
+    const GDObject &o = *d;
+    new (obj) std::unordered_map<std::string, T>;
+
+    for (const auto &p: o) {
+        parse(&(*obj)[p.first], p.second);
     }
 }
 EOF
-end
 
+
+optional_regex = /^\[(.*)\]$/
 
 structs.each do |struct, fields|
     serializer.write <<EOF
 
 
-void #{struct}_parse(#{struct} *obj, const GDData *d)
+template<> void parse<#{struct}>(#{struct} *obj, const GDData *d)
 {
     if (d->type != GDData::OBJECT) {
         throw std::runtime_error("Struct values (#{struct}) must be objects");
@@ -372,26 +396,36 @@ void #{struct}_parse(#{struct} *obj, const GDData *d)
     const GDObject &o = *d;
 EOF
     fields.each do |name, type|
+        plain_name = name.sub(optional_regex, '\1')
+
         serializer.write <<EOF
 
-    auto #{name}_di = o.find(\"#{name}\");
-    if (#{name}_di == o.end()) {
-        throw std::runtime_error("Missing value for #{struct}.#{name}");
-    }
-    const GDData *#{name}_d = #{name}_di->second;
+    auto #{plain_name}_di = o.find(\"#{plain_name}\");
+    if (#{plain_name}_di == o.end()) {
 EOF
-        actual_type = first_level_type(type)
-        if actual_type == 'array'
-            atl = array_type_and_level(type)
+        if name =~ optional_regex
             serializer.write <<EOF
-    array_parse_#{atl[0] - 1}(&obj->#{name}, #{name}_d,
-        &#{atl[1]}_parse);
+        obj->has_#{plain_name} = false;
 EOF
         else
             serializer.write <<EOF
-    #{actual_type}_parse(&obj->#{name}, #{name}_d);
+        throw std::runtime_error("Missing value for #{struct}.#{name}");
 EOF
         end
+        serializer.write <<EOF
+    } else {
+EOF
+        if name =~ optional_regex
+            serializer.write <<EOF
+        obj->has_#{plain_name} = true;
+
+EOF
+        end
+        serializer.write <<EOF
+        const GDData *#{plain_name}_d = #{plain_name}_di->second;
+        parse(&obj->#{plain_name}, #{plain_name}_d);
+    }
+EOF
     end
     serializer.write("}\n")
 end

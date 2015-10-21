@@ -1,0 +1,6 @@
+{
+    "primitives":   {
+        "type": "array",
+        "of":   "GLTFMeshPrimitive"
+    }
+}

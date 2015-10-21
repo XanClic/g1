@@ -1,0 +1,8 @@
+{
+    "attributes": {
+        "type": "map",
+        "of":   "string"
+    },
+    "[indices]":    "string",
+    "mode":         "u32"
+}

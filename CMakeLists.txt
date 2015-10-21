@@ -49,7 +49,7 @@ link_directories("${dake_dir}")
 
 add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/physics.cpp src/environment.cpp src/cockpit.cpp
-                  src/xsmd.cpp src/software.cpp src/localize.cpp src/text.cpp
+                  src/gltf.cpp src/software.cpp src/localize.cpp src/text.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
                   src/ship_types.cpp src/ship.cpp src/weapons.cpp
                   src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp

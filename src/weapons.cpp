@@ -30,7 +30,7 @@ void load_weapons(void)
                                                         + ".json");
             WeaponClass *wc = new WeaponClass;
             try {
-                WeaponClass_parse(wc, weapon_class_spec);
+                parse(wc, weapon_class_spec);
             } catch (...) {
                 delete wc;
                 delete weapon_class_spec;

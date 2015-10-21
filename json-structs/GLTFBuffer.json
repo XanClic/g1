@@ -1,0 +1,5 @@
+{
+    "byteLength":   "u64",
+    "type":         "GLTFBufferType",
+    "uri":          "string"
+}

@@ -1,0 +1,6 @@
+{
+    "buffer":       "string",
+    "byteLength":   "u64",
+    "byteOffset":   "u64",
+    "target":       "u32"
+}

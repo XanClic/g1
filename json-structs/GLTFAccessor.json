@@ -1,0 +1,8 @@
+{
+    "bufferView":       "string",
+    "byteOffset":       "u64",
+    "byteStride":       "u64",
+    "componentType":    "u32",
+    "count":            "u64",
+    "type":             "GLTFAccessorType"
+}

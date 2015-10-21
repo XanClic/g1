@@ -8,52 +8,22 @@
 #include <initializer_list>
 
 #include <dake/math.hpp>
+#include <dake/gl.hpp>
 
 
+using namespace dake;
 using namespace dake::math;
-
-
-namespace XSMD
-{
-
-enum XSMDVertexMode {
-    TRIANGLE_STRIP
-};
-
-enum XSMDDataType {
-    FLOAT
-};
-
-struct XSMDHeader {
-    char magic[8];
-    char version[6];
-
-    uint8_t compatible_features;
-    uint8_t incompatible_features;
-
-    uint64_t vertex_count;
-    uint32_t vertex_mode;
-
-    uint32_t vertex_attrib_count;
-
-    uint64_t vertex_attrib_headers_offset;
-    uint64_t vertex_data_offset;
-} __attribute__((packed));
-
-struct XSMDVertexAttrib {
-    uint32_t element_type;
-    uint32_t elements_per_vertex;
-    uint32_t name_length;
-    char name[];
-} __attribute__((packed));
-
-};
 
 
 int main(int argc, char *argv[])
 {
     if (argc != 4) {
-        fprintf(stderr, "Usage: create-sphere <file.xsmd> <horizontal segments> <vertical segments>\n");
+        fprintf(stderr, "Usage: create-sphere <file.gltf> <horizontal segments> <vertical segments>\n");
+        return 1;
+    }
+
+    if (strlen(argv[1]) < 5 || strcmp(argv[1] + strlen(argv[1]) - 5, ".gltf")) {
+        fprintf(stderr, "Filename does not end in .gltf: %s\n", argv[1]);
         return 1;
     }
 
@@ -72,21 +42,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    FILE *fp = fopen(argv[1], "wb");
 
-    XSMD::XSMDHeader *hdr = new XSMD::XSMDHeader;
+    char *binfile = strdup(argv[1]);
+    binfile[strlen(binfile) - 5] = 0;
+    strcat(binfile, ".bin");
 
-    memcpy(&hdr->magic, "XSOGLVDD", sizeof(hdr->magic)); // XanClic's Shitty OpenGL Vertex Data Dump (or XSMD, XanClic's Shitty Mesh Dump, for short)
-    memcpy(&hdr->version, "NPRJAW", sizeof(hdr->version)); // No Parsing Required, Just Add Water
-
-    hdr->compatible_features   = 0;
-    hdr->incompatible_features = 0;
-
-    hdr->vertex_mode  = XSMD::TRIANGLE_STRIP;
-    hdr->vertex_count = hor_count * (ver_count * 2 + 2) - 2;
-
-    hdr->vertex_attrib_count = 3;
-
+    FILE *gltffp = fopen(argv[1], "wb");
+    FILE *binfp = fopen(binfile, "wb");
 
     struct Vertex {
         vec3 position;
@@ -94,7 +56,69 @@ int main(int argc, char *argv[])
         vec2 texcoord;
     };
 
-    Vertex *vertices = new Vertex[hdr->vertex_count];
+    int vertex_count = hor_count * (ver_count * 2 + 2) - 2;
+
+    fprintf(gltffp, "{\n");
+    fprintf(gltffp, "    \"buffers\": {\n");
+    fprintf(gltffp, "        \"mesh_buffer\": {\n");
+    fprintf(gltffp, "            \"byteLength\": %zi,\n", vertex_count * sizeof(Vertex));
+    fprintf(gltffp, "            \"type\": \"arraybuffer\",\n");
+    fprintf(gltffp, "            \"uri\": \"%s\"\n", basename(binfile));
+    fprintf(gltffp, "        }\n");
+    fprintf(gltffp, "    },\n");
+    fprintf(gltffp, "    \"bufferViews\": {\n");
+    fprintf(gltffp, "        \"mesh_bufferview\": {\n");
+    fprintf(gltffp, "            \"buffer\": \"mesh_buffer\",\n");
+    fprintf(gltffp, "            \"byteLength\": %zi,\n", vertex_count * sizeof(Vertex));
+    fprintf(gltffp, "            \"byteOffset\": %i,\n", 0);
+    fprintf(gltffp, "            \"target\": %i\n", GL_ARRAY_BUFFER);
+    fprintf(gltffp, "        }\n");
+    fprintf(gltffp, "    },\n");
+    fprintf(gltffp, "    \"accessors\": {\n");
+    fprintf(gltffp, "        \"acc_position\": {\n");
+    fprintf(gltffp, "            \"bufferView\": \"mesh_bufferview\",\n");
+    fprintf(gltffp, "            \"byteOffset\": %zi,\n", offsetof(Vertex, position));
+    fprintf(gltffp, "            \"byteStride\": %zi,\n", sizeof(Vertex));
+    fprintf(gltffp, "            \"componentType\": %i,\n", GL_FLOAT);
+    fprintf(gltffp, "            \"count\": %i,\n", vertex_count);
+    fprintf(gltffp, "            \"type\": \"VEC3\"\n");
+    fprintf(gltffp, "        },\n");
+    fprintf(gltffp, "        \"acc_normal\": {\n");
+    fprintf(gltffp, "            \"bufferView\": \"mesh_bufferview\",\n");
+    fprintf(gltffp, "            \"byteOffset\": %zi,\n", offsetof(Vertex, normal));
+    fprintf(gltffp, "            \"byteStride\": %zi,\n", sizeof(Vertex));
+    fprintf(gltffp, "            \"componentType\": %i,\n", GL_FLOAT);
+    fprintf(gltffp, "            \"count\": %i,\n", vertex_count);
+    fprintf(gltffp, "            \"type\": \"VEC3\"\n");
+    fprintf(gltffp, "        },\n");
+    fprintf(gltffp, "        \"acc_texcoord\": {\n");
+    fprintf(gltffp, "            \"bufferView\": \"mesh_bufferview\",\n");
+    fprintf(gltffp, "            \"byteOffset\": %zi,\n", offsetof(Vertex, texcoord));
+    fprintf(gltffp, "            \"byteStride\": %zi,\n", sizeof(Vertex));
+    fprintf(gltffp, "            \"componentType\": %i,\n", GL_FLOAT);
+    fprintf(gltffp, "            \"count\": %i,\n", vertex_count);
+    fprintf(gltffp, "            \"type\": \"VEC2\"\n");
+    fprintf(gltffp, "        }\n");
+    fprintf(gltffp, "    },\n");
+    fprintf(gltffp, "    \"meshes\": {\n");
+    fprintf(gltffp, "        \"sphere\": {\n");
+    fprintf(gltffp, "            \"primitives\": [\n");
+    fprintf(gltffp, "                {\n");
+    fprintf(gltffp, "                    \"attributes\": {\n");
+    fprintf(gltffp, "                        \"POSITION\": \"acc_position\",\n");
+    fprintf(gltffp, "                        \"NORMAL\": \"acc_normal\",\n");
+    fprintf(gltffp, "                        \"TEXCOORD\": \"acc_texcoord\"\n");
+    fprintf(gltffp, "                    },\n");
+    fprintf(gltffp, "                    \"mode\": %i\n", GL_TRIANGLE_STRIP);
+    fprintf(gltffp, "                }\n");
+    fprintf(gltffp, "            ]\n");
+    fprintf(gltffp, "        }\n");
+    fprintf(gltffp, "    }\n");
+    fprintf(gltffp, "}\n");
+
+    fclose(gltffp);
+
+    Vertex *vertices = new Vertex[vertex_count];
 
     long vi = 0;
 
@@ -130,48 +154,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    assert(vi == static_cast<long>(hdr->vertex_count));
+    assert(vi == static_cast<long>(vertex_count));
 
 
-    XSMD::XSMDVertexAttrib *ahdrs[3] = {
-        static_cast<XSMD::XSMDVertexAttrib *>(malloc(sizeof(*ahdrs[0]) + strlen("va_position"))),
-        static_cast<XSMD::XSMDVertexAttrib *>(malloc(sizeof(*ahdrs[1]) + strlen("va_normal"))),
-            static_cast<XSMD::XSMDVertexAttrib *>(malloc(sizeof(*ahdrs[2]) + strlen("va_texcoord")))
-    };
+    fwrite(vertices, sizeof(Vertex), vertex_count, binfp);
 
-    ahdrs[0]->element_type        = XSMD::FLOAT;
-    ahdrs[0]->elements_per_vertex = 3;
-    ahdrs[0]->name_length         = strlen("va_position");
-    memcpy(ahdrs[0]->name, "va_position", strlen("va_position"));
-
-    ahdrs[1]->element_type        = XSMD::FLOAT;
-    ahdrs[1]->elements_per_vertex = 3;
-    ahdrs[1]->name_length         = strlen("va_normal");
-    memcpy(ahdrs[1]->name, "va_normal", strlen("va_normal"));
-
-    ahdrs[2]->element_type        = XSMD::FLOAT;
-    ahdrs[2]->elements_per_vertex = 2;
-    ahdrs[2]->name_length         = strlen("va_texcoord");
-    memcpy(ahdrs[2]->name, "va_texcoord", strlen("va_texcoord"));
-
-    hdr->vertex_attrib_headers_offset = sizeof(*hdr);
-    hdr->vertex_data_offset           = hdr->vertex_attrib_headers_offset;
-    for (int i: {0, 1, 2}) {
-        hdr->vertex_data_offset += sizeof(*ahdrs[i]) + ahdrs[i]->name_length;
-    }
-
-
-    fwrite(hdr, sizeof(*hdr), 1, fp);
-    assert(ftell(fp) == static_cast<long>(hdr->vertex_attrib_headers_offset));
-
-    for (int i: {0, 1, 2}) {
-        fwrite(ahdrs[i], sizeof(*ahdrs[i]) + ahdrs[i]->name_length, 1, fp);
-    }
-    assert(ftell(fp) == static_cast<long>(hdr->vertex_data_offset));
-
-    fwrite(vertices, sizeof(Vertex), hdr->vertex_count, fp);
-
-    fclose(fp);
+    fclose(binfp);
 
 
     return 0;
