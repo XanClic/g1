@@ -11,7 +11,7 @@ find_package(JPEG REQUIRED)
 find_package(Lua51 REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
-pkg_search_module(LIBUSB REQUIRED libusb-1.0)
+pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
 
 ExternalProject_Add(
     dake_source
@@ -47,15 +47,24 @@ include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
                     ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIRS})
 link_directories("${dake_dir}")
 
+if (LIBUSB_FOUND)
+    set(SC_FILES src/steam_controller.cpp)
+    set(SC_CXXFLAGS -DHAS_LIBUSB)
+else (LIBUSB_FOUND)
+    set(SC_FILES)
+    set(SC_CXXFLAGS)
+endif (LIBUSB_FOUND)
+
 add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/physics.cpp src/environment.cpp src/cockpit.cpp
                   src/gltf.cpp src/software.cpp src/localize.cpp src/text.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
                   src/ship_types.cpp src/ship.cpp src/weapons.cpp
                   src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp
-                  src/steam_controller.cpp
+                  ${SC_FILES}
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
+
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                       ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
                       txc_dxtn dake m)
@@ -67,4 +76,4 @@ add_executable(polar-to-cube tools/polar-to-cube.cpp)
 target_link_libraries(polar-to-cube ${PNG_LIBRARIES} ${JPEG_LIBRARIES} txc_dxtn
                                     dake m)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow")
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS}")
