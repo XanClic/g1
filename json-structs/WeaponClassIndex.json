@@ -1,0 +1,6 @@
+{
+    "classes": {
+        "type": "array",
+        "of":   "string"
+    }
+}
