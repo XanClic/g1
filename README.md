@@ -25,7 +25,16 @@ Testing
 Building
 --------
 
-GCC, SDL2, libpng, libjpeg, Lua, CMake, and that should be it:
+You need:
+* GCC or clang (for building)
+* CMake (for building)
+* SDL2 (for an OpenGL context, and mouse and keyboard input)
+* libpng (for some textures)
+* libjpeg (for other textures)
+* Lua (for scripting (IGS: “In-Game Software”))
+* Optionally: libusb (for Steam Controller input)
+
+Once you gathered what you need:
 
     $ mkdir build
     $ cd build

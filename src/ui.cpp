@@ -14,8 +14,11 @@
 #include "localize.hpp"
 #include "main_loop.hpp"
 #include "physics.hpp"
-#include "steam_controller.hpp"
 #include "ui.hpp"
+
+#ifdef HAS_LIBUSB
+#include "steam_controller.hpp"
+#endif
 
 
 using namespace dake::math;
@@ -31,6 +34,7 @@ enum MouseAxis {
 };
 
 
+#ifdef HAS_LIBUSB
 enum GamepadAxis {
     AXIS_UNKNOWN,
 
@@ -55,6 +59,7 @@ enum GamepadAxis {
     AXIS_LSHOULDER,
     AXIS_RSHOULDER,
 };
+#endif
 
 
 namespace std
@@ -66,8 +71,11 @@ namespace std
 
 int_hash(SDL_Scancode);
 int_hash(MouseAxis);
+
+#ifdef HAS_LIBUSB
 int_hash(SteamController::Button);
 int_hash(GamepadAxis);
+#endif
 
 #undef int_hash
 }
@@ -103,17 +111,23 @@ struct Action {
 
 
 static SDL_Window *wnd;
-static SteamController *gamepad;
 static int wnd_width, wnd_height;
+
+#ifdef HAS_LIBUSB
+static SteamController *gamepad;
+#endif
 
 
 static std::unordered_map<SDL_Scancode, std::vector<Action>> keyboard_mappings;
 static std::unordered_map<int, std::vector<Action>> mouse_button_mappings;
 static std::unordered_map<MouseAxis, std::vector<Action>> mouse_axis_mappings;
+
+#ifdef HAS_LIBUSB
 static std::unordered_map<SteamController::Button, std::vector<Action>>
     gamepad_button_mappings;
 static std::unordered_map<GamepadAxis, std::vector<Action>>
     gamepad_axis_mappings;
+#endif
 
 
 static int get_mouse_button_from_name(const char *name)
@@ -146,6 +160,7 @@ static MouseAxis get_mouse_axis_from_name(const char *name)
 }
 
 
+#ifdef HAS_LIBUSB
 static SteamController::Button get_gamepad_button_from_name(const char *name)
 {
     if (!strcmp(name, "BottomLeftShoulder")) {
@@ -240,6 +255,7 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_UNKNOWN;
     }
 }
+#endif
 
 
 static void create_context(int w, int h, int major = 0, int minor = 0)
@@ -266,6 +282,7 @@ static void create_context(int w, int h, int major = 0, int minor = 0)
 }
 
 
+#ifdef HAS_LIBUSB
 static void destroy_gamepad(void)
 {
     if (gamepad) {
@@ -273,6 +290,7 @@ static void destroy_gamepad(void)
         gamepad = nullptr;
     }
 }
+#endif
 
 
 static void verify_axis_actions(const std::string &name,
@@ -456,12 +474,14 @@ void init_ui(void)
     printf("OpenGL %i.%i Core initialized\n", maj, min);
 
 
+#ifdef HAS_LIBUSB
     try {
         gamepad = new SteamController;
         atexit(destroy_gamepad);
     } catch (std::exception &e) {
         fprintf(stderr, "Failed to initialize gamepad: %s\n", e.what());
     }
+#endif
 
 
     init_graphics();
@@ -512,6 +532,7 @@ void init_ui(void)
                 }
             }
         } else if (!strncmp(m.first.c_str(), "Gamepad.", 8)) {
+#ifdef HAS_LIBUSB
             GamepadAxis a = get_gamepad_axis_from_name(m.first.c_str() + 8);
             if (a != AXIS_UNKNOWN) {
                 verify_axis_actions(m.first, action_list);
@@ -527,6 +548,10 @@ void init_ui(void)
                                              "”");
                 }
             }
+#else
+            fprintf(stderr, "Warning: Ignoring gamepad mapping %s; no gamepad "
+                    "support compiled in\n", m.first.c_str());
+#endif
         } else {
             SDL_Scancode sc = SDL_GetScancodeFromName(m.first.c_str());
             if (sc == SDL_SCANCODE_UNKNOWN) {
@@ -615,6 +640,7 @@ static void update_axis(Input &input, Action &a, float state)
     ns = clamp(ns + state * a.multiplier);
 }
 
+#ifdef HAS_LIBUSB
 static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 {
     auto it = gamepad_axis_mappings.find(axis);
@@ -732,6 +758,7 @@ void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
         }
     }
 }
+#endif
 
 
 static void update_mouse_axis(Input &input, MouseAxis axis, float state)
@@ -816,15 +843,19 @@ void ui_process_events(Input &input)
 
     process_mouse_events(input, true);
     process_keyboard_events(input, true);
+#ifdef HAS_LIBUSB
     if (gamepad) {
         process_gamepad_events(input, gamepad, true);
     }
+#endif
 
     process_mouse_events(input, false);
     process_keyboard_events(input, false);
+#ifdef HAS_LIBUSB
     if (gamepad) {
         process_gamepad_events(input, gamepad, false);
     }
+#endif
 
 
     if (input.get_mapping("quit")) {
