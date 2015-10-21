@@ -11,9 +11,9 @@
 #include <dake/dake.hpp>
 
 #include "environment.hpp"
+#include "gltf.hpp"
 #include "graphics.hpp"
 #include "options.hpp"
-#include "xsmd.hpp"
 
 
 using namespace dake;
@@ -24,7 +24,7 @@ using namespace dake::math;
 #define EARTH_VERT 128
 
 
-static XSMD *earth, *skybox;
+static GLTFObject *earth, *skybox;
 static gl::array_texture *day_tex, *night_tex;
 static gl::texture *cloud_normal_map, *aurora_bands, *moon_tex, *atmo_map;
 static gl::cubemap *skybox_tex;
@@ -312,10 +312,9 @@ static void init_lods(void)
 
 void init_environment(void)
 {
-    earth = load_xsmd("assets/earth.xsmd");
-    earth->make_vertex_array();
+    earth = GLTFObject::load("assets/earth.gltf");
 
-    earth_tex_va = earth->va->attrib(3);
+    earth_tex_va = earth->vertex_array(0).attrib(3);
     earth_tex_va->format(2, GL_INT);
     earth_tex_va->data(nullptr, static_cast<size_t>(-1), GL_DYNAMIC_DRAW);
 
@@ -415,8 +414,7 @@ void init_environment(void)
     }
 
 
-    skybox = load_xsmd("assets/skybox.xsmd");
-    skybox->make_vertex_array();
+    skybox = GLTFObject::load("assets/skybox.gltf");
 
     skybox_tex = new gl::cubemap;
     skybox_tex->format(GL_COMPRESSED_RGB_S3TC_DXT1_EXT, global_options.star_map_resolution,
@@ -523,7 +521,7 @@ static void perform_lod_update(vec<2, int32_t> *indices)
         }
     }
 
-    assert(vertex == earth->hdr->vertex_count);
+    assert(vertex == earth->vertex_count(0));
 }
 
 
@@ -764,7 +762,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
         lod_load_textures();
         lod_set_uniforms();
 
-        memcpy(earth_tex_va->map(), indices, earth->hdr->vertex_count * sizeof(indices[0]));
+        memcpy(earth_tex_va->map(), indices, earth->vertex_count(0) * sizeof(indices[0]));
         earth_tex_va->unmap();
         delete[] indices;
 
@@ -903,7 +901,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
     }
 
     if (changed) {
-        indices = new vec<2, int32_t>[earth->hdr->vertex_count];
+        indices = new vec<2, int32_t>[earth->vertex_count(0)];
 
         perform_lod_update(indices);
 
