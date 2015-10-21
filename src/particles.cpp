@@ -45,7 +45,7 @@ void spawn_particle(WorldState &output, const vec<3, double> &position,
     np.position = position;
     np.velocity = velocity;
     np.orientation = orientation;
-    np.lifetime = 1e5f;
+    np.lifetime = 120.f;
 }
 
 
@@ -58,7 +58,7 @@ void handle_particles(Particles &output, const Particles &input,
 
     for (const Particle &p: input) {
         vec3 movement = p.velocity * out_ws.interval;
-        float new_lifetime = p.lifetime - movement.length();
+        float new_lifetime = p.lifetime - out_ws.interval;
 
         if (new_lifetime <= 0.f) {
             continue;
