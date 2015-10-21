@@ -71,15 +71,15 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
 
-target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
-                      ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
-                      ${LIBTXC_DXTN} dake m)
+target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
+                         ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
+                         ${LIBTXC_DXTN} m)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
 
 add_executable(polar-to-cube tools/polar-to-cube.cpp)
-target_link_libraries(polar-to-cube ${PNG_LIBRARIES} ${JPEG_LIBRARIES} txc_dxtn
-                                    dake m)
+target_link_libraries(polar-to-cube dake ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
+                                    txc_dxtn m)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS}")
