@@ -31,6 +31,7 @@ You need:
 * SDL2 (for an OpenGL context, and mouse and keyboard input)
 * libpng (for some textures)
 * libjpeg (for other textures)
+* libtxc\_dxtn (for on-GPU texture compression)
 * Lua (for scripting (IGS: “In-Game Software”))
 * Optionally: libusb (for Steam Controller input)
 

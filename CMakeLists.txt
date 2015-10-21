@@ -13,6 +13,12 @@ find_package(Lua51 REQUIRED)
 pkg_search_module(SDL2 REQUIRED sdl2)
 pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
 
+find_library(LIBTXC_DXTN txc_dxtn)
+
+if (NOT LIBTXC_DXTN)
+    message(FATAL_ERROR "libtxc_dxtn not found!")
+endif (NOT LIBTXC_DXTN)
+
 ExternalProject_Add(
     dake_source
     GIT_REPOSITORY git://github.com/XanClic/dake.git
@@ -67,7 +73,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 
 target_link_libraries(g1 ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                       ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
-                      txc_dxtn dake m)
+                      ${LIBTXC_DXTN} dake m)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
