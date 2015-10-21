@@ -36,6 +36,13 @@ You need:
 * Lua (for scripting (IGS: “In-Game Software”))
 * Optionally: libusb (for Steam Controller input)
 
+I am running Arch Linux, so I do not tend to make sure everything works with
+build tools or libraries that are not bleeding edge. Feel free to open an issue
+if g1 fails to build and you are not using the newest versions of all these
+components, but I may just dismiss the issue because of that. On the other hand,
+as long as it is simple to do, I do like to keep compatibility with older
+versions.
+
 Once you gathered what you need:
 
     $ mkdir build
