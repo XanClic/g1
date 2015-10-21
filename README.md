@@ -26,6 +26,7 @@ Building
 --------
 
 You need:
+* Ruby (for some code generation)
 * GCC or clang (for building)
 * CMake (for building)
 * SDL2 (for an OpenGL context, and mouse and keyboard input)
