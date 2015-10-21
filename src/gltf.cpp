@@ -10,10 +10,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "generic-data.hpp"
 #include "gltf.hpp"
-#include "json-structs.hpp"
-#include "json.hpp"
+#include "serializer.hpp"
 
 
 using namespace dake;
@@ -71,10 +69,8 @@ GLTFObject *GLTFObject::load(const std::string &name)
 
     gltf_dir += "/";
 
-    std::unique_ptr<GDData> gdd(json_parse_file(name));
-
     GLTF gltf;
-    parse(&gltf, gdd.get());
+    parse_file(&gltf, name);
 
     std::unordered_map<std::string, Buffer> buffers;
 
