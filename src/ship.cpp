@@ -46,6 +46,7 @@ ShipState::ShipState(const Ship *ship_type):
 
     thruster_states.resize(ship->thrusters.size(), 0.f);
     weapon_cooldowns.resize(ship->weapons.size(), 0.f);
+    weapon_forwards.resize(ship->weapons.size(), vec3(0.f, 0.f, -1.f));
 
     hull_hitpoints = ship->hull_hitpoints;
 }
