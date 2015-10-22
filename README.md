@@ -30,6 +30,8 @@ You need:
 * GCC or clang (for building)
 * CMake (for building)
 * SDL2 (for an OpenGL context, and mouse and keyboard input)
+* OpenGL (obviously)
+* libepoxy (for OpenGL function pointer management)
 * libpng (for some textures)
 * libjpeg (for other textures)
 * libtxc\_dxtn (for on-GPU texture compression)
