@@ -47,6 +47,33 @@ static void handle_weapons(WorldState &output, const WorldState &input,
 {
     int weapon_count = static_cast<int>(ship_in.ship->weapons.size());
     bool is_player_ship = &ship_in == &input.ships[input.player_ship];
+    bool local_mat_initialized = false;
+    mat3 local_mat;
+
+    float aim_xp, aim_xn, aim_yp, aim_yn;
+    aim_xp = user_input.get_mapping("aim.+x");
+    aim_xn = user_input.get_mapping("aim.-x");
+    aim_yp = user_input.get_mapping("aim.+y");
+    aim_yn = user_input.get_mapping("aim.-y");
+
+#if 0
+    if (aim_xp || aim_xn || aim_yp || aim_yn) {
+        mat3 rot(mat4::identity().rotated((aim_xp - aim_xn) / 64.f,
+                                          vec3(0.f, -1.f, 0.f))
+                                 .rotated((aim_yp - aim_yn) / 64.f,
+                                          vec3(1.f,  0.f, 0.f)));
+
+        for (int i = 0; i < weapon_count; i++) {
+            ship_out.weapon_forwards[i] = rot * ship_out.weapon_forwards[i];
+        }
+    }
+#else
+    for (int i = 0; i < weapon_count; i++) {
+        ship_out.weapon_forwards[i] = vec3(aim_xp - aim_xn,
+                                           aim_yp - aim_yn,
+                                           -1.f).normalized();
+    }
+#endif
 
     for (int i = 0; i < weapon_count; i++) {
         float new_cooldown = ship_in.weapon_cooldowns[i] - output.interval;
@@ -58,10 +85,20 @@ static void handle_weapons(WorldState &output, const WorldState &input,
                 WeaponType wt = ship_in.ship->weapons[i].type;
                 const WeaponClass *wc = weapon_classes[wt];
 
+                if (!local_mat_initialized) {
+                    local_mat[0] = ship_out.right;
+                    local_mat[1] = ship_out.up;
+                    local_mat[2] = -ship_out.forward;
+
+                    local_mat_initialized = true;
+                }
+
+                vec3 fwd(local_mat * ship_out.weapon_forwards[i]);
+
                 spawn_particle(output, ship_out, ship_out.position,
-                               ship_out.velocity + ship_out.forward
-                                                   * wc->projectile_velocity,
-                               ship_out.forward * 20.f);
+                               ship_out.velocity +
+                               fwd * wc->projectile_velocity,
+                               fwd * 20.f);
 
                 new_cooldown += wc->cooldown;
             }

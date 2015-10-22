@@ -25,7 +25,7 @@ static gl::texture *scratch_tex, *normals_tex;
 
 static gl::texture *prograde_sprite, *retrograde_sprite;
 static gl::texture *radar_contact_sprite, *radar_target_sprite;
-static gl::texture *target_aim_sprite;
+static gl::texture *target_aim_sprite, *aim_sprite;
 static gl::texture *delta_positive_sprite, *delta_negative_sprite;
 static gl::texture *orbit_normal_sprite, *orbit_antinormal_sprite;
 
@@ -107,6 +107,9 @@ void init_cockpit(void)
 
     target_aim_sprite = new gl::texture("assets/hud/target-aim.png");
     target_aim_sprite->filter(GL_LINEAR);
+
+    aim_sprite = new gl::texture("assets/hud/aim.png");
+    aim_sprite->filter(GL_LINEAR);
 
     delta_positive_sprite = new gl::texture("assets/hud/delta-positive.png");
     delta_positive_sprite->filter(GL_LINEAR);
@@ -324,13 +327,32 @@ static void draw_cockpit_controls(const WorldState &world,
 
 static void draw_target_cross(const GraphicsStatus &status,
                               const WorldState &world,
-                              float sxs, float sys)
+                              float cockpit_brightness, float blink_time,
+                              float sxs, float sys,
+                              const vec2 &hbx, const vec2 &hby)
 {
     const ShipState &ship = world.ships[world.player_ship];
 
     vec2 fwd_proj = project(status, ship.forward);
     draw_line(fwd_proj + vec2(-sxs, 0.f), fwd_proj + vec2(sxs, 0.f));
     draw_line(fwd_proj + vec2(0.f, -sys), fwd_proj + vec2(0.f, sys));
+
+
+    vec2 sprite_size = 2.f * vec2(sxs, sys);
+
+    bool weapon_fwd_visible;
+    mat3 local_mat(ship.right, ship.up, -ship.forward);
+    const vec3 &weapon_fwd = local_mat * ship.weapon_forwards[0];
+
+    vec2 aim_proj = project_clamp_to_border(status, weapon_fwd, hbx, hby,
+                                            sprite_size, &weapon_fwd_visible);
+
+    if (weapon_fwd_visible || blink_time < .5f) {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        draw_sprite(aim_proj, vec2(2.f * sxs, 2.f * sys), *aim_sprite,
+                    cockpit_brightness * (weapon_fwd_visible ? 1.f : .3f));
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    }
 }
 
 
@@ -644,8 +666,6 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     hby[1] = 1.f;
 
 
-    draw_target_cross(status, world, sxs, sys);
-
     draw_velocity_indicators(status, world, cockpit_brightness, sxs, sys,
                              hbx, hby);
 
@@ -656,6 +676,10 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
 
     draw_radar_contacts(status, world, cockpit_brightness, blink_time, sxs, sys,
                         hbx, hby);
+
+
+    draw_target_cross(status, world, cockpit_brightness, blink_time, sxs, sys,
+                      hbx, hby);
 
 
     glDisable(GL_SCISSOR_TEST);

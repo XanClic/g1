@@ -11,5 +11,5 @@ uniform float brightness;
 
 void main(void)
 {
-    out_col = texture(sprite, vf_pos) * vec4(1.0, 1.0, 1.0, brightness);
+    out_col = texture(sprite, vf_pos) * vec4(vec3(brightness), 1.0);
 }

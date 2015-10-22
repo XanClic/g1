@@ -92,6 +92,7 @@ struct Action {
         // Axis translations
         DIFFERENCE,
         CIRCLE_DIFFERENCE,
+        FOV_ANGLE,
     };
 
     Action(void) {}
@@ -298,7 +299,8 @@ static void verify_axis_actions(const std::string &name,
 {
     for (const Action &a: al) {
         if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
-            a.trans != Action::CIRCLE_DIFFERENCE)
+            a.trans != Action::CIRCLE_DIFFERENCE &&
+            a.trans != Action::FOV_ANGLE)
         {
             throw std::runtime_error("Invalid translation for an axis event "
                                      "(for “" + name + "”");
@@ -366,6 +368,8 @@ static void fill_action(std::vector<Action> *al, const GDObject &cm,
             a.trans = Action::DIFFERENCE;
         } else if (trans_str == "circle_difference") {
             a.trans = Action::CIRCLE_DIFFERENCE;
+        } else if (trans_str == "fov_angle") {
+            a.trans = Action::FOV_ANGLE;
         } else {
             throw std::runtime_error("Invalid value “" + trans_str + "” given "
                                      "as @translate for “" + event + "”");
@@ -631,7 +635,9 @@ static void update_axis(Input &input, Action &a, float state)
             state -= a.previous_state;
         }
         a.previous_state = s;
-    } else if (a.trans == Action::CIRCLE_DIFFERENCE) {
+    } else if (a.trans == Action::CIRCLE_DIFFERENCE ||
+               a.trans == Action::FOV_ANGLE)
+    {
         // Has been taken care of already
     } else {
         state = (state - (a.deadzone)) / (1.f - a.deadzone);
@@ -643,6 +649,10 @@ static void update_axis(Input &input, Action &a, float state)
 #ifdef HAS_LIBUSB
 static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 {
+    if (state < 0.f) {
+        state = 0.f;
+    }
+
     auto it = gamepad_axis_mappings.find(axis);
     if (it != gamepad_axis_mappings.end()) {
         for (Action &a: it->second) {
@@ -761,11 +771,26 @@ void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
 #endif
 
 
-static void update_mouse_axis(Input &input, MouseAxis axis, float state)
+static void update_mouse_axis(Input &input, MouseAxis axis, float state, bool y)
 {
+    if (state < 0.f) {
+        state = 0.f;
+    }
+
     auto it = mouse_axis_mappings.find(axis);
     if (it != mouse_axis_mappings.end()) {
         for (Action &a: it->second) {
+            if (a.trans == Action::FOV_ANGLE) {
+                // FIXME: We don't know that!
+                const float yfov = M_PIf / 3.f;
+
+                if (y) {
+                    state *= tanf(.5f * yfov);
+                } else {
+                    state *= tanf(.5f * yfov) * wnd_width / wnd_height;
+                }
+            }
+
             update_axis(input, a, state);
         }
     }
@@ -781,10 +806,10 @@ static void process_mouse_events(Input &input, bool modifiers)
         float rel_x = 2.f * abs_x / wnd_width - 1.f;
         float rel_y = 1.f - 2.f * abs_y / wnd_height;
 
-        update_mouse_axis(input, MOUSE_LEFT,  -rel_x);
-        update_mouse_axis(input, MOUSE_RIGHT,  rel_x);
-        update_mouse_axis(input, MOUSE_DOWN,  -rel_y);
-        update_mouse_axis(input, MOUSE_UP,     rel_y);
+        update_mouse_axis(input, MOUSE_LEFT,  -rel_x, false);
+        update_mouse_axis(input, MOUSE_RIGHT,  rel_x, false);
+        update_mouse_axis(input, MOUSE_DOWN,  -rel_y, true);
+        update_mouse_axis(input, MOUSE_UP,     rel_y, true);
     }
 
     for (auto &mbm: mouse_button_mappings) {

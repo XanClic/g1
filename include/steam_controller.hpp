@@ -61,8 +61,8 @@ class SteamController {
 
     public:
         enum Button {
-            BOT_LSHOULDER,
             BOT_RSHOULDER,
+            BOT_LSHOULDER,
             TOP_LSHOULDER,
             TOP_RSHOULDER,
 

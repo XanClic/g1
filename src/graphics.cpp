@@ -127,7 +127,7 @@ void init_game_graphics(void)
     status.z_near = 1.f;
     status.z_far  = 500.e3f;
 
-    status.yfov   = static_cast<float>(M_PI) / 4.f;
+    status.yfov   = static_cast<float>(M_PI) / 3.f;
 
     status.luminance = 1.f;
 }
