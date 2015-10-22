@@ -306,6 +306,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     for (auto it = output.ships.begin(); it != output.ships.end();) {
         if (it->hull_hitpoints <= 0.f) {
             it = output.ships.erase(it);
+            output.ship_list_changed = true;
         } else {
             ++it;
         }
