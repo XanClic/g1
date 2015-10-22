@@ -11,6 +11,7 @@ find_package(JPEG REQUIRED)
 find_package(Lua51 REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
+pkg_search_module(LIBEPOXY REQUIRED epoxy)
 pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
 
 find_library(LIBTXC_DXTN txc_dxtn)
@@ -50,7 +51,8 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAK
                    DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
 
 include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
-                    ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIRS})
+                    ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
+                    ${LIBUSB_INCLUDE_DIRS} ${LIBEPOXY_INCLUDE_DIRS})
 link_directories("${dake_dir}")
 
 if (LIBUSB_FOUND)
@@ -73,7 +75,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 
 target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                          ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
-                         ${LIBTXC_DXTN} m)
+                         ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} m)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
