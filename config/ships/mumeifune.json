@@ -9,7 +9,7 @@
     "thrusters": [
         {
             "type":                 "THRUSTER_MAIN",
-            "force":                [0, 0, -1e7],
+            "force":                [0, 0, -1e4],
             "relative_position":    [0, 0, 2]
         },
 
