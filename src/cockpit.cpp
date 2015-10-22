@@ -149,7 +149,7 @@ static void draw_line(const vec2 &start, const vec2 &end)
 
 
 static void draw_sprite(const vec2 &position, const vec2 &size,
-                        const gl::texture &sprite, const vec4 &color)
+                        const gl::texture &sprite, float brightness)
 {
     sprite_prg->use();
 
@@ -159,7 +159,7 @@ static void draw_sprite(const vec2 &position, const vec2 &size,
     sprite_prg->uniform<vec2>("center") = position;
     sprite_prg->uniform<vec2>("size") = size;
     sprite_prg->uniform<gl::texture>("sprite") = sprite;
-    sprite_prg->uniform<vec4>("color") = color;
+    sprite_prg->uniform<float>("brightness") = brightness;
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 }
@@ -359,15 +359,13 @@ static void draw_velocity_indicators(const GraphicsStatus &status,
 
     if (fwd_visible || !bwd_visible) {
         draw_sprite(proj_fwd_vlcty, indicator_size, *prograde_sprite,
-                    vec4(0.f, cockpit_brightness, 0.f,
-                         fwd_visible ? 1.f : .3f));
+                    cockpit_brightness * (fwd_visible ? 1.f : .3f));
     }
 
 
     if (bwd_visible || !fwd_visible) {
         draw_sprite(proj_bwd_vlcty, indicator_size, *retrograde_sprite,
-                    vec4(0.f, cockpit_brightness, 0.f,
-                         bwd_visible ? 1.f : .3f));
+                    cockpit_brightness * (bwd_visible ? 1.f : .3f));
     }
 }
 
@@ -395,12 +393,10 @@ static void draw_orbit_grid(const GraphicsStatus &status,
 
         if (cfdon > 0.f) {
             draw_sprite(project(status, ship.orbit_normal), size,
-                        *orbit_normal_sprite,
-                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
+                        *orbit_normal_sprite, cockpit_brightness);
         } else {
             draw_sprite(project(status, -ship.orbit_normal), size,
-                        *orbit_antinormal_sprite,
-                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
+                        *orbit_antinormal_sprite, cockpit_brightness);
         }
         return;
     }
@@ -508,12 +504,12 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         //                                      constantly then)
         // (3) Otherwise (it is out of view, but close to us) it should blink
         if (visible || distance > 50e3f || blink_time < .5f) {
-            vec4 color(0.f, cockpit_brightness, 0.f, visible ? 1.f : .3f);
-
             if (t.id == r.selected_id) {
-                draw_sprite(proj, sprite_size, *radar_target_sprite, color);
+                draw_sprite(proj, sprite_size, *radar_target_sprite,
+                            cockpit_brightness * (visible ? 1.f : .3f));
             } else {
-                draw_sprite(proj, sprite_size, *radar_contact_sprite, color);
+                draw_sprite(proj, sprite_size, *radar_contact_sprite,
+                            cockpit_brightness * (visible ? 1.f : .3f));
             }
         }
 
@@ -543,18 +539,18 @@ static void draw_radar_contacts(const GraphicsStatus &status,
                                                  &dveln_visible);
 
             if (dvelp_visible || !dveln_visible) {
-                draw_sprite(dvelp_proj, sprite_size, *delta_positive_sprite,
-                            vec4(0.f, cockpit_brightness, 0.f,
-                                 dvelp_visible ? 1.f : .3f));
+                draw_sprite(dvelp_proj, .5f * sprite_size,
+                            *delta_positive_sprite,
+                            cockpit_brightness * (dvelp_visible ? 1.f : .3f));
             }
             if (dveln_visible || !dvelp_visible) {
-                draw_sprite(dveln_proj, sprite_size, *delta_negative_sprite,
-                            vec4(0.f, cockpit_brightness, 0.f,
-                                 dveln_visible ? 1.f : .3f));
+                draw_sprite(dveln_proj, .5f * sprite_size,
+                            *delta_negative_sprite,
+                            cockpit_brightness * (dveln_visible ? 1.f : .3f));
             }
 
             if (dvelp_visible) {
-                draw_text(dvelp_proj + vec2(0.f, 2.f * sys),
+                draw_text(dvelp_proj + vec2(0.f, 1.5f * sys),
                           vec2(sxs * .5f, sys),
                           localize(t.relative_velocity.length(), 2,
                                    LS_UNIT_M_S),
@@ -562,7 +558,7 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             }
 
             if (dveln_visible) {
-                draw_text(dveln_proj + vec2(0.f, 2.f * sys),
+                draw_text(dveln_proj + vec2(0.f, 1.5f * sys),
                           vec2(sxs * .5f, sys),
                           localize(-t.relative_velocity.length(), 2,
                                    LS_UNIT_M_S),
@@ -584,7 +580,8 @@ static void draw_radar_contacts(const GraphicsStatus &status,
             aim_proj = project_clamp_to_border(status, aim2, hbx, hby,
                                                sprite_size, &aim_visible);
 
-            draw_sprite(aim_proj, sprite_size, *target_aim_sprite, vec4(0.f, cockpit_brightness, 0.f, aim_visible ? 1.f : .3f));
+            draw_sprite(aim_proj, sprite_size, *target_aim_sprite,
+                        cockpit_brightness * (aim_visible ? 1.f : .3f));
         }
     }
 }
