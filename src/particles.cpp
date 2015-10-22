@@ -36,16 +36,23 @@ void init_particles(void)
 }
 
 
-void spawn_particle(WorldState &output, const vec<3, double> &position,
-                    const vec3 &velocity, const vec3 &orientation)
+void spawn_particle(WorldState &output, const ShipState &sender,
+                    const vec<3, double> &position, const vec3 &velocity,
+                    const vec3 &orientation)
 {
-    output.new_particles.emplace_back();
+    output.new_particles.pgd.emplace_back();
 
-    Particle &np = output.new_particles.back();
-    np.position = position;
-    np.velocity = velocity;
-    np.orientation = orientation;
-    np.lifetime = 120.f;
+    ParticleGraphicsData &pgd = output.new_particles.pgd.back();
+    pgd.orientation = orientation;
+
+
+    output.new_particles.pngd.emplace_back();
+
+    ParticleNonGraphicsData &pngd = output.new_particles.pngd.back();
+    pngd.position = position;
+    pngd.velocity = velocity;
+    pngd.lifetime = 120.f;
+    pngd.source_ship_id = sender.id;
 }
 
 
@@ -54,51 +61,116 @@ void handle_particles(Particles &output, const Particles &input,
 {
     size_t out_i = 0;
 
-    vec<3, double> cam_pos = player.position + mat3(player.right, player.up, player.forward) * player.ship->cockpit_position;
+    vec<3, double> cam_pos = player.position +
+                             mat3(player.right, player.up, player.forward)
+                             * player.ship->cockpit_position;
 
-    for (const Particle &p: input) {
-        vec3 movement = p.velocity * out_ws.interval;
-        float new_lifetime = p.lifetime - out_ws.interval;
+    size_t isz = input.pgd.size(), osz = output.pgd.size();
+
+    for (size_t i = 0; i < isz; i++) {
+        const ParticleGraphicsData &pgd = input.pgd[i];
+        const ParticleNonGraphicsData &pngd = input.pngd[i];
+
+        float new_lifetime = pngd.lifetime - out_ws.interval;
 
         if (new_lifetime <= 0.f) {
             continue;
         }
 
-        if (output.size() <= out_i) {
-            output.emplace_back();
+        if (osz <= out_i) {
+            output.pgd.emplace_back();
+            output.pngd.emplace_back();
+
+            osz++;
         }
 
-        vec3 gravitation = -p.position *
+        vec3 gravitation = -pngd.position *
                            6.67384e-11 * 5.974e24
-                           / pow(p.position.length(), 3.);
+                           / pow(pngd.position.length(), 3.);
 
-        Particle &op = output[out_i++];
-        op.position = p.position + movement;
-        op.velocity = p.velocity + gravitation * out_ws.interval;
-        op.orientation = p.orientation;
-        op.lifetime = new_lifetime;
+        ParticleGraphicsData &opgd = output.pgd[out_i];
+        ParticleNonGraphicsData &opngd = output.pngd[out_i];
+        out_i++;
 
-        op.position_relative_to_viewer = vec3(op.position - cam_pos);
+        opngd.velocity = pngd.velocity + gravitation * out_ws.interval;
+        opngd.position = pngd.position + opngd.velocity * out_ws.interval;
+        opngd.lifetime = new_lifetime;
+        opngd.source_ship_id = pngd.source_ship_id;
+
+        opgd.position_relative_to_viewer = vec3(opngd.position - cam_pos);
+        opgd.orientation = pgd.orientation;
     }
 
-    for (const Particle &p: out_ws.new_particles) {
-        if (output.size() <= out_i) {
-            output.emplace_back();
+    size_t nsz = out_ws.new_particles.pgd.size();
+
+    for (size_t i = 0; i < nsz; i++) {
+        const ParticleGraphicsData &pgd = out_ws.new_particles.pgd[i];
+        const ParticleNonGraphicsData &pngd = out_ws.new_particles.pngd[i];
+
+        if (osz <= out_i) {
+            output.pgd.emplace_back();
+            output.pngd.emplace_back();
+
+            osz++;
         }
 
-        Particle &op = output[out_i++];
-        op.position = p.position;
-        op.velocity = p.velocity;
-        op.orientation = p.orientation;
-        op.lifetime = p.lifetime;
+        ParticleGraphicsData &opgd = output.pgd[out_i];
+        ParticleNonGraphicsData &opngd = output.pngd[out_i];
+        out_i++;
 
-        op.position_relative_to_viewer = vec3(op.position - cam_pos);
+        opngd.velocity = pngd.velocity;
+        opngd.position = pngd.position;
+        opngd.lifetime = pngd.lifetime;
+        opngd.source_ship_id = pngd.source_ship_id;
+
+        opgd.position_relative_to_viewer = vec3(opngd.position - cam_pos);
+        opgd.orientation = pgd.orientation;
     }
 
-    out_ws.new_particles.clear();
+    out_ws.new_particles.pgd.clear();
+    out_ws.new_particles.pngd.clear();
 
-    if (out_i < output.size()) {
-        output.resize(out_i);
+    if (out_i < osz) {
+        output.pgd.resize(out_i);
+        output.pngd.resize(out_i);
+    }
+
+
+#define HITBOX_RADIUS 1.f
+
+    // TODO: Put particle and ship positions into a kd tree to reduce collision
+    // testing complexity
+    for (size_t i = 0; i < out_i; i++) {
+        ParticleNonGraphicsData &pngd = output.pngd[i];
+
+        for (ShipState &s: out_ws.ships) {
+            vec3 movement = -out_ws.interval * pngd.velocity;
+            float mvsq = movement.dot(movement);
+            float dist_end = (pngd.position - s.position).length();
+
+            if (dist_end < HITBOX_RADIUS + sqrtf(mvsq) &&
+                pngd.source_ship_id != s.id)
+            {
+                // Find nearest point
+                float t = (s.position - pngd.position).dot(movement) / mvsq;
+                float min_dist;
+
+                min_dist = (pngd.position + t * movement - s.position).length();
+
+                if (min_dist <= HITBOX_RADIUS) {
+                    float dist_start =
+                        (pngd.position + movement - s.position).length();
+
+                    if ((t >= 0.f && t <= 1.f) ||
+                        dist_end <= HITBOX_RADIUS ||
+                        dist_start <= HITBOX_RADIUS)
+                    {
+                        pngd.lifetime = 0.f;
+                        s.deal_damage(10.f);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -110,17 +182,18 @@ void draw_particles(const GraphicsStatus &status, const Particles &input)
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
 
-    particle_data->set_elements(input.size());
+    particle_data->set_elements(input.pgd.size());
 
-    particle_data->attrib(0)->data(input.data(),
-                                   input.size() * sizeof(Particle),
+    particle_data->attrib(0)->data(input.pgd.data(),
+                                   input.pgd.size()
+                                   * sizeof(ParticleGraphicsData),
                                    GL_DYNAMIC_DRAW, false);
 
-    particle_data->attrib(0)->load(sizeof(Particle),
-                                   offsetof(Particle,
+    particle_data->attrib(0)->load(sizeof(ParticleGraphicsData),
+                                   offsetof(ParticleGraphicsData,
                                             position_relative_to_viewer));
-    particle_data->attrib(1)->load(sizeof(Particle),
-                                   offsetof(Particle, orientation));
+    particle_data->attrib(1)->load(sizeof(ParticleGraphicsData),
+                                   offsetof(ParticleGraphicsData, orientation));
 
     particle_prg->use();
 

@@ -58,8 +58,9 @@ static void handle_weapons(WorldState &output, const WorldState &input,
                 WeaponType wt = ship_in.ship->weapons[i].type;
                 const WeaponClass *wc = weapon_classes[wt];
 
-                spawn_particle(output, ship_out.position,
-                               ship_out.velocity + ship_out.forward * 5e2f,
+                spawn_particle(output, ship_out, ship_out.position,
+                               ship_out.velocity + ship_out.forward
+                                                   * wc->projectile_velocity,
                                ship_out.forward * 20.f);
 
                 new_cooldown += wc->cooldown;
@@ -299,6 +300,15 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         ShipState &out = output.ships[&in - input.ships.data()];
 
         out.radar.update(in.radar, out, output, user_input);
+    }
+
+
+    for (auto it = output.ships.begin(); it != output.ships.end();) {
+        if (it->hull_hitpoints <= 0.f) {
+            it = output.ships.erase(it);
+        } else {
+            ++it;
+        }
     }
 
 

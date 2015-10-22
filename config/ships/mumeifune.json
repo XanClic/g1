@@ -1,6 +1,8 @@
 {
     "name":         "mumeifune",
-    "empty_mass":   500,
+
+    "empty_mass":       500,
+    "hull_hitpoints":   100.0,
 
     "cockpit_position": [0, 1, 0],
 

@@ -46,4 +46,15 @@ ShipState::ShipState(const Ship *ship_type):
 
     thruster_states.resize(ship->thrusters.size(), 0.f);
     weapon_cooldowns.resize(ship->weapons.size(), 0.f);
+
+    hull_hitpoints = ship->hull_hitpoints;
+}
+
+
+void ShipState::deal_damage(float amount)
+{
+    hull_hitpoints -= amount;
+    if (hull_hitpoints < 0.f) {
+        hull_hitpoints = 0.f;
+    }
 }
