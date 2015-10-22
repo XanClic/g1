@@ -2,5 +2,7 @@
     "type":         "WeaponType",
     "full_name":    "string",
 
-    "cooldown": "single"
+    "cooldown": "single",
+
+    "projectile_velocity":  "single"
 }

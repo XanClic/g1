@@ -9,6 +9,7 @@
 #include "options.hpp"
 #include "radar.hpp"
 #include "text.hpp"
+#include "weapons.hpp"
 
 
 // #define COCKPIT_SUPERSAMPLING
@@ -24,6 +25,7 @@ static gl::texture *scratch_tex, *normals_tex;
 
 static gl::texture *prograde_sprite, *retrograde_sprite;
 static gl::texture *radar_contact_sprite, *radar_target_sprite;
+static gl::texture *target_aim_sprite;
 static gl::texture *delta_positive_sprite, *delta_negative_sprite;
 static gl::texture *orbit_normal_sprite, *orbit_antinormal_sprite;
 
@@ -102,6 +104,9 @@ void init_cockpit(void)
 
     radar_target_sprite = new gl::texture("assets/hud/radar-target.png");
     radar_target_sprite->filter(GL_LINEAR);
+
+    target_aim_sprite = new gl::texture("assets/hud/target-aim.png");
+    target_aim_sprite->filter(GL_LINEAR);
 
     delta_positive_sprite = new gl::texture("assets/hud/delta-positive.png");
     delta_positive_sprite->filter(GL_LINEAR);
@@ -487,7 +492,8 @@ static void draw_radar_contacts(const GraphicsStatus &status,
 {
     vec2 sprite_size = 2.f * vec2(sxs, sys);
 
-    const Radar &r = world.ships[world.player_ship].radar;
+    const ShipState &player = world.ships[world.player_ship];
+    const Radar &r = player.radar;
 
     for (const RadarTarget &t: r.targets) {
         bool visible;
@@ -524,8 +530,8 @@ static void draw_radar_contacts(const GraphicsStatus &status,
         }
 
         if (t.id == r.selected_id) {
-            bool dvelp_visible, dveln_visible;
-            vec2 dvelp_proj, dveln_proj;
+            bool dvelp_visible, dveln_visible, aim_visible;
+            vec2 dvelp_proj, dveln_proj, aim_proj;
 
             // Negate, since t.relative_velocity is the velocity of the target
             // relative to us; but we want it the other way around
@@ -562,6 +568,23 @@ static void draw_radar_contacts(const GraphicsStatus &status,
                                    LS_UNIT_M_S),
                           ALIGN_CENTER, ALIGN_BOTTOM);
             }
+
+            enum WeaponType wt = player.ship->weapons[0].type;
+            const WeaponClass *wc = weapon_classes[wt];
+
+            float p_sqr = t.relative_position.dot(t.relative_position);
+            float s_sqr = wc->projectile_velocity * wc->projectile_velocity;
+            float v_sqr = t.relative_velocity.dot(t.relative_velocity);
+            float np2 = t.relative_position.dot(t.relative_velocity) / s_sqr;
+            float nq = (p_sqr + v_sqr) / s_sqr;
+
+            float t2 = np2 + sqrtf(np2 * np2 + nq);
+            vec3 aim2 = t.relative_position + t2 * t.relative_velocity;
+
+            aim_proj = project_clamp_to_border(status, aim2, hbx, hby,
+                                               sprite_size, &aim_visible);
+
+            draw_sprite(aim_proj, sprite_size, *target_aim_sprite, vec4(0.f, cockpit_brightness, 0.f, aim_visible ? 1.f : .3f));
         }
     }
 }

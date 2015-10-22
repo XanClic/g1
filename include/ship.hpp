@@ -10,6 +10,8 @@
 struct ShipState {
     ShipState(const Ship *ship_type);
 
+    void deal_damage(float amount);
+
     const Ship *ship;
 
     uint64_t id;
@@ -38,6 +40,8 @@ struct ShipState {
     std::vector<float> weapon_cooldowns;
 
     Radar radar;
+
+    float hull_hitpoints;
 };
 
 #endif

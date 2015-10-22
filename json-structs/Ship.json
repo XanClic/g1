@@ -1,7 +1,8 @@
 {
     "name":         "string",
 
-    "empty_mass":   "single",
+    "empty_mass":       "single",
+    "hull_hitpoints":   "single",
 
     "cockpit_position": "vec3",
 

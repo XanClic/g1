@@ -6,15 +6,23 @@
 #include <vector>
 
 
-struct Particle {
-    dake::math::vec<3, double> position;
+struct ParticleGraphicsData {
     dake::math::vec3 position_relative_to_viewer;
-    dake::math::vec3 velocity, orientation;
+    dake::math::vec3 orientation;
+};
+
+struct ParticleNonGraphicsData {
+    dake::math::vec<3, double> position;
+    dake::math::vec3 velocity;
     float lifetime;
+    uint64_t source_ship_id;
 };
 
 
-typedef std::vector<Particle> Particles;
+struct Particles {
+    std::vector<ParticleGraphicsData> pgd;
+    std::vector<ParticleNonGraphicsData> pngd;
+};
 
 
 struct WorldState;
@@ -24,7 +32,7 @@ struct ShipState;
 
 void init_particles(void);
 
-void spawn_particle(WorldState &output,
+void spawn_particle(WorldState &output, const ShipState &sender,
                     const dake::math::vec<3, double> &position,
                     const dake::math::vec3 &velocity,
                     const dake::math::vec3 &orientation);
