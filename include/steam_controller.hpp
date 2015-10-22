@@ -63,8 +63,8 @@ class SteamController {
         enum Button {
             BOT_RSHOULDER,
             BOT_LSHOULDER,
-            TOP_LSHOULDER,
             TOP_RSHOULDER,
+            TOP_LSHOULDER,
 
             Y,
             B,
