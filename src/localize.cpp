@@ -1,3 +1,4 @@
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -72,18 +73,18 @@ static const std::string translations[][LOCALIZATIONS] = {
 
 
     {
-        "km",
-        "km",
-    //   ka      e   m"
-        "\xc2\xb0\x2b\xc3\xb1",
-        "km",
+        "m",
+        "m",
+    //   me      te  r
+        "\xc2\x83\x33\xc3\xaa",
+        "m",
     },
 
     {
         "m/s",
         "m/s",
-    //   e   m       /   e   s
-        "\x2b\xc3\xb1\x06\x2b\xc3\xb2",
+    //   me      te  r       _   p       ro  _   se [ze] ku      n       de
+        "\xc2\x83\x33\xc3\xaa\x0f\xc3\xad\x44\x0f\xc2\xab\xc2\xb2\xc3\xab\x3b",
         "m/s",
     },
 
@@ -93,6 +94,30 @@ static const std::string translations[][LOCALIZATIONS] = {
     //   -   fa  ch
         "\x01\x70\xc3\xb7",
         "x",
+    },
+
+    {
+        "m",
+        "m",
+    //   mi      li
+        "\xc2\x81\xc2\xa1",
+        "m",
+    },
+
+    {
+        "k",
+        "k",
+    //   ki      lo
+        "\xc2\xb1\xc2\xa4",
+        "k",
+    },
+
+    {
+        "M",
+        "M",
+    //   me      ga
+        "\xc2\x83\xc2\xb8",
+        "M",
     },
 };
 
@@ -140,14 +165,29 @@ static const std::string localize_float(float f, int prec)
 
 const std::string localize(float f, int prec, LocalizedStrings unit)
 {
-    const std::string unit_str = localize(unit);
-    if (unit_str.empty()) {
+    if (unit == LS_REALLY_NOTHING_AND_NOTHING_BUT) {
         return localize_float(f, prec);
     } else {
         if (unit == LS_UNIT_TIMES) {
-            return localize_float(f, prec) + unit_str;
+            return localize_float(f, prec) + localize(unit);
         } else {
-            return localize_float(f, prec) + localize(LS_SEPARATOR) + unit_str;
+            LocalizedStrings prefix;
+            float fav = fabsf(f);
+            if (fav < 1e0f) {
+                prefix = LS_UNIT_PREFIX_MILLI;
+                f *= 1e3f;
+            } else if (fav < 1e3f) {
+                prefix = LS_REALLY_NOTHING_AND_NOTHING_BUT;
+            } else if (fav < 1e6f) {
+                prefix = LS_UNIT_PREFIX_KILO;
+                f *= 1e-3f;
+            } else {
+                prefix = LS_UNIT_PREFIX_MEGA;
+                f *= 1e-6f;
+            }
+
+            return localize_float(f, prec) + localize(LS_SEPARATOR) +
+                   localize(prefix) + localize(unit);
         }
     }
 }

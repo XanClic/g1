@@ -312,8 +312,8 @@ static void draw_cockpit_controls(const WorldState &world,
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
-              localize((static_cast<float>(ship.position.length()) - 6371e3f)
-                       * 1e-3f, 2, LS_UNIT_KM));
+              localize((static_cast<float>(ship.position.length()) - 6371e3f),
+                       2, LS_UNIT_M));
 
     float time_factor = world.interval / world.real_interval;
     if (time_factor > 1.f) {
@@ -540,7 +540,7 @@ static void draw_radar_contacts(const GraphicsStatus &status,
                               .dot(t.relative_velocity);
 
             draw_text(proj + vec2(0.f, 3.f * sys), vec2(sxs * .5f, sys),
-                      localize(distance * 1e-3f, 2, LS_UNIT_KM),
+                      localize(distance, 2, LS_UNIT_M),
                       ALIGN_CENTER, ALIGN_BOTTOM);
             draw_text(proj + vec2(0.f, 2.f * sys), vec2(sxs * .5f, sys),
                       localize(rel_speed, 2, LS_UNIT_M_S),
