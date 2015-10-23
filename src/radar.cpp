@@ -8,7 +8,7 @@
 #include "radar.hpp"
 #include "ship.hpp"
 #include "ui.hpp"
-
+#include "conversion.hpp"
 
 using namespace dake::math;
 
@@ -25,7 +25,7 @@ void Radar::update(const Radar &radar_old, const ShipState &ship_new,
             continue;
         }
 
-        vec3 rel_pos = ship.position - ship_new.position;
+        vec3 rel_pos = conversion::fromEigenToDake(ship.physicsBody->getPosition()) - conversion::fromEigenToDake(ship_new.physicsBody->getPosition());
 
         // TODO: Check whether obstructed by earth
         if (rel_pos.length() >= 1e6f) {
@@ -51,7 +51,10 @@ void Radar::update(const Radar &radar_old, const ShipState &ship_new,
         // velocity as the difference is not trivial, either, as we'd have to
         // iterate through the old targets (or the full old ship list). Just
         // skip it, too.
-        targets[oi].relative_velocity = ship.velocity - ship_new.velocity;
+
+
+        // ASK< do we have to scratch the old position somewhere? >
+        targets[oi].relative_velocity = conversion::fromEigenToDake(ship.physicsBody->getLinearVelocity()) - conversion::fromEigenToDake(ship_new.physicsBody->getLinearVelocity());
 
         if (ship.id == selected_id) {
             selected = &targets[oi];

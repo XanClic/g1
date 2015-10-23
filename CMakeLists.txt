@@ -54,8 +54,6 @@ ExternalProject_Add(
     
     BUILD_COMMAND mkdir -p build &&
                   cd build &&
-                  pwd &&
-                  pwd &&
                   cmake "-DEIGEN_INCLUDE:PATH=${EIGEN_INCLUDE}" ".." &&
                   ${CMAKE_MAKE_PROGRAM} "CXX=${CMAKE_CXX_COMPILER}"
     BINARY_DIR SpaceSimCore
@@ -64,6 +62,7 @@ ExternalProject_Add(
 
 ExternalProject_Get_Property(SpaceSimCore_source binary_dir)
 set(SpaceSimCore_binary_dir "${binary_dir}/build")
+set(SpaceSimCore_include_dir "${binary_dir}/include")
 
 add_library(SpaceSimCore IMPORTED STATIC)
 add_dependencies(SpaceSimCore SpaceSimCore_source)
@@ -82,7 +81,7 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAK
                    COMMAND "${CMAKE_SOURCE_DIR}/tools/generate-serializer.rb" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
                    DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
 
-include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_binary_dir}/include" "${SpaceSimCore_source}/include"
+include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_binary_dir}/include" "${SpaceSimCore_include_dir}" "${EIGEN_INCLUDE}"
                     ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
                     ${LIBUSB_INCLUDE_DIRS} ${LIBEPOXY_INCLUDE_DIRS})
 link_directories("${dake_binary_dir}" "${SpaceSimCore_binary_dir}")
@@ -100,12 +99,12 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/gltf.cpp src/software.cpp src/localize.cpp src/text.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
                   src/ship_types.cpp src/ship.cpp src/weapons.cpp
-                  src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp
+                  src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp src/conversion.cpp
                   ${SC_FILES}
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
 
-target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
+target_link_libraries(g1 dake SpaceSimCore ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                          ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
                          ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} m)
 
@@ -116,7 +115,7 @@ target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRAR
 
 add_custom_target(
     debug
-    COMMAND echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}"
+    COMMAND echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}"
 )
 add_dependencies(g1 debug)
 

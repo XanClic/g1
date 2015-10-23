@@ -11,6 +11,8 @@
 #include "physics.hpp"
 #include "ui.hpp"
 
+#include "physics/PhysicsEngine.h"
+
 
 static bool quit = false;
 
@@ -34,11 +36,20 @@ static void physics_worker(SharedInfo &info)
         while (info.current_physics_state != info.current_graphics_state) {
             info.cgs_change.wait(lock);
         }
+        // TODO< avoid race condition >
+        // transfer new physics state
+        const float timeDelta = info.world_states[(info.current_physics_state + 1) % 2]->interval;
+        info.world_states[info.current_physics_state]->physicsEngine->postStep(timeDelta);
+
 
         int next_state = (info.current_physics_state + 1) % 2;
 
+        // TODO< UI has nothing lost inside physics >
         ui_process_events(*info.input);
+
         do_physics(*info.world_states[next_state], *info.world_states[info.current_physics_state], *info.input);
+
+
 
         info.current_physics_state = next_state;
     }
@@ -59,12 +70,19 @@ void main_loop(const std::string &scenario)
     info.world_states.emplace_back(new WorldState);
     info.world_states.emplace_back(new WorldState);
 
+    info.world_states[0]->physicsEngine = info.world_states[1]->physicsEngine = SharedPointer<PhysicsEngine>(new PhysicsEngine());
+
     info.world_states[0]->initialize(scenario);
 
     // Do one step, because some values are actually not initialized by
     // "initialize".
     ui_process_events(*info.input);
+
     do_physics(*info.world_states[1], *info.world_states[0], *info.input);
+    // transfer new physics state
+    const float timeDelta = info.world_states[(info.current_physics_state + 1) % 2]->interval;
+    info.world_states[info.current_physics_state]->physicsEngine->postStep(timeDelta);
+
     info.current_graphics_state = 1;
     info.current_physics_state  = 1;
 

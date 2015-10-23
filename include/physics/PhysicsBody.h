@@ -1,5 +1,0 @@
-struct PhysicsBody {
-	double mass;
-
-	
-};

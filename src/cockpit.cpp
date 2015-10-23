@@ -10,7 +10,7 @@
 #include "radar.hpp"
 #include "text.hpp"
 #include "weapons.hpp"
-
+#include "conversion.hpp"
 
 // #define COCKPIT_SUPERSAMPLING
 
@@ -299,7 +299,8 @@ static void draw_cockpit_controls(const WorldState &world,
                                   float sxs, float sys)
 {
     const ShipState &ship = world.ships[world.player_ship];
-    const vec3 &velocity = ship.velocity;
+    const vec3 velocity = conversion::fromEigenToDake(ship.physicsBody->getLinearVelocity());
+    const vec3 position = conversion::fromEigenToDake(ship.physicsBody->getPosition());
 
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 1.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_ORBITAL_VELOCITY));
@@ -309,7 +310,7 @@ static void draw_cockpit_controls(const WorldState &world,
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
-              localize((static_cast<float>(ship.position.length()) - 6371e3f)
+              localize((static_cast<float>(position.length()) - 6371e3f)
                        * 1e-3f, 2, LS_UNIT_KM));
 
     float time_factor = world.interval / world.real_interval;
@@ -341,7 +342,7 @@ static void draw_velocity_indicators(const GraphicsStatus &status,
                                      const vec2 &hbx, const vec2 &hby)
 {
     const ShipState &ship = world.ships[world.player_ship];
-    const vec3 &velocity = ship.velocity;
+    const vec3 &velocity = conversion::fromEigenToDake(ship.physicsBody->getLinearVelocity());
 
     if (!velocity.length()) {
         return;
@@ -379,7 +380,7 @@ static void draw_orbit_grid(const GraphicsStatus &status,
                             const vec2 &hbx, const vec2 &hby)
 {
     const ShipState &ship = world.ships[world.player_ship];
-    const vec3 &velocity = ship.velocity;
+    const vec3 velocity = conversion::fromEigenToDake(ship.physicsBody->getLinearVelocity());
 
 
     if (!velocity.length()) {
@@ -447,7 +448,7 @@ static void draw_artificial_horizon(const GraphicsStatus &status,
 {
     const ShipState &ship = world.ships[world.player_ship];
 
-    vec3 earth_upward = ship.position.normalized();
+    vec3 earth_upward = conversion::fromEigenToDake(ship.physicsBody->getPosition()).normalized();
     vec3 horizont = (status.camera_forward -
                      status.camera_forward.dot(earth_upward) * earth_upward)
                     .normalized();

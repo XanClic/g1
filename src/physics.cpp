@@ -13,7 +13,7 @@
 #include "ship_types.hpp"
 #include "software.hpp"
 #include "weapons.hpp"
-
+#include "conversion.hpp"
 
 using namespace dake::math;
 
@@ -58,8 +58,8 @@ static void handle_weapons(WorldState &output, const WorldState &input,
                 WeaponType wt = ship_in.ship->weapons[i].type;
                 const WeaponClass *wc = weapon_classes[wt];
 
-                spawn_particle(output, ship_out, ship_out.position,
-                               ship_out.velocity + ship_out.forward
+                spawn_particle(output, ship_out, conversion::fromEigenToDake(ship_out.physicsBody->getPosition()),
+                               conversion::fromEigenToDake(ship_out.physicsBody->getLinearVelocity()) + ship_out.forward
                                                    * wc->projectile_velocity,
                                ship_out.forward * 20.f);
 
@@ -160,6 +160,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     ShipState &player = output.ships[output.player_ship];
     execute_flight_control_software(player, user_input, output.interval);
 
+    // ASK< is it a global flag or a body sleep flag? >
+    if(player_physics_enabled) {
+        output.physicsEngine->step(output.interval);
+    }
 
     for (const ShipState &in: input.ships) {
         int i = &in - input.ships.data();
@@ -171,63 +175,17 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         bool physics_enabled = player_physics_enabled || i != input.player_ship;
 
+
+
+        // TODO< case for to ground attached body >
+
         if (physics_enabled) {
-            vec3 forces = vec3::zero(), torque = vec3::zero();
-            for (size_t j = 0; j < out.ship->thrusters.size(); j++) {
-                float state = out.thruster_states[j];
-                if (state < 0.f) {
-                    state = 0.f;
-                } else if (state > 1.f) {
-                    state = 1.f;
-                }
 
-                vec3 force = state * (local_mat * out.ship->thrusters[j].force);
-
-                forces += force;
-                torque += (local_mat * out.ship->thrusters[j].relative_position)
-                          .cross(force);
-            }
-
-            forces += in.weapon_force;
-            torque += in.weapon_torque;
-
-            vec3 accel = forces / in.total_mass;
-
-            auto rk4_calc_accel = [&accel](const RK4State &state) -> vec3 {
-                vec3 total_accel = accel;
-                if (state.x.length() > 6371e3) {
-                    total_accel += state.x * (-6.67384e-11 * 5.974e24)
-                                   / pow(state.x.length(), 3.);
-                }
-                return total_accel;
-            };
-
-            RK4State rk4_initial(in.position, in.velocity);
-            RK4State rk4s = rk4_integrate(rk4_initial, output.interval,
-                                          rk4_calc_accel);
-
-            out.acceleration = (rk4s.v - in.velocity) / output.interval;
-            out.torque       = torque;
-
-            out.velocity = rk4s.v;
-            out.position = rk4s.x;
         } else {
             if (player_fixed_to_ground) {
-                vec3 tangent = vec3(input.earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(in.position).normalized();
-                vec3 sphere_pos = (input.earth_inv_mv * vec4::direction(in.position)).normalized();
-                sphere_pos.y() = 0.f;
-                vec3 earth_velocity = sphere_pos.length() * 6371e3f * 2.f * M_PIf / 86164.09f * tangent;
 
-                out.velocity = earth_velocity;
-
-                if (!fixed_to_ground_length) {
-                    fixed_to_ground_length = in.position.length();
-                }
-                out.position = vec3(output.earth_mv * (input.earth_inv_mv * vec4::direction(in.position)));
-                out.position = out.position.normalized() * fixed_to_ground_length;
             } else {
-                out.velocity = vec3::zero();
-                out.position = in.position;
+
             }
 
             out.acceleration = vec3::zero();
@@ -245,14 +203,15 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             input.scenario->sub<ScenarioScript>().execute(output, input, user_input);
         }
 
+        /*
         if (physics_enabled && out.position.length() < 6371e3f) {
             vec3 earth_normal = out.position.normalized();
             out.velocity = .8 * (out.velocity -
                                  2. * out.velocity.dot(earth_normal) *
                                 vec<3, double>(earth_normal));
-            out.position = 6371e3 / out.position.length() * out.position;
+            //out.position = 6371e3 / out.position.length() * out.position;
         }
-
+        */
         //out.orbit_normal = out.velocity.cross(out.position).normalized();
 
         if (physics_enabled) {
@@ -282,7 +241,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         // .transpose() == .invert() (local_mat is a rotation matrix)
         local_mat.transpose();
-        out.local_velocity            = local_mat * out.velocity;
+        out.local_velocity            = local_mat * conversion::fromEigenToDake(out.physicsBody->getLinearVelocity());
         out.local_acceleration        = local_mat * out.acceleration;
         out.local_rotational_velocity = local_mat * out.rotational_velocity;
         //out.local_orbit_normal        = local_mat * out.orbit_normal;
@@ -356,7 +315,7 @@ void WorldState::initialize(const std::string &sn)
 
 ShipState &WorldState::spawn_ship(const Ship *type)
 {
-    ships.emplace_back(type);
+    ships.emplace_back(type, physicsEngine);
     ship_list_changed = true;
     return ships.back();
 }
