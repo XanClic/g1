@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.8)
 include(ExternalProject)
 include(FindPkgConfig)
 
+SET(EIGEN_INCLUDE "" CACHE PATH "Path to eigen include")
+
 project(g1)
 
 find_package(OpenGL REQUIRED)
@@ -36,12 +38,42 @@ ExternalProject_Add(
 )
 
 ExternalProject_Get_Property(dake_source binary_dir)
-set(dake_dir "${binary_dir}")
+set(dake_binary_dir "${binary_dir}")
 
 add_library(dake IMPORTED STATIC)
 add_dependencies(dake dake_source)
 set_property(TARGET dake APPEND PROPERTY IMPORTED_CONFIGURATIONS NOCONFIG)
-set_target_properties(dake PROPERTIES IMPORTED_LOCATION_NOCONFIG "${binary_dir}/libdake.a")
+set_target_properties(dake PROPERTIES IMPORTED_LOCATION_NOCONFIG "${dake_binary_dir}/libdake.a")
+
+ExternalProject_Add(
+    SpaceSimCore_source
+    GIT_REPOSITORY https://github.com/PtrMan/SpaceSimCore.git
+    GIT_TAG origin/master
+    SOURCE_DIR SpaceSimCore
+    CMAKE_COMMAND true
+    
+    BUILD_COMMAND mkdir -p build &&
+                  cd build &&
+                  pwd &&
+                  pwd &&
+                  cmake "-DEIGEN_INCLUDE:PATH=${EIGEN_INCLUDE}" ".." &&
+                  ${CMAKE_MAKE_PROGRAM} "CXX=${CMAKE_CXX_COMPILER}"
+    BINARY_DIR SpaceSimCore
+    INSTALL_COMMAND true
+)
+
+ExternalProject_Get_Property(SpaceSimCore_source binary_dir)
+set(SpaceSimCore_binary_dir "${binary_dir}/build")
+
+add_library(SpaceSimCore IMPORTED STATIC)
+add_dependencies(SpaceSimCore SpaceSimCore_source)
+set_property(TARGET SpaceSimCore APPEND PROPERTY IMPORTED_CONFIGURATIONS NOCONFIG)
+set_target_properties(SpaceSimCore PROPERTIES IMPORTED_LOCATION_NOCONFIG "${SpaceSimCore_binary_dir}/libSpaceSimCore.a")
+
+
+
+
+
 
 add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include"
                    COMMAND mkdir -p "${CMAKE_BINARY_DIR}/include")
@@ -50,10 +82,10 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAK
                    COMMAND "${CMAKE_SOURCE_DIR}/tools/generate-serializer.rb" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
                    DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
 
-include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
+include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_binary_dir}/include" "${SpaceSimCore_source}/include"
                     ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
                     ${LIBUSB_INCLUDE_DIRS} ${LIBEPOXY_INCLUDE_DIRS})
-link_directories("${dake_dir}")
+link_directories("${dake_binary_dir}" "${SpaceSimCore_binary_dir}")
 
 if (LIBUSB_FOUND)
     set(SC_FILES src/steam_controller.cpp)
@@ -76,6 +108,20 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                          ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
                          ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} m)
+
+
+
+#debug
+
+
+add_custom_target(
+    debug
+    COMMAND echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}" && echo "${SpaceSimCore_source}"
+)
+add_dependencies(g1 debug)
+
+
+
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
