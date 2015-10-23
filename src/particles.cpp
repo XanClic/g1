@@ -8,7 +8,7 @@
 #include "particles.hpp"
 #include "physics.hpp"
 #include "ship.hpp"
-
+#include "conversion.hpp"
 
 using namespace dake;
 using namespace dake::math;
@@ -83,9 +83,9 @@ void handle_particles(Particles &output, const Particles &input,
 {
     size_t out_i = 0;
 
-    fvec3d cam_pos = player.position +
-                     fmat3(player.right, player.up, player.forward)
-                     * player.ship->cockpit_position;
+    fvec3d cam_pos = conversion::fromEigenToDake(player.physicsBody->getPosition()) +
+                             mat3(player.right, player.up, player.forward)
+                             * player.ship->cockpit_position;
 
     size_t isz = input.pgd.size(), osz = output.pgd.size();
 
@@ -206,20 +206,20 @@ void handle_particles(Particles &output, const Particles &input,
         for (ShipState &s: out_ws.ships) {
             fvec3 movement = -out_ws.interval * pngd.velocity;
             float mvsq = movement.dot(movement);
-            float dist_end = (pngd.position - s.position).length();
+            float dist_end = (pngd.position - conversion::fromEigenToDake(s.physicsBody->getPosition())).length();
 
             if (dist_end < HITBOX_RADIUS + sqrtf(mvsq) &&
                 pngd.source_ship_id != s.id)
             {
                 // Find nearest point
-                float t = (s.position - pngd.position).dot(movement) / mvsq;
+                float t = (conversion::fromEigenToDake(s.physicsBody->getPosition()) - pngd.position).dot(movement) / mvsq;
                 float min_dist;
 
-                min_dist = (pngd.position + t * movement - s.position).length();
+                min_dist = (pngd.position + t * movement - conversion::fromEigenToDake(s.physicsBody->getPosition())).length();
 
                 if (min_dist <= HITBOX_RADIUS) {
                     float dist_start =
-                        (pngd.position + movement - s.position).length();
+                        (pngd.position + movement - conversion::fromEigenToDake(s.physicsBody->getPosition())).length();
 
                     if ((t >= 0.f && t <= 1.f) ||
                         dist_end <= HITBOX_RADIUS ||

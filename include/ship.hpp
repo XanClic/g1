@@ -7,21 +7,28 @@
 #include "json-structs.hpp"
 #include "radar.hpp"
 
+#include "physics/PhysicsEngine.h"
+#include "physics/PhysicsBody.h"
 
 struct ShipState {
-    ShipState(const Ship *ship_type);
+    ShipState(const Ship *ship_type, SharedPointer<PhysicsEngine> physicsEngine);
 
     void recalcAndCacheOrbitNormal();
+
 
     void deal_damage(float amount);
 
     const Ship *ship;
 
+    SharedPointer<PhysicsBody> physicsBody;
+
     uint64_t id;
 
     // position in km, velocity in m/s, acceleration in m/s^2
-    dake::math::fvec3d position, velocity;
+
+    //dake::math::vec<3, double> position, velocity;
     dake::math::fvec3 acceleration;
+
     // rotational_velocity in 1/s, angular_momentum in kg*m^2/s, torque in kg*m^2/s^2 (Nm)
     dake::math::fvec3 rotational_velocity, angular_momentum, torque;
     // normalized

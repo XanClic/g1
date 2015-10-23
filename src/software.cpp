@@ -17,6 +17,7 @@ extern "C" {
 #include "ship_types.hpp"
 #include "software.hpp"
 #include "ui.hpp"
+#include "conversion.hpp"
 
 
 using namespace dake;
@@ -416,12 +417,14 @@ int ScenarioScript::luaw_set_ship_position(lua_State *ls)
     float lat = lua_tonumber(ls, 3);
     double height = lua_tonumber(ls, 4);
 
-    ship->position = ss->current_world_state->earth_mv
-                     * fvec4(cosf(lat) * sinf(lng),
-                             sinf(lat),
-                             cosf(lat) * cosf(lng),
-                             1.f);
-    ship->position += height * ship->position.normalized();
+    // NOTE< relative to earth >
+    dake::math::vec3 updatedPosition = ss->current_world_state->earth_mv
+                     * vec4(cosf(lat) * sinf(lng),
+                            sinf(lat),
+                            cosf(lat) * cosf(lng),
+                            1.f);
+    updatedPosition += (updatedPosition.normalized() * static_cast<double>(height));
+    ship->physicsBody->setPositionHard(conversion::fromDakeToEigen(updatedPosition));
 
     return 0;
 }
@@ -431,9 +434,12 @@ int ScenarioScript::luaw_set_ship_velocity(lua_State *ls)
 {
     ShipState *ship = lua_toship(ls, 1);
 
-    ship->velocity = ship->right   * lua_tonumber(ls, 2)
-                   + ship->up      * lua_tonumber(ls, 3)
-                   + ship->forward * lua_tonumber(ls, 4);
+    dake::math::vec3 updatedVelocity =
+          ship->right   * lua_tonumber(ls, 2)
+        + ship->up      * lua_tonumber(ls, 3)
+        + ship->forward * lua_tonumber(ls, 4);
+
+    ship->physicsBody->setLinearVelocityHard(conversion::fromDakeToEigen(updatedVelocity));
 
     return 0;
 }
@@ -444,14 +450,15 @@ int ScenarioScript::luaw_set_ship_bearing(lua_State *ls)
     ScenarioScript *ss =
         static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
     ShipState *ship = lua_toship(ls, 1);
-    fvec3 tangent = crossp(fvec3(ss->current_world_state->earth_mv
-                                 * fvec4(0.f, 1.f, 0.f, 0.f)),
-                           fvec3(ship->position)).normalized();
 
-    ship->up      = ship->position.normalized();
-    ship->forward = fmat4::rotation_normalized(lua_tonumber(ls, 2), ship->up)
-                    * fvec4::direction(tangent);
-    ship->right   = crossp(ship->forward, ship->up);
+    vec3 tangent = vec3(ss->current_world_state->earth_mv
+                        * vec4(0.f, 1.f, 0.f, 0.f))
+                   .cross(conversion::fromEigenToDake(ship->physicsBody->getPosition())).normalized();
+
+    ship->up      = conversion::fromEigenToDake(ship->physicsBody->getPosition()).normalized();
+    ship->forward = vec3(mat4::identity().rotated(lua_tonumber(ls, 2), ship->up)
+                         * vec4::direction(tangent));
+    ship->right   = ship->forward.cross(ship->up);
 
     return 0;
 }
@@ -548,7 +555,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
     lua_newtable(ls());
 
     struct cvecval { const char *name; const fvec3d &v; };
-    for (const auto &vec: (cvecval[]){ { "velocity", ips.velocity }, { "position", ips.position },
+    for (const auto &vec: (cvecval[]){ { "velocity", conversion::fromEigenToDake(ips.physicsBody->getLinearVelocity()) }, { "position", conversion::fromEigenToDake(ips.physicsBody->getPosition()) },
                                        { "up", ips.up }, { "forward", ips.forward }, { "right", ips.right } })
     {
         lua_pushvector(ls(), vec.v);
@@ -564,9 +571,10 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
         return;
     }
 
-    fvec3d ovel, oup, ofwd, orgt;
-    struct vecval { const char *name; fvec3d &v; };
-    for (const auto &vec: (vecval[]){ { "velocity", ovel }, { "position", ops.position },
+    fvec<3, double> ovel, oup, ofwd, orgt;
+    fvec<3, double> shipPosition = conversion::fromEigenToDakeDouble(ops.physicsBody->getPosition());
+    struct vecval { const char *name; vec<3, double> &v; };
+    for (const auto &vec: (vecval[]){ { "velocity", ovel }, { "position", shipPosition },
                                       { "up", oup }, { "forward", ofwd }, { "right", orgt } })
     {
         lua_getfield(ls(), -1, vec.name);
@@ -582,7 +590,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
         orgt = crossp(ofwd, oup);
     }
 
-    ops.velocity = ovel;
+    ops.physicsBody->setLinearVelocityHard(conversion::fromDakeDoubleToEigen(ovel));
     ops.forward  = ofwd;
     ops.right    = orgt;
     ops.up       = oup;

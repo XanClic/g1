@@ -7,7 +7,7 @@
 
 #include "json-structs.hpp"
 #include "ship.hpp"
-
+#include "conversion.hpp"
 
 using namespace dake::math;
 
@@ -15,16 +15,19 @@ using namespace dake::math;
 static uint64_t id_counter;
 
 
-ShipState::ShipState(const Ship *ship_type):
+ShipState::ShipState(const Ship *ship_type, SharedPointer<PhysicsEngine> physicsEngine):
     ship(ship_type)
 {
     assert(id_counter < UINT64_MAX);
 
+    // TODO< set position and velocity >
+    Eigen::Matrix<double, 3, 3> InertiaTensor;
+    physicsBody = SharedPointer<PhysicsBody>(new PhysicsBody(InertiaTensor));
+    physicsEngine->addPhysicsBody(physicsBody);
+
     id = id_counter++;
 
-    position        = fvec3d::zero();
-    velocity        = fvec3d::zero();
-    acceleration    = fvec3::zero();
+    acceleration    = fvec3d::zero();
 
     rotational_velocity = fvec3::zero();
     angular_momentum    = fvec3::zero();
@@ -53,7 +56,7 @@ ShipState::ShipState(const Ship *ship_type):
 
 void ShipState::recalcAndCacheOrbitNormal() {
     // TODO< position is the relative position to the heaviest celestial object which is heavier than a asteroid >
-    cachedOrbitNormal = velocity.cross(position).normalized();
+    cachedOrbitNormal = conversion::fromEigenToDake(physicsBody->getLinearVelocity()).cross(conversion::fromEigenToDake(physicsBody->getPosition())).normalized();
 }
 
 void ShipState::deal_damage(float amount)

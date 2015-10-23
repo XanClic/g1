@@ -15,6 +15,8 @@
 #include "software.hpp"
 #include "ui.hpp"
 
+#include "physics/PhysicsEngine.h"
+
 
 struct WorldState {
     void initialize(const std::string &scenario);
@@ -43,6 +45,8 @@ struct WorldState {
     bool scenario_initialized;
 
     Particles particles, new_particles;
+
+    SharedPointer<PhysicsEngine> physicsEngine;
 };
 
 
