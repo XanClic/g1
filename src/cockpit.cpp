@@ -85,7 +85,7 @@ void init_cockpit(void)
     normals_tex = new gl::texture("assets/cockpit_normals.png");
     normals_tex->set_tmu(2);
     normals_tex->filter(GL_LINEAR);
-    normals_tex->wrap(GL_CLAMP);
+    normals_tex->wrap(GL_CLAMP_TO_EDGE);
 
     cockpit_fb    = new gl::framebuffer(1, GL_R11F_G11F_B10F);
 #ifdef COCKPIT_SUPERSAMPLING
