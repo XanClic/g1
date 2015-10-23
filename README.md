@@ -136,7 +136,7 @@ TODO
     - IGS
     - “Bullets”
     - Defensive systems (visualization)
-    - Physical interaction
+    - ~~Physical interaction~~
 - Multifunctional displays
     - Orbit control
     - Orbit alignment

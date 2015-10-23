@@ -18,10 +18,23 @@ struct ParticleNonGraphicsData {
     uint64_t source_ship_id;
 };
 
+struct ImpactGraphicsData {
+    dake::math::vec3 position_relative_to_viewer;
+    float lifetime, total_lifetime;
+};
+
+struct ImpactNonGraphicsData {
+    dake::math::vec<3, double> position;
+    dake::math::vec3 velocity;
+};
+
 
 struct Particles {
     std::vector<ParticleGraphicsData> pgd;
     std::vector<ParticleNonGraphicsData> pngd;
+
+    std::vector<ImpactGraphicsData> igd;
+    std::vector<ImpactNonGraphicsData> ingd;
 };
 
 
