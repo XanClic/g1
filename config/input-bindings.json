@@ -25,7 +25,7 @@
     ],
 
     "Mouse.LButton":    "modifier.mouse_rotate",
-    "Gamepad.LeftPad":  { "target": "modifier.gamepad_aim", "translate": "sticky" },
+    "m":    { "target": "modifier.gamepad_aim", "translate": "sticky" },
 
     "Mouse.Down":  [
         { "target": "rotate.-x", "if": "modifier.mouse_rotate" },
@@ -108,6 +108,7 @@
     "Mouse.RButton": "main_fire",
 
     "Gamepad.BottomLeftShoulder": "main_fire",
+    "Gamepad.LeftPad":            "main_fire",
 
     "Tab":      { "target": "next_target",     "translate": "one-shot" },
     "CapsLock": { "target": "previous_target", "translate": "one-shot" },
