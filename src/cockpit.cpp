@@ -408,30 +408,35 @@ static void draw_orbit_grid(const GraphicsStatus &status,
     const ShipState &ship = world.ships[world.player_ship];
     const fvec3 &velocity = ship.velocity;
 
+
     if (!velocity.length()) {
         return;
     }
 
-    float cfdon = dotp(status.camera_forward, ship.orbit_normal);
 
-    fvec3 zero = status.camera_forward - cfdon * ship.orbit_normal;
+    float cfdon = status.camera_forward.dot(ship.cachedOrbitNormal);
+
+    fvec3 zero = status.camera_forward - cfdon * ship.cachedOrbitNormal;
+
     if (zero.length() < 1e-3f) {
         fvec2 size;
         size.y() = (M_PIf / 45.f) / status.yfov;
         size.x() = size.y() / status.aspect;
 
         if (cfdon > 0.f) {
-            draw_sprite(project(status, ship.orbit_normal), size,
-                        *orbit_normal_sprite, cockpit_brightness);
+            draw_sprite(project(status, ship.cachedOrbitNormal), size,
+                        *orbit_normal_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
         } else {
-            draw_sprite(project(status, -ship.orbit_normal), size,
-                        *orbit_antinormal_sprite, cockpit_brightness);
+            draw_sprite(project(status, -ship.cachedOrbitNormal), size,
+                        *orbit_antinormal_sprite,
+                        vec4(0.f, cockpit_brightness, 0.f, 1.f));
         }
         return;
     }
     zero.approx_normalize();
 
-    fvec3 rvec = crossp(zero, ship.orbit_normal);
+    fvec3 rvec = zero.cross(ship.cachedOrbitNormal);
     for (int angle = -90; angle <= 90; angle += 2) {
         float ra = M_PIf * angle / 180.f;
 

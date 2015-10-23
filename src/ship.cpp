@@ -51,6 +51,10 @@ ShipState::ShipState(const Ship *ship_type):
     hull_hitpoints = ship->hull_hitpoints;
 }
 
+void ShipState::recalcAndCacheOrbitNormal() {
+    // TODO< position is the relative position to the heaviest celestial object which is heavier than a asteroid >
+    cachedOrbitNormal = velocity.cross(position).normalized();
+}
 
 void ShipState::deal_damage(float amount)
 {
