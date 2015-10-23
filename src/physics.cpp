@@ -324,6 +324,8 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         out.local_rotational_velocity = local_mat * out.rotational_velocity;
         out.local_orbit_normal        = local_mat * out.orbit_normal;
 
+        out.hull_hitpoints = in.hull_hitpoints;
+
 
         handle_weapons(output, input, user_input, out, in,
                        &out.weapon_force, &out.weapon_torque);
