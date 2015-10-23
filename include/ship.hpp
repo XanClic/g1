@@ -10,6 +10,8 @@
 struct ShipState {
     ShipState(const Ship *ship_type);
 
+    void recalcAndCacheOrbitNormal();
+
     void deal_damage(float amount);
 
     const Ship *ship;
@@ -24,7 +26,7 @@ struct ShipState {
     // normalized
     dake::math::vec3 forward, up, right;
 
-    dake::math::vec3 orbit_normal;
+    dake::math::vec3 cachedOrbitNormal;
 
     // Can only be applied during the next frame
     dake::math::vec3 weapon_force, weapon_torque;

@@ -253,7 +253,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.position = 6371e3 / out.position.length() * out.position;
         }
 
-        out.orbit_normal = out.velocity.cross(out.position).normalized();
+        //out.orbit_normal = out.velocity.cross(out.position).normalized();
 
         if (physics_enabled) {
             out.angular_momentum    = in.angular_momentum + out.torque * output.interval;
@@ -285,7 +285,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         out.local_velocity            = local_mat * out.velocity;
         out.local_acceleration        = local_mat * out.acceleration;
         out.local_rotational_velocity = local_mat * out.rotational_velocity;
-        out.local_orbit_normal        = local_mat * out.orbit_normal;
+        //out.local_orbit_normal        = local_mat * out.orbit_normal;
 
 
         handle_weapons(output, input, user_input, out, in,

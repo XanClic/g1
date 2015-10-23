@@ -208,7 +208,7 @@ static void calculate_camera(mat4 &mat, const vec3 &pos, const vec3 &forward, co
 }
 
 
-void do_graphics(const WorldState &input)
+void do_graphics(WorldState &input)
 {
     if (change_width && change_height) {
         update_resolution();
@@ -246,6 +246,10 @@ void do_graphics(const WorldState &input)
     draw_particles(status, input.particles);
 
     glDisable(GL_DEPTH_TEST);
+
+
+    // CONFUSION< input is world state... >
+    input.ships[input.player_ship].recalcAndCacheOrbitNormal();
 
     draw_cockpit(status, input);
 
