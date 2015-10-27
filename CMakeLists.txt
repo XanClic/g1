@@ -26,11 +26,7 @@ ExternalProject_Add(
     GIT_TAG origin/master
     SOURCE_DIR dake
     CMAKE_COMMAND true
-    # Clean up after build; dake is built pretty quickly, even without ccache
-    # (But it does have some iffy bits when it comes to make dependencies, so
-    #  this is why running make clean is a good idea)
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "CXX=${CMAKE_CXX_COMPILER}" &&
-                  ${CMAKE_MAKE_PROGRAM} clean
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "CXX=${CMAKE_CXX_COMPILER}" libdake.a
     BINARY_DIR dake
     INSTALL_COMMAND true
 )
