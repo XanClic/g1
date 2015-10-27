@@ -1,18 +1,18 @@
 #ifndef GRAPHICS_HPP
 #define GRAPHICS_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 #include <dake/gl/vertex_array.hpp>
 
 #include "physics.hpp"
 
 
 struct GraphicsStatus {
-    dake::math::vec<3, double> camera_position;
-    dake::math::vec3 camera_forward;
+    dake::math::fvec3d camera_position;
+    dake::math::fvec3 camera_forward;
 
-    dake::math::mat4 world_to_camera, relative_to_camera;
-    dake::math::mat4 projection;
+    dake::math::fmat4 world_to_camera, relative_to_camera;
+    dake::math::fmat4 projection;
 
     unsigned width, height;
     float z_near, z_far;

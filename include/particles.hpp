@@ -2,8 +2,11 @@
 #define PARTICLES_HPP
 
 #include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <vector>
+
+#include "align-allocator.hpp"
 
 
 struct ParticleGraphicsData {
@@ -12,8 +15,8 @@ struct ParticleGraphicsData {
 };
 
 struct ParticleNonGraphicsData {
-    dake::math::vec<3, double> position;
-    dake::math::vec3 velocity;
+    dake::math::fvec3d position;
+    dake::math::fvec3 velocity;
     float lifetime;
     uint64_t source_ship_id;
 };
@@ -24,17 +27,17 @@ struct ImpactGraphicsData {
 };
 
 struct ImpactNonGraphicsData {
-    dake::math::vec<3, double> position;
-    dake::math::vec3 velocity;
+    dake::math::fvec3d position;
+    dake::math::fvec3 velocity;
 };
 
 
 struct Particles {
-    std::vector<ParticleGraphicsData> pgd;
-    std::vector<ParticleNonGraphicsData> pngd;
+    AlignedVector<ParticleGraphicsData> pgd;
+    AlignedVector<ParticleNonGraphicsData> pngd;
 
-    std::vector<ImpactGraphicsData> igd;
-    std::vector<ImpactNonGraphicsData> ingd;
+    AlignedVector<ImpactGraphicsData> igd;
+    AlignedVector<ImpactNonGraphicsData> ingd;
 };
 
 
@@ -46,9 +49,9 @@ struct ShipState;
 void init_particles(void);
 
 void spawn_particle(WorldState &output, const ShipState &sender,
-                    const dake::math::vec<3, double> &position,
-                    const dake::math::vec3 &velocity,
-                    const dake::math::vec3 &orientation);
+                    const dake::math::fvec3d &position,
+                    const dake::math::fvec3 &velocity,
+                    const dake::math::fvec3 &orientation);
 
 void handle_particles(Particles &output, const Particles &input,
                       WorldState &out_ws, const ShipState &player);

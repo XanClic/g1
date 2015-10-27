@@ -1,7 +1,7 @@
 #ifndef RADAR_HPP
 #define RADAR_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -15,11 +15,11 @@ struct Input;
 struct RadarTarget {
     // Vector on the unit sphere is the direction the signal was sent to and
     // arrived from; the distance is determined by the travel time
-    dake::math::vec3 relative_position;
+    dake::math::fvec3 relative_position;
 
     // The difference between the last relative position and the current
     // relative position (scaled by the time interval)
-    dake::math::vec3 relative_velocity;
+    dake::math::fvec3 relative_velocity;
 
     uint64_t id;
 };

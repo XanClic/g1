@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 
 struct Input {
@@ -17,7 +17,8 @@ struct Input {
 void init_ui(void);
 
 void ui_process_events(Input &input);
-void ui_process_menu_events(bool &quit, bool &mouse_down, dake::math::vec2 &mouse_pos);
+void ui_process_menu_events(bool &quit, bool &mouse_down,
+                            dake::math::fvec2 &mouse_pos);
 void ui_swap_buffers(void);
 
 #endif

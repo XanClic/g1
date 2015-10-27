@@ -662,12 +662,12 @@ static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 }
 
 
-static void update_6way_axis(Input &input, GamepadAxis left, const vec2 &state,
-                             vec2 &prev_state)
+static void update_6way_axis(Input &input, GamepadAxis left, const fvec2 &state,
+                             fvec2 &prev_state)
 {
-    vec2 difference;
+    fvec2 difference;
     if (isnanf(prev_state.x())) {
-        difference = vec2::zero();
+        difference = fvec2::zero();
     } else {
         difference = state - prev_state;
     }
@@ -678,12 +678,12 @@ static void update_6way_axis(Input &input, GamepadAxis left, const vec2 &state,
         nrm = 1e-3f;
     }
 
-    vec2 state_left_ortho(-state.y(), state.x());
+    fvec2 state_left_ortho(-state.y(), state.x());
 
     float straight_part = fabsf(difference.dot(state)) / nrm;
     float circle_part = difference.dot(state_left_ortho) / nrm;
 
-    vec3 circle_difference;
+    fvec3 circle_difference;
     circle_difference.x() = straight_part * difference.x();
     circle_difference.y() = straight_part * difference.y();
     circle_difference.z() = circle_part * difference.length();
@@ -713,7 +713,7 @@ static void update_6way_axis(Input &input, GamepadAxis left, const vec2 &state,
 }
 
 
-static void invalidate_6way_axis(GamepadAxis left, vec2 &prev_state)
+static void invalidate_6way_axis(GamepadAxis left, fvec2 &prev_state)
 {
     for (int i = 0; i < 6; i++) {
         auto it = gamepad_axis_mappings.find(left);
@@ -733,9 +733,9 @@ static void invalidate_6way_axis(GamepadAxis left, vec2 &prev_state)
 
 void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
 {
-    static vec2 prev_lpad(NAN, NAN);
-    static vec2 prev_rpad(NAN, NAN);
-    static vec2 prev_analog(NAN, NAN);
+    static fvec2 prev_lpad(NAN, NAN);
+    static fvec2 prev_rpad(NAN, NAN);
+    static fvec2 prev_analog(NAN, NAN);
 
     if (!modifiers) {
         if (gp->lpad_valid()) {
@@ -892,7 +892,8 @@ void ui_process_events(Input &input)
 }
 
 
-void ui_process_menu_events(bool &quit, bool &mouse_down, dake::math::vec2 &mouse_pos)
+void ui_process_menu_events(bool &quit, bool &mouse_down,
+                            dake::math::fvec2 &mouse_pos)
 {
     int abs_x, abs_y;
     mouse_down = SDL_GetMouseState(&abs_x, &abs_y) & SDL_BUTTON(SDL_BUTTON_LEFT);

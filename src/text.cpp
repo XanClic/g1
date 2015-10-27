@@ -15,11 +15,11 @@ using namespace dake::math;
 static gl::vertex_array *char_va;
 static gl::program *char_prg;
 static gl::texture *font[LOCALIZATIONS];
-static vec2 font_fr[LOCALIZATIONS];
+static fvec2 font_fr[LOCALIZATIONS];
 
 
 struct CharVAElement {
-    vec2 pos;
+    fvec2 pos;
     unsigned chr;
 };
 
@@ -37,7 +37,7 @@ void init_text(void)
 
         ysign = (m < 2) ? -ysign : ysign;
 
-        cvad[i].pos = vec2(i / 5 + (m % 2) * .9999f, ysign * .5f);
+        cvad[i].pos = fvec2(i / 5 + (m % 2) * .9999f, ysign * .5f);
     }
 
     char_va = new gl::vertex_array;
@@ -81,13 +81,14 @@ void init_text(void)
 }
 
 
-void set_text_color(const vec4 &color)
+void set_text_color(const fvec4 &color)
 {
-    char_prg->uniform<vec4>("color") = color;
+    char_prg->uniform<fvec4>("color") = color;
 }
 
 
-void draw_text(const vec2 &pos, const vec2 &size, const std::string &text, HAlignment halign, VAlignment valign)
+void draw_text(const fvec2 &pos, const fvec2 &size, const std::string &text,
+               HAlignment halign, VAlignment valign)
 {
     std::vector<unsigned> tt;
     for (int i = 0; text[i]; i++) {
@@ -126,7 +127,7 @@ void draw_text(const vec2 &pos, const vec2 &size, const std::string &text, HAlig
 
     char_va->attrib(1)->load(sizeof(CharVAElement), offsetof(CharVAElement, chr));
 
-    vec2 position = pos;
+    fvec2 position = pos;
     switch (halign) {
         case ALIGN_LEFT:   break;
         case ALIGN_CENTER: position.x() -= tt.size() * size.x() / 2.f; break;
@@ -150,9 +151,9 @@ void draw_text(const vec2 &pos, const vec2 &size, const std::string &text, HAlig
         char_prg->uniform<gl::texture>("font") = *font[olo];
     }
 
-    char_prg->uniform<vec2>("position") = position;
-    char_prg->uniform<vec2>("char_size") = size;
-    char_prg->uniform<vec2>("font_char_fill_ratio") = font_fr[olo];
+    char_prg->uniform<fvec2>("position") = position;
+    char_prg->uniform<fvec2>("char_size") = size;
+    char_prg->uniform<fvec2>("font_char_fill_ratio") = font_fr[olo];
 
     char_va->set_elements(tt.size() * 5);
     char_va->draw(GL_TRIANGLE_STRIP);

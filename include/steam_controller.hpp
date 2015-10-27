@@ -1,7 +1,7 @@
 #ifndef STEAM_CONTROLLER_HPP
 #define STEAM_CONTROLLER_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 extern "C" {
 #include <libusb.h>
@@ -47,9 +47,9 @@ class SteamController {
 
         uint32_t raw_button_state = 0;
 
-        dake::math::vec2 lpad_status = dake::math::vec2::zero();
-        dake::math::vec2 rpad_status = dake::math::vec2::zero();
-        dake::math::vec2 analog_status = dake::math::vec2::zero();
+        dake::math::fvec2 lpad_status = dake::math::fvec2::zero();
+        dake::math::fvec2 rpad_status = dake::math::fvec2::zero();
+        dake::math::fvec2 analog_status = dake::math::fvec2::zero();
         float lshoulder_status = 0.f, rshoulder_status = 0.f;
 
         std::thread *usb_thread = nullptr;
@@ -101,9 +101,9 @@ class SteamController {
         bool rpad_valid(void) const;
         bool analog_valid(void) const;
 
-        const dake::math::vec2 &lpad(void) const { return lpad_status; }
-        const dake::math::vec2 &rpad(void) const { return rpad_status; }
-        const dake::math::vec2 &analog(void) const { return analog_status; }
+        const dake::math::fvec2 &lpad(void) const { return lpad_status; }
+        const dake::math::fvec2 &rpad(void) const { return rpad_status; }
+        const dake::math::fvec2 &analog(void) const { return analog_status; }
         float lshoulder(void) const { return lshoulder_status; }
         float rshoulder(void) const { return rshoulder_status; }
 

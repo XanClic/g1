@@ -38,7 +38,7 @@ std::string menu_loop(void)
     bool quit = false;
     Buttons to_game = NONE;
     bool mouse_down = false, mouse_was_down;
-    vec2 mouse_pos;
+    fvec2 mouse_pos;
 
     gl::image menu_bg_img("assets/menu_bg.png");
     menu_bg_aspect = static_cast<float>(menu_bg_img.width()) / menu_bg_img.height();
@@ -109,39 +109,41 @@ static void render_menu(Buttons loading)
     menu_prg->use();
     menu_prg->uniform<gl::texture>("menu_bg") = *menu_bg;
 
-    vec2 menu_bg_size = vec2(menu_bg_aspect * height / width, 1.f);
+    fvec2 menu_bg_size = fvec2(menu_bg_aspect * height / width, 1.f);
     if (menu_bg_size.x() > 1.f) {
         menu_bg_size /= static_cast<float>(menu_bg_size.x());
     }
 
-    menu_prg->uniform<vec2>("size") = menu_bg_size;
+    menu_prg->uniform<fvec2>("size") = menu_bg_size;
 
     menu_va->draw(GL_TRIANGLE_STRIP);
 
 
     if (loading == NONE) {
-        set_text_color((hover == TEST_ENVIRONMENT) ? vec4(1.f, 1.f, 1.f, 1.f)
-                     : (down  == TEST_ENVIRONMENT) ? vec4(.3f, .3f, .3f, 1.f)
-                                           : vec4(.6f, .6f, .6f, 1.f));
+        set_text_color((hover == TEST_ENVIRONMENT) ? fvec4(1.f, 1.f, 1.f, 1.f)
+                     : (down  == TEST_ENVIRONMENT) ? fvec4(.3f, .3f, .3f, 1.f)
+                                                   : fvec4(.6f, .6f, .6f, 1.f));
 
-        draw_text(vec2(-.9f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_ENVIRONMENT),
-                  ALIGN_LEFT, ALIGN_BOTTOM);
+        draw_text(fvec2(-.9f, -.9f), fvec2(.1f * height / width, .2f),
+                  localize(LS_TEST_ENVIRONMENT), ALIGN_LEFT, ALIGN_BOTTOM);
 
-        set_text_color((hover == TEST_SCENARIO) ? vec4(1.f, 1.f, 1.f, 1.f)
-                     : (down  == TEST_SCENARIO) ? vec4(.3f, .3f, .3f, 1.f)
-                                           : vec4(.6f, .6f, .6f, 1.f));
+        set_text_color((hover == TEST_SCENARIO) ? fvec4(1.f, 1.f, 1.f, 1.f)
+                     : (down  == TEST_SCENARIO) ? fvec4(.3f, .3f, .3f, 1.f)
+                                                : fvec4(.6f, .6f, .6f, 1.f));
 
-        draw_text(vec2(.9f, -.9f), vec2(.1f * height / width, .2f), localize(LS_TEST_SCENARIO),
-                  ALIGN_RIGHT, ALIGN_BOTTOM);
+        draw_text(fvec2(.9f, -.9f), fvec2(.1f * height / width, .2f),
+                  localize(LS_TEST_SCENARIO), ALIGN_RIGHT, ALIGN_BOTTOM);
     } else {
-        set_text_color(vec4(.5f, .5f, .5f, 1.f));
+        set_text_color(fvec4(.5f, .5f, .5f, 1.f));
 
-        draw_text(vec2(-.9f, -.9f), vec2(.1f * height / width, .2f),
-                  localize(loading == TEST_ENVIRONMENT ? LS_LOADING : LS_TEST_ENVIRONMENT),
+        draw_text(fvec2(-.9f, -.9f), fvec2(.1f * height / width, .2f),
+                  localize(loading == TEST_ENVIRONMENT ? LS_LOADING
+                                                       : LS_TEST_ENVIRONMENT),
                   ALIGN_LEFT, ALIGN_BOTTOM);
 
-        draw_text(vec2(.9f, -.9f), vec2(.1f * height / width, .2f),
-                  localize(loading == TEST_SCENARIO ? LS_LOADING : LS_TEST_SCENARIO),
+        draw_text(fvec2(.9f, -.9f), fvec2(.1f * height / width, .2f),
+                  localize(loading == TEST_SCENARIO ? LS_LOADING
+                                                    : LS_TEST_SCENARIO),
                   ALIGN_RIGHT, ALIGN_BOTTOM);
     }
 

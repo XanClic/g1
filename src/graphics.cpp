@@ -151,7 +151,8 @@ void update_resolution(void)
 
     status.aspect = static_cast<float>(change_width) / change_height;
 
-    status.projection = mat4::projection(status.yfov, status.aspect, status.z_near, status.z_far);
+    status.projection = fmat4::projection(status.yfov, status.aspect,
+                                          status.z_near, status.z_far);
     glViewport(0, 0, change_width, change_height);
 
     main_fb->resize(change_width, change_height);
@@ -176,33 +177,19 @@ void register_resize_handler(void (*rh)(unsigned w, unsigned h))
 }
 
 
-static void calculate_camera(mat4 &mat, const vec3 &pos, const vec3 &forward, const vec3 &up)
+static void calculate_camera(fmat4 &mat, const fvec3 &pos, const fvec3 &forward,
+                             const fvec3 &up)
 {
-    vec3 f = forward.normalized();
-    vec3 u = up.normalized();
-    vec3 r = f.cross(u).normalized();
+    fvec3 f = forward.normalized();
+    fvec3 u = up.normalized();
+    fvec3 r = f.cross(u).normalized();
 
     u = r.cross(f);
 
-    mat[0][0] =  r[0];
-    mat[0][1] =  u[0];
-    mat[0][2] = -f[0];
-    mat[0][3] = 0.f;
-
-    mat[1][0] =  r[1];
-    mat[1][1] =  u[1];
-    mat[1][2] = -f[1];
-    mat[1][3] = 0.f;
-
-    mat[2][0] =  r[2];
-    mat[2][1] =  u[2];
-    mat[2][2] = -f[2];
-    mat[2][3] = 0.f;
-
-    mat[3][0] = 0.f;
-    mat[3][1] = 0.f;
-    mat[3][2] = 0.f;
-    mat[3][3] = 1.f;
+    mat[0] = fvec4(r[0], u[0], -f[0], 0.f);
+    mat[1] = fvec4(r[1], u[1], -f[1], 0.f);
+    mat[2] = fvec4(r[2], u[2], -f[2], 0.f);
+    mat[3] = fvec4( 0.f,  0.f,   0.f, 1.f);
 
     mat.translate(-pos);
 }
@@ -218,14 +205,15 @@ void do_graphics(const WorldState &input)
     const ShipState &ps = input.ships[input.player_ship];
 
     status.camera_position = ps.position
-                           + mat3(ps.right, ps.up, ps.forward) *
+                           + fmat3(ps.right, ps.up, -ps.forward) *
                              ps.ship->cockpit_position;
 
     status.camera_forward  = ps.forward;
 
-    calculate_camera(status.world_to_camera, status.camera_position,
+    calculate_camera(status.world_to_camera,
+                     (fvec3)status.camera_position,
                      status.camera_forward, ps.up);
-    calculate_camera(status.relative_to_camera, vec3::zero(),
+    calculate_camera(status.relative_to_camera, fvec3::zero(),
                      status.camera_forward, ps.up);
 
 

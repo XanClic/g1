@@ -110,12 +110,12 @@ void Software::sg(const char *n, int v)
 }
 
 
-static vec<3, double> lua_tovector(lua_State *ls, int index)
+static fvec3d lua_tovector(lua_State *ls, int index)
 {
-    vec<3, double> v;
+    fvec3d v;
 
     if (lua_isnil(ls, index)) {
-        return vec<3, double>::zero();
+        return fvec3d::zero();
     }
 
     lua_getfield(ls, index, "x");
@@ -144,7 +144,7 @@ static int luaw_vecdiv(lua_State *ls);
 static int luaw_vecunm(lua_State *ls);
 
 
-static void lua_pushvector(lua_State *ls, const vec<3, double> &vec)
+static void lua_pushvector(lua_State *ls, const fvec3 &vec)
 {
     lua_newtable(ls);
 
@@ -196,9 +196,8 @@ static int luaw_veclength(lua_State *ls)
 
 static int luaw_vecrotate(lua_State *ls)
 {
-    mat4 rot = mat4::identity().rotate(lua_tonumber(ls, 3),
-                                       lua_tovector(ls, 2));
-    lua_pushvector(ls, rot * vec4::direction(lua_tovector(ls, 1)));
+    fmat4 rot(fmat4::rotation(lua_tonumber(ls, 3), lua_tovector(ls, 2)));
+    lua_pushvector(ls, rot * fvec4::direction(lua_tovector(ls, 1)));
     return 1;
 }
 
@@ -251,7 +250,7 @@ static int luaw_vecunm(lua_State *ls)
 
 static int luaw_crossp(lua_State *ls)
 {
-    lua_pushvector(ls, lua_tovector(ls, 1).cross(lua_tovector(ls, 2)));
+    lua_pushvector(ls, crossp(lua_tovector(ls, 1), lua_tovector(ls, 2)));
     return 1;
 }
 
@@ -265,9 +264,9 @@ static int luaw_dotp(lua_State *ls)
 
 static int luaw_vec3(lua_State *ls)
 {
-    lua_pushvector(ls, vec3(lua_tonumber(ls, 1),
-                            lua_tonumber(ls, 2),
-                            lua_tonumber(ls, 3)));
+    lua_pushvector(ls, fvec3(lua_tonumber(ls, 1),
+                             lua_tonumber(ls, 2),
+                             lua_tonumber(ls, 3)));
     return 1;
 }
 
@@ -322,16 +321,16 @@ void FlightControlSoftware::execute(ShipState &ship, const Input &input, float i
 
     lua_newtable(ls());
 
-    vec3 rotate(input.get_mapping("rotate.+x") - input.get_mapping("rotate.-x"),
-                input.get_mapping("rotate.+y") - input.get_mapping("rotate.-y"),
-                input.get_mapping("rotate.+z") - input.get_mapping("rotate.-z"));
+    fvec3 rotate(input.get_mapping("rotate.+x") - input.get_mapping("rotate.-x"),
+                 input.get_mapping("rotate.+y") - input.get_mapping("rotate.-y"),
+                 input.get_mapping("rotate.+z") - input.get_mapping("rotate.-z"));
 
     lua_pushvector(ls(), rotate);
     lua_setfield(ls(), -2, "rotate");
 
-    vec3 strafe(input.get_mapping("strafe.+x") - input.get_mapping("strafe.-x"),
-                input.get_mapping("strafe.+y") - input.get_mapping("strafe.-y"),
-                input.get_mapping("strafe.+z") - input.get_mapping("strafe.-z"));
+    fvec3 strafe(input.get_mapping("strafe.+x") - input.get_mapping("strafe.-x"),
+                 input.get_mapping("strafe.+y") - input.get_mapping("strafe.-y"),
+                 input.get_mapping("strafe.+z") - input.get_mapping("strafe.-z"));
 
     lua_pushvector(ls(), strafe);
     lua_setfield(ls(), -2, "strafe");
@@ -415,14 +414,14 @@ int ScenarioScript::luaw_set_ship_position(lua_State *ls)
     ShipState *ship = lua_toship(ls, 1);
     float lng = lua_tonumber(ls, 2) - M_PIf / 2.f;
     float lat = lua_tonumber(ls, 3);
-    float height = lua_tonumber(ls, 4);
+    double height = lua_tonumber(ls, 4);
 
     ship->position = ss->current_world_state->earth_mv
-                     * vec4(cosf(lat) * sinf(lng),
-                            sinf(lat),
-                            cosf(lat) * cosf(lng),
-                            1.f);
-    ship->position += static_cast<double>(height) * ship->position.normalized();
+                     * fvec4(cosf(lat) * sinf(lng),
+                             sinf(lat),
+                             cosf(lat) * cosf(lng),
+                             1.f);
+    ship->position += height * ship->position.normalized();
 
     return 0;
 }
@@ -445,14 +444,14 @@ int ScenarioScript::luaw_set_ship_bearing(lua_State *ls)
     ScenarioScript *ss =
         static_cast<ScenarioScript *>(lua_touserdata(ls, lua_upvalueindex(1)));
     ShipState *ship = lua_toship(ls, 1);
-    vec3 tangent = vec3(ss->current_world_state->earth_mv
-                        * vec4(0.f, 1.f, 0.f, 0.f))
-                   .cross(ship->position).normalized();
+    fvec3 tangent = crossp(fvec3(ss->current_world_state->earth_mv
+                                 * fvec4(0.f, 1.f, 0.f, 0.f)),
+                           fvec3(ship->position)).normalized();
 
     ship->up      = ship->position.normalized();
-    ship->forward = vec3(mat4::identity().rotated(lua_tonumber(ls, 2), ship->up)
-                         * vec4::direction(tangent));
-    ship->right   = ship->forward.cross(ship->up);
+    ship->forward = fmat4::rotation_normalized(lua_tonumber(ls, 2), ship->up)
+                    * fvec4::direction(tangent);
+    ship->right   = crossp(ship->forward, ship->up);
 
     return 0;
 }
@@ -548,7 +547,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
 
     lua_newtable(ls());
 
-    struct cvecval { const char *name; const vec<3, double> &v; };
+    struct cvecval { const char *name; const fvec3d &v; };
     for (const auto &vec: (cvecval[]){ { "velocity", ips.velocity }, { "position", ips.position },
                                        { "up", ips.up }, { "forward", ips.forward }, { "right", ips.right } })
     {
@@ -565,8 +564,8 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
         return;
     }
 
-    vec<3, double> ovel, oup, ofwd, orgt;
-    struct vecval { const char *name; vec<3, double> &v; };
+    fvec3d ovel, oup, ofwd, orgt;
+    struct vecval { const char *name; fvec3d &v; };
     for (const auto &vec: (vecval[]){ { "velocity", ovel }, { "position", ops.position },
                                       { "up", oup }, { "forward", ofwd }, { "right", orgt } })
     {
@@ -576,11 +575,11 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
     }
 
     if (!oup.length()) {
-        oup = orgt.cross(ofwd);
+        oup = crossp(orgt, ofwd);
     } else if (!ofwd.length()) {
-        ofwd = oup.cross(orgt);
+        ofwd = crossp(oup, orgt);
     } else if (!orgt.length()) {
-        orgt = ofwd.cross(oup);
+        orgt = crossp(ofwd, oup);
     }
 
     ops.velocity = ovel;

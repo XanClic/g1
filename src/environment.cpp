@@ -407,6 +407,8 @@ void init_environment(void)
                                       gl::shader::frag("shaders/aurora_frag.glsl")};
 
         aurora_prg->bind_attrib("va_position", 0);
+        aurora_prg->bind_attrib("va_texcoord", 1);
+        aurora_prg->bind_attrib("va_strength", 2);
         aurora_prg->bind_frag("out_col", 0);
 
         aurora_bands = new gl::texture("assets/aurora-bands.png");
@@ -638,11 +640,11 @@ static void lod_set_uniforms(void)
                         earth_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
                     }
 
-                    earth_prg->uniform<vec4>("day_texture_params[" + si + "]")
-                        = vec4(static_cast<float>(day_lods[lod].horz_tiles),
-                               static_cast<float>(day_lods[lod].vert_tiles),
-                               tile.s,
-                               tile.t);
+                    earth_prg->uniform<fvec4>("day_texture_params[" + si + "]")
+                        = fvec4(static_cast<float>(day_lods[lod].horz_tiles),
+                                static_cast<float>(day_lods[lod].vert_tiles),
+                                tile.s,
+                                tile.t);
                 }
 
                 if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
@@ -653,11 +655,12 @@ static void lod_set_uniforms(void)
                         earth_prg->uniform<gl::texture>("night_textures[" + si + "]") = *tile.texture;
                     }
 
-                    earth_prg->uniform<vec4>("night_texture_params[" + si + "]")
-                        = vec4(static_cast<float>(night_lods[lod].horz_tiles),
-                               static_cast<float>(night_lods[lod].vert_tiles),
-                               tile.s,
-                               tile.t);
+                    earth_prg->uniform<fvec4>("night_texture_params[" + si +
+                                              "]")
+                        = fvec4(static_cast<float>(night_lods[lod].horz_tiles),
+                                static_cast<float>(night_lods[lod].vert_tiles),
+                                tile.s,
+                                tile.t);
                 }
             }
         }
@@ -674,11 +677,11 @@ static void lod_set_uniforms(void)
                         cloud_prg->uniform<gl::texture>("day_textures[" + si + "]") = *tile.texture;
                     }
 
-                    cloud_prg->uniform<vec4>("day_texture_params[" + si + "]")
-                        = vec4(static_cast<float>(day_lods[lod].horz_tiles),
-                               static_cast<float>(day_lods[lod].vert_tiles),
-                               tile.s,
-                               tile.t);
+                    cloud_prg->uniform<fvec4>("day_texture_params[" + si + "]")
+                        = fvec4(static_cast<float>(day_lods[lod].horz_tiles),
+                                static_cast<float>(day_lods[lod].vert_tiles),
+                                tile.s,
+                                tile.t);
                 }
             }
         }
@@ -743,7 +746,8 @@ static int covered_map_fcr(int *map, int lod)
 }
 
 
-static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, bool update)
+static void update_lods(const GraphicsStatus &gstat, const fmat4 &cur_earth_mv,
+                        bool update)
 {
     static std::thread *loading_thread = nullptr, *unloading_thread = nullptr;
     static vec<2, int32_t> *indices;
@@ -783,7 +787,7 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
         return;
     }
 
-    mat3 norm_mat = mat3(cur_earth_mv).transposed_inverse();
+    fmat3 norm_mat = fmat3(cur_earth_mv).transposed_inverse();
     bool changed = false;
 
     int eff_min_lod = min_lod, eff_max_lod = max_lod;
@@ -802,10 +806,10 @@ static void update_lods(const GraphicsStatus &gstat, const mat4 &cur_earth_mv, b
         for (int y = 0; y < 16; y++) {
             float ya = (y + .5f) / 16.f * static_cast<float>(M_PI);
 
-            vec3 lnrm = vec3(sinf(ya) * cosf(xa), cosf(ya), sinf(ya) * sinf(xa));
-            vec3 nrm = (norm_mat * lnrm).normalized();
+            fvec3 lnrm = fvec3(sinf(ya) * cosf(xa), cosf(ya), sinf(ya) * sinf(xa));
+            fvec3 nrm = (norm_mat * lnrm).approx_normalized();
 
-            float pos_dot = nrm.dot(gstat.camera_position);
+            float pos_dot = dotp(nrm, (fvec3)gstat.camera_position);
             if (pos_dot < 0.f) {
                 if (tile_lods[x][y] != -1) {
                     changed = true;
@@ -920,8 +924,18 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
             for (size_t i = 0; i < world.auroras.size(); i++) {
                 gl::vertex_array *aurora_va = new gl::vertex_array;
                 aurora_va->set_elements(world.auroras[i].samples().size());
-                aurora_va->attrib(0)->format(4);
-                aurora_va->attrib(0)->data(nullptr, world.auroras[i].samples().size() * sizeof(vec4), GL_DYNAMIC_DRAW);
+
+                aurora_va->attrib(0)->format(2);
+                aurora_va->attrib(0)->data(nullptr,
+                                           world.auroras[i].samples().size()
+                                           * sizeof(Aurora::Sample),
+                                           GL_DYNAMIC_DRAW, false);
+
+                aurora_va->attrib(1)->format(1);
+                aurora_va->attrib(1)->reuse_buffer(aurora_va->attrib(0));
+
+                aurora_va->attrib(2)->format(1);
+                aurora_va->attrib(2)->reuse_buffer(aurora_va->attrib(0));
 
                 aurora_vas.push_back(aurora_va);
             }
@@ -930,16 +944,23 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         for (size_t i = 0; i < aurora_vas.size(); i++) {
             memcpy(aurora_vas[i]->attrib(0)->map(),
                    world.auroras[i].samples().data(),
-                   world.auroras[i].samples().size() * sizeof(vec4));
+                   world.auroras[i].samples().size() * sizeof(Aurora::Sample));
 
             aurora_vas[i]->attrib(0)->unmap();
+
+            aurora_vas[i]->attrib(0)->load(sizeof(Aurora::Sample),
+                                           offsetof(Aurora::Sample, position));
+            aurora_vas[i]->attrib(1)->load(sizeof(Aurora::Sample),
+                                           offsetof(Aurora::Sample, texcoord));
+            aurora_vas[i]->attrib(2)->load(sizeof(Aurora::Sample),
+                                           offsetof(Aurora::Sample, strength));
         }
     }
 
 
-    mat4 cur_cloud_mv  = world.earth_mv.scaled(vec3(6381e3f / 6371e3f, 6381e3f / 6371e3f, 6381e3f / 6371e3f));
-    mat4 cur_atmo_mv   = world.earth_mv.scaled(vec3(6441e3f / 6371e3f, 6441e3f / 6371e3f, 6441e3f / 6371e3f));
-    mat4 cur_aurora_mv = world.earth_mv.scaled(vec3(6421e3f / 6371e3f, 6421e3f / 6371e3f, 6421e3f / 6371e3f));
+    fmat4 cur_cloud_mv  = world.earth_mv.scaled(fvec3(6381e3f / 6371e3f));
+    fmat4 cur_atmo_mv   = world.earth_mv.scaled(fvec3(6441e3f / 6371e3f));
+    fmat4 cur_aurora_mv = world.earth_mv.scaled(fvec3(6421e3f / 6371e3f));
 
 
     static float lod_update_timer;
@@ -952,7 +973,7 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     float sa_zn = (status.camera_position.length() - 6350e3f) / 1.5f;
     float sa_zf =  status.camera_position.length() + 7000e3f;
 
-    mat4 sa_proj = mat4::projection(status.yfov, status.aspect, sa_zn, sa_zf);
+    fmat4 sa_proj = fmat4::projection(status.yfov, status.aspect, sa_zn, sa_zf);
 
 
     // everything is in front of the skybox
@@ -961,45 +982,50 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     skybox_tex->bind();
 
-    mat4 skybox_proj = mat4::projection(status.yfov, status.aspect,
-                                        1000e3f, 1500e3f);
-    mat4 skybox_mv   = mat3(status.world_to_camera);
+    fmat4 skybox_proj = fmat4::projection(status.yfov, status.aspect,
+                                          1000e3f, 1500e3f);
+    fmat4 skybox_mv   = status.world_to_camera;
     skybox_mv[3][3] = 1.f;
 
     skybox_prg->use();
-    skybox_prg->uniform<mat4>("mat_mvp") = skybox_proj * skybox_mv;
+    skybox_prg->uniform<fmat4>("mat_mvp") = skybox_proj * skybox_mv;
     skybox_prg->uniform<gl::cubemap>("skybox") = *skybox_tex;
 
     skybox->draw();
 
 
-    vec4 sun_pos = status.world_to_camera *
-                   vec4::position(149.6e9f * -world.sun_light_dir);
-    vec4 projected_sun = status.projection * sun_pos;
+    fvec4 sun_pos = status.world_to_camera *
+                    fvec4::position(149.6e9f * -world.sun_light_dir);
+    fvec4 projected_sun = status.projection * sun_pos;
     projected_sun /= projected_sun.w();
 
     if (sun_pos.z() < 0.f) {
         float sun_radius = atanf(696.e6f / sun_pos.length()) * 2.f / status.yfov;
 
         sun_prg->use();
-        sun_prg->uniform<vec2>("sun_position") = projected_sun;
-        sun_prg->uniform<vec2>("sun_size") = vec2(sun_radius * status.height / status.width, sun_radius);
+        sun_prg->uniform<fvec2>("sun_position") = projected_sun;
+        sun_prg->uniform<fvec2>("sun_size") = fvec2(sun_radius * status.height
+                                                    / status.width, sun_radius);
 
         quad_vertices->draw(GL_TRIANGLE_STRIP);
     }
 
 
-    vec3 moon_right = (status.camera_forward.cross(vec3(0.f, 1.f, 0.f))).normalized();
-    vec3 moon_up = moon_right.cross(status.camera_forward);
+    fvec3 moon_right = crossp(status.camera_forward, fvec3(0.f, 1.f, 0.f))
+                       .approx_normalized();
+    fvec3 moon_up = crossp(moon_right, status.camera_forward);
 
     moon_tex->bind();
 
     moon_prg->use();
-    moon_prg->uniform<vec3>("moon_position") = world.moon_pos;
-    moon_prg->uniform<vec3>("right") = moon_right;
-    moon_prg->uniform<vec3>("up") = moon_up;
-    moon_prg->uniform<mat3>("mat_nrm") = mat3(mat4::identity().rotated(-world.moon_angle_to_sun, vec3(0.f, 1.f, 0.f)));
-    moon_prg->uniform<mat4>("mat_mvp") = status.projection * status.world_to_camera;
+    moon_prg->uniform<fvec3>("moon_position") = world.moon_pos;
+    moon_prg->uniform<fvec3>("right") = moon_right;
+    moon_prg->uniform<fvec3>("up") = moon_up;
+    moon_prg->uniform<fmat3>("mat_nrm") =
+        fmat3::rotation_normalized(-world.moon_angle_to_sun,
+                                   fvec3(0.f, 1.f, 0.f));
+    moon_prg->uniform<fmat4>("mat_mvp") = status.projection
+                                          * status.world_to_camera;
     moon_prg->uniform<gl::texture>("moon_tex") = *moon_tex;
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
@@ -1024,8 +1050,8 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     glCullFace(GL_FRONT);
 
     atmob_prg->use();
-    atmob_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
-    atmob_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
+    atmob_prg->uniform<fmat4>("mat_mv") = cur_atmo_mv;
+    atmob_prg->uniform<fmat4>("mat_proj") = sa_proj * status.world_to_camera;
 
     earth->draw();
 
@@ -1037,11 +1063,12 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     glCullFace(GL_BACK);
 
     earth_prg->use();
-    earth_prg->uniform<mat4>("mat_mv") = world.earth_mv;
-    earth_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
-    earth_prg->uniform<mat3>("mat_nrm") = mat3(world.earth_mv).transposed_inverse();
-    earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
-    earth_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
+    earth_prg->uniform<fmat4>("mat_mv") = world.earth_mv;
+    earth_prg->uniform<fmat4>("mat_proj") = sa_proj * status.world_to_camera;
+    earth_prg->uniform<fmat3>("mat_nrm") = fmat3(world.earth_mv)
+                                           .transposed_inverse();
+    earth_prg->uniform<fvec3>("cam_pos") = status.camera_position;
+    earth_prg->uniform<fvec3>("light_dir") = world.sun_light_dir;
 
     if (!gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
         day_tex->bind();
@@ -1070,10 +1097,11 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
     cloud_normal_map->bind();
 
     cloud_prg->use();
-    cloud_prg->uniform<mat4>("mat_mv") = cur_cloud_mv;
-    cloud_prg->uniform<mat4>("mat_proj") = sa_proj * status.world_to_camera;
-    cloud_prg->uniform<mat3>("mat_nrm") = mat3(cur_cloud_mv).transposed_inverse();
-    cloud_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
+    cloud_prg->uniform<fmat4>("mat_mv") = cur_cloud_mv;
+    cloud_prg->uniform<fmat4>("mat_proj") = sa_proj * status.world_to_camera;
+    cloud_prg->uniform<fmat3>("mat_nrm") = fmat3(cur_cloud_mv)
+                                           .transposed_inverse();
+    cloud_prg->uniform<fvec3>("light_dir") = world.sun_light_dir;
     cloud_prg->uniform<gl::texture>("cloud_normal_map") = *cloud_normal_map;
 
     if (!gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
@@ -1105,21 +1133,24 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
 
     draw_earth_prg->use();
     if (!in_atmosphere) {
-        draw_earth_prg->uniform<mat4>("mat_mv") = cur_atmo_mv;
-        draw_earth_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
-        draw_earth_prg->uniform<mat3>("mat_nrm") = mat3(cur_atmo_mv).transposed_inverse();
+        draw_earth_prg->uniform<fmat4>("mat_mv") = cur_atmo_mv;
+        draw_earth_prg->uniform<fmat4>("mat_proj") = status.projection
+                                                     * status.world_to_camera;
+        draw_earth_prg->uniform<fmat3>("mat_nrm") = fmat3(cur_atmo_mv)
+                                                    .transposed_inverse();
     } else {
-        draw_earth_prg->uniform<vec3>("cam_right") = ship.right;
-        draw_earth_prg->uniform<vec3>("cam_up") = ship.up;
+        draw_earth_prg->uniform<fvec3>("cam_right") = ship.right;
+        draw_earth_prg->uniform<fvec3>("cam_up") = ship.up;
         draw_earth_prg->uniform<float>("height") = height / 70e3f;
         draw_earth_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
         draw_earth_prg->uniform<float>("yhfov") = status.yfov / 2.f;
     }
-    draw_earth_prg->uniform<vec3>("cam_pos") = status.camera_position;
-    draw_earth_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
-    draw_earth_prg->uniform<vec3>("light_dir") = world.sun_light_dir;
-    draw_earth_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
-    draw_earth_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
+    draw_earth_prg->uniform<fvec3>("cam_pos") = status.camera_position;
+    draw_earth_prg->uniform<fvec3>("cam_fwd") = status.camera_forward;
+    draw_earth_prg->uniform<fvec3>("light_dir") = world.sun_light_dir;
+    draw_earth_prg->uniform<fvec2>("sa_z_dim") = fvec2(sa_zn, sa_zf);
+    draw_earth_prg->uniform<fvec2>("screen_dim") = fvec2(status.width,
+                                                         status.height);
     draw_earth_prg->uniform<gl::texture>("color") = (*sub_atmo_fbo)[0];
     draw_earth_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
     draw_earth_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
@@ -1140,12 +1171,14 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         sub_atmo_fbo->depth().bind();
 
         aurora_prg->use();
-        aurora_prg->uniform<mat4>("mat_mv") = cur_aurora_mv;
-        aurora_prg->uniform<mat4>("mat_proj") = status.projection * status.world_to_camera;
-        aurora_prg->uniform<vec3>("cam_pos") = status.camera_position;
-        aurora_prg->uniform<vec3>("cam_fwd") = status.camera_forward;
-        aurora_prg->uniform<vec2>("screen_dim") = vec2(status.width, status.height);
-        aurora_prg->uniform<vec2>("sa_z_dim") = vec2(sa_zn, sa_zf);
+        aurora_prg->uniform<fmat4>("mat_mv") = cur_aurora_mv;
+        aurora_prg->uniform<fmat4>("mat_proj") = status.projection
+                                                 * status.world_to_camera;
+        aurora_prg->uniform<fvec3>("cam_pos") = status.camera_position;
+        aurora_prg->uniform<fvec3>("cam_fwd") = status.camera_forward;
+        aurora_prg->uniform<fvec2>("screen_dim") = fvec2(status.width,
+                                                         status.height);
+        aurora_prg->uniform<fvec2>("sa_z_dim") = fvec2(sa_zn, sa_zf);
         aurora_prg->uniform<gl::texture>("stencil") = (*sub_atmo_fbo)[1];
         aurora_prg->uniform<gl::texture>("depth") = sub_atmo_fbo->depth();
         aurora_prg->uniform<gl::texture>("bands") = *aurora_bands;
