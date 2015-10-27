@@ -80,4 +80,4 @@ add_executable(polar-to-cube tools/polar-to-cube.cpp)
 target_link_libraries(polar-to-cube dake ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                                     txc_dxtn m)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS} -march=native -mtune=native -fno-math-errno -fomit-frame-pointer -flto")
