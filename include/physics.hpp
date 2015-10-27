@@ -1,12 +1,13 @@
 #ifndef PHYSICS_HPP
 #define PHYSICS_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <chrono>
 #include <string>
 #include <vector>
 
+#include "align-allocator.hpp"
 #include "aurora.hpp"
 #include "json-structs.hpp"
 #include "particles.hpp"
@@ -24,14 +25,14 @@ struct WorldState {
     float interval, real_interval;
     int time_speed_up;
 
-    dake::math::vec3 sun_light_dir;
-    dake::math::vec3 moon_pos;
+    dake::math::fvec3 sun_light_dir;
+    dake::math::fvec3 moon_pos;
     float earth_angle;
     float moon_angle_to_sun;
 
-    dake::math::mat4 earth_mv, earth_inv_mv;
+    dake::math::fmat4 earth_mv, earth_inv_mv;
 
-    std::vector<ShipState> ships;
+    AlignedVector<ShipState> ships;
     int player_ship;
     bool ship_list_changed;
 

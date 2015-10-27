@@ -43,12 +43,12 @@ static inline std::chrono::system_clock::duration
 static void handle_weapons(WorldState &output, const WorldState &input,
                            const Input &user_input,
                            ShipState &ship_out, const ShipState &ship_in,
-                           vec3 *weapon_force, vec3 *weapon_torque)
+                           fvec3 *weapon_force, fvec3 *weapon_torque)
 {
     int weapon_count = static_cast<int>(ship_in.ship->weapons.size());
     bool is_player_ship = &ship_in == &input.ships[input.player_ship];
     bool local_mat_initialized = false;
-    mat3 local_mat;
+    fmat3 local_mat;
 
     float aim_xp, aim_xn, aim_yp, aim_yn;
     aim_xp = user_input.get_mapping("aim.+x");
@@ -56,24 +56,11 @@ static void handle_weapons(WorldState &output, const WorldState &input,
     aim_yp = user_input.get_mapping("aim.+y");
     aim_yn = user_input.get_mapping("aim.-y");
 
-#if 0
-    if (aim_xp || aim_xn || aim_yp || aim_yn) {
-        mat3 rot(mat4::identity().rotated((aim_xp - aim_xn) / 64.f,
-                                          vec3(0.f, -1.f, 0.f))
-                                 .rotated((aim_yp - aim_yn) / 64.f,
-                                          vec3(1.f,  0.f, 0.f)));
-
-        for (int i = 0; i < weapon_count; i++) {
-            ship_out.weapon_forwards[i] = rot * ship_out.weapon_forwards[i];
-        }
-    }
-#else
     for (int i = 0; i < weapon_count; i++) {
-        ship_out.weapon_forwards[i] = vec3(aim_xp - aim_xn,
-                                           aim_yp - aim_yn,
-                                           -1.f).normalized();
+        ship_out.weapon_forwards[i] = fvec3(aim_xp - aim_xn,
+                                            aim_yp - aim_yn,
+                                            -1.f).approx_normalized();
     }
-#endif
 
     for (int i = 0; i < weapon_count; i++) {
         float new_cooldown = ship_in.weapon_cooldowns[i] - output.interval;
@@ -93,11 +80,11 @@ static void handle_weapons(WorldState &output, const WorldState &input,
                     local_mat_initialized = true;
                 }
 
-                vec3 fwd(local_mat * ship_out.weapon_forwards[i]);
+                fvec3 fwd(local_mat * ship_out.weapon_forwards[i]);
 
                 spawn_particle(output, ship_out, ship_out.position,
-                               ship_out.velocity +
-                               fwd * wc->projectile_velocity,
+                               fvec3(ship_out.velocity +
+                                     fwd * wc->projectile_velocity),
                                fwd * 20.f);
 
                 new_cooldown += wc->cooldown;
@@ -112,8 +99,8 @@ static void handle_weapons(WorldState &output, const WorldState &input,
     }
 
     // TODO
-    *weapon_force = vec3::zero();
-    *weapon_torque = vec3::zero();
+    *weapon_force = fvec3::zero();
+    *weapon_torque = fvec3::zero();
 }
 
 
@@ -157,7 +144,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     // 0 == vernal point (spring)
     float year_angle = (gmtime(&time_t_now)->tm_yday - 79) / 365.f * 2.f * M_PIf;
 
-    output.sun_light_dir = -vec3(cosf(year_angle), 0.f, sinf(year_angle));
+    output.sun_light_dir = -fvec3(cosf(year_angle), 0.f, sinf(year_angle));
 
     // 2015-04-18 18:56:56
     auto new_moon = std::chrono::system_clock::from_time_t(1429379816);
@@ -166,7 +153,7 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     float moon_phase_angle = fmodf(moon_phase_time / 2551442.9f, 1.f) * 2.f * M_PIf;
 
     // FIXME: Perigee, apogee and vertical angle (against ecliptic)
-    output.moon_pos = 383397.79163f * vec3(cosf(year_angle + moon_phase_angle),
+    output.moon_pos = 383397.7916f * fvec3(cosf(year_angle + moon_phase_angle),
                                            0.f,
                                            sinf(year_angle + moon_phase_angle));
 
@@ -181,9 +168,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
     output.earth_angle  = second_of_day / 86164.09f * 2.f * M_PIf;
     output.earth_angle -= year_angle;
 
-    output.earth_mv = mat4::identity().scaled(vec3(6371e3f, 6371e3f, 6371e3f))
-                                      .rotated(.41f, vec3(1.f, 0.f, 0.f))
-                                      .rotated(output.earth_angle, vec3(0.f, 1.f, 0.f));
+    output.earth_mv = fmat4::scaling(fvec3(6371e3f, 6371e3f, 6371e3f))
+                             .rotated_normalized(.41f, fvec3(1.f, 0.f, 0.f))
+                             .rotated_normalized(output.earth_angle,
+                                                 fvec3(0.f, 1.f, 0.f));
     output.earth_inv_mv = output.earth_mv.inverse();
 
 
@@ -203,13 +191,13 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         ShipState &out = output.ships[i];
 
         // Positive Z is backwards
-        mat3 local_mat(in.right, in.up, -in.forward);
+        fmat3 local_mat(in.right, in.up, -in.forward);
 
 
         bool physics_enabled = player_physics_enabled || i != input.player_ship;
 
         if (physics_enabled) {
-            vec3 forces = vec3::zero(), torque = vec3::zero();
+            fvec3 forces = fvec3::zero(), torque = fvec3::zero();
             for (size_t j = 0; j < out.ship->thrusters.size(); j++) {
                 float state = out.thruster_states[j];
                 if (state < 0.f) {
@@ -218,20 +206,21 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
                     state = 1.f;
                 }
 
-                vec3 force = state * (local_mat * out.ship->thrusters[j].force);
+                fvec3 force = state * (local_mat * out.ship->thrusters[j].force);
 
                 forces += force;
-                torque += (local_mat * out.ship->thrusters[j].relative_position)
+                torque += fvec3(local_mat *
+                                out.ship->thrusters[j].relative_position)
                           .cross(force);
             }
 
             forces += in.weapon_force;
             torque += in.weapon_torque;
 
-            vec3 accel = forces / in.total_mass;
+            fvec3 accel = forces / in.total_mass;
 
-            auto rk4_calc_accel = [&accel](const RK4State &state) -> vec3 {
-                vec3 total_accel = accel;
+            auto rk4_calc_accel = [&accel](const RK4State &state) -> fvec3 {
+                fvec3 total_accel = accel;
                 if (state.x.length() > 6371e3) {
                     total_accel += state.x * (-6.67384e-11 * 5.974e24)
                                    / pow(state.x.length(), 3.);
@@ -250,25 +239,29 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.position = rk4s.x;
         } else {
             if (player_fixed_to_ground) {
-                vec3 tangent = vec3(input.earth_mv * vec4(0.f, 1.f, 0.f, 0.f)).cross(in.position).normalized();
-                vec3 sphere_pos = (input.earth_inv_mv * vec4::direction(in.position)).normalized();
+                fvec3 tangent = crossp(fvec3(input.earth_mv * fvec4(0.f, 1.f, 0.f, 0.f)),
+                                       fvec3(in.position)).normalized();
+                fvec3 sphere_pos = (input.earth_inv_mv *
+                                    fvec4::direction(in.position).normalized());
                 sphere_pos.y() = 0.f;
-                vec3 earth_velocity = sphere_pos.length() * 6371e3f * 2.f * M_PIf / 86164.09f * tangent;
+                fvec3 earth_velocity = sphere_pos.length() * 6371e3f * 2.f * M_PIf / 86164.09f * tangent;
 
                 out.velocity = earth_velocity;
 
                 if (!fixed_to_ground_length) {
                     fixed_to_ground_length = in.position.length();
                 }
-                out.position = vec3(output.earth_mv * (input.earth_inv_mv * vec4::direction(in.position)));
+                out.position = output.earth_mv *
+                               (input.earth_inv_mv *
+                                fvec4::direction(in.position));
                 out.position = out.position.normalized() * fixed_to_ground_length;
             } else {
-                out.velocity = vec3::zero();
+                out.velocity = fvec3d::zero();
                 out.position = in.position;
             }
 
-            out.acceleration = vec3::zero();
-            out.torque = vec3::zero();
+            out.acceleration = fvec3::zero();
+            out.torque = fvec3::zero();
         }
 
         if (!physics_enabled) {
@@ -283,10 +276,10 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
         }
 
         if (physics_enabled && out.position.length() < 6371e3f) {
-            vec3 earth_normal = out.position.normalized();
+            fvec3 earth_normal = out.position.normalized();
             out.velocity = .8 * (out.velocity -
                                  2. * out.velocity.dot(earth_normal) *
-                                vec<3, double>(earth_normal));
+                                fvec3d(earth_normal));
             out.position = 6371e3 / out.position.length() * out.position;
         }
 
@@ -296,15 +289,16 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
             out.angular_momentum    = in.angular_momentum + out.torque * output.interval;
             out.rotational_velocity = out.angular_momentum / in.total_mass;
         } else {
-            out.angular_momentum    = vec3::zero();
-            out.rotational_velocity = vec3::zero();
+            out.angular_momentum    = fvec3::zero();
+            out.rotational_velocity = fvec3::zero();
         }
 
         if (physics_enabled) {
             if (in.rotational_velocity.length()) {
-                mat3 rot_mat(mat4::identity().rotated(in.rotational_velocity.length() * output.interval,
-                                                      in.rotational_velocity));
-                // out.right   = rot_mat * in.right;
+                fmat3 rot_mat(fmat3::rotation(in.rotational_velocity.length()
+                                              * output.interval,
+                                              in.rotational_velocity));
+                // out.right   = (rot_mat * in.right).normalized();
                 out.up      = (rot_mat * in.up).normalized();
                 out.forward = (rot_mat * in.forward).normalized();
 

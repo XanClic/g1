@@ -1,21 +1,21 @@
 #ifndef RUNGE_KUTTA_4_HPP
 #define RUNGE_KUTTA_4_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 #include <functional>
 
 
 struct RK4State {
-    RK4State(const dake::math::vec<3, double> &pos,
-             const dake::math::vec<3, double> &vel):
+    RK4State(const dake::math::fvec3d &pos,
+             const dake::math::fvec3d &vel):
         x(pos), v(vel)
     {}
 
-    dake::math::vec<3, double> x, v;
+    dake::math::fvec3d x, v;
 };
 
 
-typedef std::function<dake::math::vec3(const RK4State &state)>
+typedef std::function<dake::math::fvec3(const RK4State &state)>
         RK4CalcAccelerationFunc;
 
 RK4State rk4_integrate(const RK4State &initial, float dt,

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 
 enum HAlignment {
@@ -21,7 +21,9 @@ enum VAlignment {
 
 void init_text(void);
 
-void set_text_color(const dake::math::vec4 &color);
-void draw_text(const dake::math::vec2 &pos, const dake::math::vec2 &size, const std::string &text, HAlignment halign = ALIGN_LEFT, VAlignment valign = ALIGN_MIDDLE);
+void set_text_color(const dake::math::fvec4 &color);
+void draw_text(const dake::math::fvec2 &pos, const dake::math::fvec2 &size,
+               const std::string &text, HAlignment halign = ALIGN_LEFT,
+               VAlignment valign = ALIGN_MIDDLE);
 
 #endif

@@ -1,4 +1,4 @@
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 #include <dake/gl.hpp>
 
 #include <cmath>
@@ -59,8 +59,8 @@ void init_particles(void)
 
 
 void spawn_particle(WorldState &output, const ShipState &sender,
-                    const vec<3, double> &position, const vec3 &velocity,
-                    const vec3 &orientation)
+                    const fvec3d &position, const fvec3 &velocity,
+                    const fvec3 &orientation)
 {
     output.new_particles.pgd.emplace_back();
 
@@ -83,9 +83,9 @@ void handle_particles(Particles &output, const Particles &input,
 {
     size_t out_i = 0;
 
-    vec<3, double> cam_pos = player.position +
-                             mat3(player.right, player.up, player.forward)
-                             * player.ship->cockpit_position;
+    fvec3d cam_pos = player.position +
+                     fmat3(player.right, player.up, player.forward)
+                     * player.ship->cockpit_position;
 
     size_t isz = input.pgd.size(), osz = output.pgd.size();
 
@@ -106,9 +106,9 @@ void handle_particles(Particles &output, const Particles &input,
             osz++;
         }
 
-        vec3 gravitation = -pngd.position *
-                           6.67384e-11 * 5.974e24
-                           / pow(pngd.position.length(), 3.);
+        fvec3 gravitation = -pngd.position *
+                            6.67384e-11 * 5.974e24
+                            / pow(pngd.position.length(), 3.);
 
         ParticleGraphicsData &opgd = output.pgd[out_i];
         ParticleNonGraphicsData &opngd = output.pngd[out_i];
@@ -119,7 +119,7 @@ void handle_particles(Particles &output, const Particles &input,
         opngd.lifetime = new_lifetime;
         opngd.source_ship_id = pngd.source_ship_id;
 
-        opgd.position_relative_to_viewer = vec3(opngd.position - cam_pos);
+        opgd.position_relative_to_viewer = fvec3(opngd.position - cam_pos);
         opgd.orientation = pgd.orientation;
     }
 
@@ -145,7 +145,7 @@ void handle_particles(Particles &output, const Particles &input,
         opngd.lifetime = pngd.lifetime;
         opngd.source_ship_id = pngd.source_ship_id;
 
-        opgd.position_relative_to_viewer = vec3(opngd.position - cam_pos);
+        opgd.position_relative_to_viewer = fvec3(opngd.position - cam_pos);
         opgd.orientation = pgd.orientation;
     }
 
@@ -179,9 +179,9 @@ void handle_particles(Particles &output, const Particles &input,
             impact_osz++;
         }
 
-        vec3 gravitation = -ingd.position *
-                           6.67384e-11 * 5.974e24
-                           / pow(ingd.position.length(), 3.);
+        fvec3 gravitation = -ingd.position *
+                            6.67384e-11 * 5.974e24
+                            / pow(ingd.position.length(), 3.);
 
         ImpactGraphicsData &oigd = output.igd[impact_out_i];
         ImpactNonGraphicsData &oingd = output.ingd[impact_out_i];
@@ -190,7 +190,7 @@ void handle_particles(Particles &output, const Particles &input,
         oingd.velocity = ingd.velocity + gravitation * out_ws.interval;
         oingd.position = ingd.position + oingd.velocity * out_ws.interval;
 
-        oigd.position_relative_to_viewer = vec3(oingd.position - cam_pos);
+        oigd.position_relative_to_viewer = fvec3(oingd.position - cam_pos);
         oigd.lifetime = new_lifetime;
         oigd.total_lifetime = igd.total_lifetime;
     }
@@ -204,7 +204,7 @@ void handle_particles(Particles &output, const Particles &input,
         ParticleNonGraphicsData &pngd = output.pngd[i];
 
         for (ShipState &s: out_ws.ships) {
-            vec3 movement = -out_ws.interval * pngd.velocity;
+            fvec3 movement = -out_ws.interval * pngd.velocity;
             float mvsq = movement.dot(movement);
             float dist_end = (pngd.position - s.position).length();
 
@@ -248,8 +248,8 @@ void handle_particles(Particles &output, const Particles &input,
                             oingd.position = pngd.position + movement;
                         }
 
-                        oigd.position_relative_to_viewer = vec3(oingd.position -
-                                                                cam_pos);
+                        oigd.position_relative_to_viewer = fvec3(oingd.position
+                                                                 - cam_pos);
                         if (s.hull_hitpoints <= 0.f) {
                             oigd.total_lifetime = 10.f;
                         } else {
@@ -327,8 +327,8 @@ void draw_particles(const GraphicsStatus &status, const Particles &input)
     if (draw_p) {
         particle_prg->use();
 
-        particle_prg->uniform<mat4>("mat_mvp") = status.projection
-                                                 * status.relative_to_camera;
+        particle_prg->uniform<fmat4>("mat_mvp") = status.projection
+                                                  * status.relative_to_camera;
         particle_prg->uniform<float>("aspect") = status.aspect;
 
         particle_data->draw(GL_POINTS);
@@ -341,8 +341,8 @@ void draw_particles(const GraphicsStatus &status, const Particles &input)
 
         impact_prg->use();
 
-        impact_prg->uniform<mat4>("mat_mv") = status.relative_to_camera;
-        impact_prg->uniform<mat4>("mat_proj") = status.projection;
+        impact_prg->uniform<fmat4>("mat_mv") = status.relative_to_camera;
+        impact_prg->uniform<fmat4>("mat_proj") = status.projection;
         impact_prg->uniform<gl::texture>("tex") = *impact_tex;
 
         impact_data->draw(GL_POINTS);

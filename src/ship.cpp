@@ -1,4 +1,4 @@
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <cassert>
 #include <cstdint>
@@ -22,31 +22,31 @@ ShipState::ShipState(const Ship *ship_type):
 
     id = id_counter++;
 
-    position        = vec3::zero();
-    velocity        = vec3::zero();
-    acceleration    = vec3::zero();
+    position        = fvec3d::zero();
+    velocity        = fvec3d::zero();
+    acceleration    = fvec3::zero();
 
-    rotational_velocity = vec3::zero();
-    angular_momentum    = vec3::zero();
-    torque              = vec3::zero();
+    rotational_velocity = fvec3::zero();
+    angular_momentum    = fvec3::zero();
+    torque              = fvec3::zero();
 
-    forward = vec3(0.f, 0.f, -1.f);
-    up      = vec3(0.f, 1.f,  0.f);
-    right   = vec3(1.f, 0.f,  0.f);
+    forward = fvec3(0.f, 0.f, -1.f);
+    up      = fvec3(0.f, 1.f,  0.f);
+    right   = fvec3(1.f, 0.f,  0.f);
 
-    weapon_force    = vec3::zero();
-    weapon_torque   = vec3::zero();
+    weapon_force    = fvec3::zero();
+    weapon_torque   = fvec3::zero();
 
-    local_velocity      = vec3::zero();
-    local_acceleration  = vec3::zero();
+    local_velocity      = fvec3::zero();
+    local_acceleration  = fvec3::zero();
 
-    local_rotational_velocity = vec3::zero();
+    local_rotational_velocity = fvec3::zero();
 
     total_mass = ship->empty_mass;
 
     thruster_states.resize(ship->thrusters.size(), 0.f);
     weapon_cooldowns.resize(ship->weapons.size(), 0.f);
-    weapon_forwards.resize(ship->weapons.size(), vec3(0.f, 0.f, -1.f));
+    weapon_forwards.resize(ship->weapons.size(), fvec3(0.f, 0.f, -1.f));
 
     hull_hitpoints = ship->hull_hitpoints;
 }

@@ -38,7 +38,7 @@ end
 $builtin = ['single', 'vec3', 'string', 'array', 'map', 'u64', 'u32']
 $builtin_type_map = {
     'single' => 'float',
-    'vec3'   => 'dake::math::vec3',
+    'vec3'   => 'dake::math::fvec3',
     'string' => 'std::string',
     'array'  => :interpret_array,
     'map'    => :interpret_map,
@@ -201,7 +201,7 @@ header.write <<EOF
 #ifndef JSON_STRUCTS_HPP
 #define JSON_STRUCTS_HPP
 
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <string>
 #include <vector>
@@ -300,7 +300,7 @@ template<> void parse<float>(float *obj, const GDData *d)
 }
 
 
-template<> void parse<dake::math::vec3>(dake::math::vec3 *obj, const GDData *d)
+template<> void parse<dake::math::fvec3>(dake::math::fvec3 *obj, const GDData *d)
 {
     if (d->type != GDData::ARRAY) {
         throw std::runtime_error("Value given for vec3 is not an array");

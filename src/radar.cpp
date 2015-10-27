@@ -1,4 +1,4 @@
-#include <dake/math/matrix.hpp>
+#include <dake/math/fmatrix.hpp>
 
 #include <cstdint>
 #include <climits>
@@ -25,7 +25,7 @@ void Radar::update(const Radar &radar_old, const ShipState &ship_new,
             continue;
         }
 
-        vec3 rel_pos = ship.position - ship_new.position;
+        fvec3 rel_pos = ship.position - ship_new.position;
 
         // TODO: Check whether obstructed by earth
         if (rel_pos.length() >= 1e6f) {
