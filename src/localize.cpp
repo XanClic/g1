@@ -150,7 +150,8 @@ const std::string localize(int i)
 }
 
 
-static const std::string localize_float(float f, int prec)
+template<typename T>
+static const std::string localize_float(T f, int prec)
 {
     if (olo != DE_TENGWAR) {
         char bump[32];
@@ -163,7 +164,8 @@ static const std::string localize_float(float f, int prec)
 }
 
 
-const std::string localize(float f, int prec, LocalizedStrings unit)
+template<typename T>
+const std::string localize(T f, int prec, LocalizedStrings unit)
 {
     if (unit == LS_REALLY_NOTHING_AND_NOTHING_BUT) {
         return localize_float(f, prec);
@@ -172,18 +174,18 @@ const std::string localize(float f, int prec, LocalizedStrings unit)
             return localize_float(f, prec) + localize(unit);
         } else {
             LocalizedStrings prefix;
-            float fav = fabsf(f);
-            if (fav < 1e0f) {
+            T fav = std::fabs(f);
+            if (fav < static_cast<T>(1e0)) {
                 prefix = LS_UNIT_PREFIX_MILLI;
-                f *= 1e3f;
-            } else if (fav < 1e3f) {
+                f *= static_cast<T>(1e3);
+            } else if (fav < static_cast<T>(1e3)) {
                 prefix = LS_REALLY_NOTHING_AND_NOTHING_BUT;
-            } else if (fav < 1e6f) {
+            } else if (fav < static_cast<T>(1e6)) {
                 prefix = LS_UNIT_PREFIX_KILO;
-                f *= 1e-3f;
+                f *= static_cast<T>(1e-3);
             } else {
                 prefix = LS_UNIT_PREFIX_MEGA;
-                f *= 1e-6f;
+                f *= static_cast<T>(1e-6);
             }
 
             return localize_float(f, prec) + localize(LS_SEPARATOR) +
@@ -191,6 +193,11 @@ const std::string localize(float f, int prec, LocalizedStrings unit)
         }
     }
 }
+
+template const std::string localize<float>(float f, int prec,
+                                           LocalizedStrings unit);
+template const std::string localize<double>(double f, int prec,
+                                              LocalizedStrings unit);
 
 
 const std::string localize(LocalizedStrings str)

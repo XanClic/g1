@@ -302,17 +302,16 @@ static void draw_cockpit_controls(const WorldState &world,
                                   float sxs, float sys)
 {
     const ShipState &ship = world.ships[world.player_ship];
-    const vec3 &velocity = ship.velocity;
 
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 1.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_ORBITAL_VELOCITY));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 3.5f * sys), vec2(sxs, 2 * sys),
-              localize(velocity.length(), 2, LS_UNIT_M_S));
+              localize(ship.velocity.length(), 2, LS_UNIT_M_S));
 
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 5.5f * sys), vec2(sxs, 2 * sys),
               localize(LS_HEIGHT_OVER_GROUND));
     draw_text(vec2(-1.f + .5f * sxs, 1.f - 7.5f * sys), vec2(sxs, 2 * sys),
-              localize((static_cast<float>(ship.position.length()) - 6371e3f),
+              localize(ship.position.length() - 6371e3,
                        2, LS_UNIT_M));
 
     float time_factor = world.interval / world.real_interval;

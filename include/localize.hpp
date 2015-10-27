@@ -36,7 +36,7 @@ enum LocalizedStrings {
 
 
 const std::string localize(int i);
-const std::string localize(float f, int prec = 2,
+template<typename T> const std::string localize(T f, int prec = 2,
     LocalizedStrings unit = LS_REALLY_NOTHING_AND_NOTHING_BUT);
 const std::string localize(LocalizedStrings str);
 
