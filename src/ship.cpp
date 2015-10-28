@@ -27,11 +27,11 @@ ShipState::ShipState(const Ship *ship_type, SharedPointer<PhysicsEngine> physics
 
     id = id_counter++;
 
-    acceleration    = vec3::zero();
+    //acceleration    = vec3::zero();
 
-    rotational_velocity = vec3::zero();
-    angular_momentum    = vec3::zero();
-    torque              = vec3::zero();
+    //rotational_velocity = vec3::zero();
+    //angular_momentum    = vec3::zero();
+    //torque              = vec3::zero();
 
     forward = vec3(0.f, 0.f, -1.f);
     up      = vec3(0.f, 1.f,  0.f);
