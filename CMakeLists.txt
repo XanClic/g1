@@ -46,6 +46,15 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAK
                    COMMAND "${CMAKE_SOURCE_DIR}/tools/generate-serializer.rb" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
                    DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
 
+
+# This is stupid. The STL can use any library it wants for implementing
+# std::thread, but there is no way for us to query the necessary compile and
+# link options. And that is utterly stupid. But I guess that's just what I get
+# for using C++. I was stupid and now I have to deal with this stupidity.
+set(THREAD_CXXFLAGS -pthread)
+set(THREAD_LIBS pthread)
+
+
 include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
                     ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
                     ${LIBUSB_INCLUDE_DIRS} ${LIBEPOXY_INCLUDE_DIRS})
@@ -71,7 +80,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 
 target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                          ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
-                         ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} m)
+                         ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} ${THREAD_LIBS} m)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
@@ -80,4 +89,6 @@ add_executable(polar-to-cube tools/polar-to-cube.cpp)
 target_link_libraries(polar-to-cube dake ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                                     txc_dxtn m)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS} -march=native -mtune=native -fno-math-errno -fomit-frame-pointer -flto")
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS} \
+                     -march=native -mtune=native -fno-math-errno \
+                     -fomit-frame-pointer -flto ${THREAD_CXXFLAGS}")
