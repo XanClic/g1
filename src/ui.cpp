@@ -951,3 +951,24 @@ float Input::get_mapping(const std::string &n) const
 
     return it->second;
 }
+
+
+void do_force_feedback(const WorldState &ws)
+{
+#ifdef HAS_LIBUSB
+    // FIXME: We need user configuration for this (when to rumble, how to
+    //        rumble, ...)
+
+    const ShipState &ps = ws.ships[ws.player_ship];
+
+    float total_thrust = 0.f;
+    int thruster_count = ps.ship->thrusters.size();
+    for (int i = 0; i < thruster_count; i++) {
+        total_thrust += clamp(ps.thruster_states[i]) *
+                        ps.ship->thrusters[i].force.length();
+    }
+
+    // FIXME: And this multiplier is completely arbitrary
+    gamepad->set_right_rumble(clamp(.05f * total_thrust / ps.total_mass));
+#endif
+}
