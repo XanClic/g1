@@ -960,6 +960,10 @@ float Input::get_mapping(const std::string &n) const
 void do_force_feedback(const WorldState &ws)
 {
 #ifdef HAS_LIBUSB
+    if (!gamepad) {
+        return;
+    }
+
     // FIXME: We need user configuration for this (when to rumble, how to
     //        rumble, ...)
 
