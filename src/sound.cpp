@@ -39,7 +39,15 @@ static SoundEffect &get_sfx(const std::string &name)
 
 void do_sound(const WorldState &input)
 {
-    (void)input;
+    const ShipState &ps = input.ships[input.player_ship];
+
+    int weapon_count = ps.weapon_fired.size();
+    for (int i = 0; i < weapon_count; i++) {
+        if (ps.weapon_fired[i]) {
+            const WeaponClass *wc = weapon_classes[ps.ship->weapons[i].type];
+            get_sfx(wc->sound_file).play();
+        }
+    }
 }
 
 
