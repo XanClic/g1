@@ -8,7 +8,7 @@ project(g1)
 find_package(OpenGL REQUIRED)
 find_package(PNG REQUIRED)
 find_package(JPEG REQUIRED)
-find_package(Lua51 REQUIRED)
+find_package(Lua REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
 pkg_search_module(SDL2_MIXER REQUIRED SDL2_mixer)
@@ -16,6 +16,12 @@ pkg_search_module(LIBEPOXY REQUIRED epoxy)
 pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
 
 find_library(LIBTXC_DXTN txc_dxtn)
+
+if (${LUA_VERSION_MAJOR} LESS 5 OR (${LUA_VERSION_MAJOR} EQUAL 5 AND
+                                    ${LUA_VERSION_MINOR} LESS 2))
+    message(FATAL_ERROR "Lua 5.2+ required \
+                         (${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR} found)")
+endif ()
 
 if (NOT LIBTXC_DXTN)
     message(FATAL_ERROR "libtxc_dxtn not found!")
