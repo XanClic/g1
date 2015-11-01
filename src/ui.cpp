@@ -970,5 +970,13 @@ void do_force_feedback(const WorldState &ws)
 
     // FIXME: And this multiplier is completely arbitrary
     gamepad->set_right_rumble(clamp(.05f * total_thrust / ps.total_mass));
+
+
+    for (bool fired: ps.weapon_fired) {
+        if (fired) {
+            gamepad->set_left_rumble(1.f, true);
+            break;
+        }
+    }
 #endif
 }

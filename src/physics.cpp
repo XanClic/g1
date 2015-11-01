@@ -50,24 +50,27 @@ static void handle_weapons(WorldState &output, const WorldState &input,
     bool local_mat_initialized = false;
     fmat3 local_mat;
 
-    float aim_xp, aim_xn, aim_yp, aim_yn;
-    aim_xp = user_input.get_mapping("aim.+x");
-    aim_xn = user_input.get_mapping("aim.-x");
-    aim_yp = user_input.get_mapping("aim.+y");
-    aim_yn = user_input.get_mapping("aim.-y");
+    if (is_player_ship) {
+        float aim_xp, aim_xn, aim_yp, aim_yn;
+        aim_xp = user_input.get_mapping("aim.+x");
+        aim_xn = user_input.get_mapping("aim.-x");
+        aim_yp = user_input.get_mapping("aim.+y");
+        aim_yn = user_input.get_mapping("aim.-y");
 
-    for (int i = 0; i < weapon_count; i++) {
-        ship_out.weapon_forwards[i] = fvec3(aim_xp - aim_xn,
-                                            aim_yp - aim_yn,
-                                            -1.f).approx_normalized();
+        for (int i = 0; i < weapon_count; i++) {
+            ship_out.weapon_forwards[i] = fvec3(aim_xp - aim_xn,
+                                                aim_yp - aim_yn,
+                                                -1.f).approx_normalized();
+        }
     }
 
     for (int i = 0; i < weapon_count; i++) {
+        bool fire = false;
+
         float new_cooldown = ship_in.weapon_cooldowns[i] - output.interval;
 
         if (new_cooldown <= 0.f) {
-            bool fire = is_player_ship && user_input.get_mapping("main_fire");
-
+            fire = is_player_ship && user_input.get_mapping("main_fire");
             if (fire) {
                 WeaponType wt = ship_in.ship->weapons[i].type;
                 const WeaponClass *wc = weapon_classes[wt];
@@ -96,6 +99,7 @@ static void handle_weapons(WorldState &output, const WorldState &input,
         }
 
         ship_out.weapon_cooldowns[i] = new_cooldown;
+        ship_out.weapon_fired[i] = fire;
     }
 
     // TODO

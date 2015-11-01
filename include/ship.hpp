@@ -39,6 +39,7 @@ struct ShipState {
 
     std::vector<float> thruster_states;
     std::vector<float> weapon_cooldowns;
+    std::vector<bool> weapon_fired;
     AlignedVector<dake::math::fvec3> weapon_forwards;
 
     Radar radar;
