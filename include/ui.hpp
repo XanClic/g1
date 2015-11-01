@@ -7,6 +7,9 @@
 #include <dake/math/fmatrix.hpp>
 
 
+struct WorldState;
+
+
 struct Input {
     float get_mapping(const std::string &n) const;
 
@@ -19,6 +22,9 @@ void init_ui(void);
 void ui_process_events(Input &input);
 void ui_process_menu_events(bool &quit, bool &mouse_down,
                             dake::math::fvec2 &mouse_pos);
+
+void do_force_feedback(const WorldState &ws);
+
 void ui_swap_buffers(void);
 
 #endif
