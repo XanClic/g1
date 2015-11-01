@@ -77,12 +77,14 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/include/json-structs.hpp" "${CMAK
                    COMMAND "${CMAKE_SOURCE_DIR}/tools/generate-serializer.rb" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}"
                    DEPENDS json-structs/* json-enums/* "${CMAKE_BINARY_DIR}/include")
 
+
 # This is stupid. The STL can use any library it wants for implementing
 # std::thread, but there is no way for us to query the necessary compile and
 # link options. And that is utterly stupid. But I guess that's just what I get
 # for using C++. I was stupid and now I have to deal with this stupidity.
 set(THREAD_CXXFLAGS -pthread)
 set(THREAD_LIBS pthread)
+
 
 include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_binary_dir}/include" "${SpaceSimCore_include_dir}" "${EIGEN_INCLUDE}"
                     ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
@@ -110,6 +112,20 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 target_link_libraries(g1 dake SpaceSimCore ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                          ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
                          ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} ${THREAD_LIBS} m)
+
+
+
+#debug
+
+
+add_custom_target(
+    debug
+    COMMAND echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}" && echo "${SpaceSimCore_include_dir}"
+)
+add_dependencies(g1 debug)
+
+
+
 
 
 

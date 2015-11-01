@@ -203,7 +203,6 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
         // TODO< case for to ground attached body >
 
-
         if (physics_enabled) {
 
         } else {
@@ -236,7 +235,6 @@ void do_physics(WorldState &output, const WorldState &input, const Input &user_i
 
                                 vec<3, double>(earth_normal));
             //out.position = 6371e3 / out.position.length() * out.position;
-
         }
         */
         //out.orbit_normal = out.velocity.cross(out.position).normalized();

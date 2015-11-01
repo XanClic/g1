@@ -414,7 +414,6 @@ static void draw_orbit_grid(const GraphicsStatus &status,
         return;
     }
 
-
     float cfdon = status.camera_forward.dot(ship.cachedOrbitNormal);
 
     fvec3 zero = status.camera_forward - cfdon * ship.cachedOrbitNormal;
@@ -438,6 +437,7 @@ static void draw_orbit_grid(const GraphicsStatus &status,
     zero.approx_normalize();
 
     fvec3 rvec = zero.cross(ship.cachedOrbitNormal);
+
     for (int angle = -90; angle <= 90; angle += 2) {
         float ra = M_PIf * angle / 180.f;
 

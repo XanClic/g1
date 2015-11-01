@@ -205,7 +205,6 @@ void do_graphics(WorldState &input)
 
     const ShipState &ps = input.ships[input.player_ship];
 
-
     status.camera_position = conversion::fromEigenToDake(ps.physicsBody->getPosition())
                            + mat3(ps.right, ps.up, ps.forward) *
                              ps.ship->cockpit_position;

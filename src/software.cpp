@@ -573,6 +573,7 @@ void ScenarioScript::execute(WorldState &out_state, const WorldState &in_state, 
 
     fvec<3, double> ovel, oup, ofwd, orgt;
     fvec<3, double> shipPosition = conversion::fromEigenToDakeDouble(ops.physicsBody->getPosition());
+
     struct vecval { const char *name; vec<3, double> &v; };
     for (const auto &vec: (vecval[]){ { "velocity", ovel }, { "position", shipPosition },
                                       { "up", oup }, { "forward", ofwd }, { "right", orgt } })
