@@ -3,3 +3,4 @@
 -Ibuild/dake/include
 -I/usr/include/libusb-1.0
 -std=c++11
+-DHAS_LIBUSB
