@@ -9,6 +9,7 @@
 #include "graphics.hpp"
 #include "main_loop.hpp"
 #include "physics.hpp"
+#include "sound.hpp"
 #include "ui.hpp"
 
 
@@ -73,6 +74,7 @@ void main_loop(const std::string &scenario)
     while (!quit) {
         do_graphics(*info.world_states[info.current_graphics_state]);
         do_force_feedback(*info.world_states[info.current_graphics_state]);
+        do_sound(*info.world_states[info.current_graphics_state]);
 
         lock.lock();
 

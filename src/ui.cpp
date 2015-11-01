@@ -14,6 +14,7 @@
 #include "localize.hpp"
 #include "main_loop.hpp"
 #include "physics.hpp"
+#include "sound.hpp"
 #include "ui.hpp"
 
 #ifdef HAS_LIBUSB
@@ -444,7 +445,7 @@ static void fill_action_list(std::vector<Action> *al, const GDArray &cml,
 
 void init_ui(void)
 {
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
     create_context(1280, 720);
 
@@ -493,6 +494,9 @@ void init_ui(void)
 
     wnd_width = 1280;
     wnd_height = 720;
+
+
+    init_sound();
 
 
     GDData *map_config = json_parse_file("config/input-bindings.json");
