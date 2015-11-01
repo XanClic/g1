@@ -11,6 +11,7 @@ find_package(JPEG REQUIRED)
 find_package(Lua51 REQUIRED)
 
 pkg_search_module(SDL2 REQUIRED sdl2)
+pkg_search_module(SDL2_MIXER REQUIRED SDL2_mixer)
 pkg_search_module(LIBEPOXY REQUIRED epoxy)
 pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
 
@@ -56,8 +57,9 @@ set(THREAD_LIBS pthread)
 
 
 include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
-                    ${SDL2_INCLUDE_DIRS} ${LUA_INCLUDE_DIR}
-                    ${LIBUSB_INCLUDE_DIRS} ${LIBEPOXY_INCLUDE_DIRS})
+                    ${SDL2_INCLUDE_DIRS} ${SDL2_MIXER_INCLUDE_DIRS}
+                    ${LUA_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIRS}
+                    ${LIBEPOXY_INCLUDE_DIRS})
 link_directories("${dake_dir}")
 
 if (LIBUSB_FOUND)
@@ -74,13 +76,15 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/menu.cpp src/aurora.cpp src/generic-data.cpp src/json.cpp
                   src/ship_types.cpp src/ship.cpp src/weapons.cpp
                   src/particles.cpp src/runge-kutta-4.cpp src/radar.cpp
-                  ${SC_FILES}
+                  ${SC_FILES} src/sound.cpp
                   "${CMAKE_BINARY_DIR}/serializer.cpp"
                   "${CMAKE_BINARY_DIR}/include/json-structs.hpp")
 
-target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
-                         ${SDL2_LIBRARIES} ${LUA_LIBRARIES} ${LIBUSB_LIBRARIES}
-                         ${LIBTXC_DXTN} ${LIBEPOXY_LIBRARIES} ${THREAD_LIBS} m)
+target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES}
+                         ${JPEG_LIBRARIES} ${SDL2_LIBRARIES}
+                         ${SDL2_MIXER_LIBRARIES} ${LUA_LIBRARIES}
+                         ${LIBUSB_LIBRARIES} ${LIBTXC_DXTN}
+                         ${LIBEPOXY_LIBRARIES} ${THREAD_LIBS} m)
 
 add_executable(create-sphere tools/create-sphere.cpp)
 target_link_libraries(create-sphere dake m)
