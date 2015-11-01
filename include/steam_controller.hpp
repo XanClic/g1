@@ -56,6 +56,7 @@ class SteamController {
         bool usb_thread_quit = false;
 
         uint16_t left_rumble = 0, right_rumble = 0;
+        bool left_rumble_autoclear = false, right_rumble_autoclear = false;
         int rumble_index = 0;
 
 
@@ -111,11 +112,13 @@ class SteamController {
 
         bool button_state(Button b) const { return buttons() & (1 << b); }
 
-        void set_left_rumble(float intensity)
-        { left_rumble = static_cast<uint16_t>(intensity * 65535.f); }
+        void set_left_rumble(float intensity, bool autoclear = false)
+        { left_rumble = static_cast<uint16_t>(intensity * 65535.f);
+          left_rumble_autoclear = autoclear; }
 
-        void set_right_rumble(float intensity)
-        { right_rumble = static_cast<uint16_t>(intensity * 65535.f); }
+        void set_right_rumble(float intensity, bool autoclear = false)
+        { right_rumble = static_cast<uint16_t>(intensity * 65535.f);
+          right_rumble_autoclear = autoclear; }
 };
 
 #endif
