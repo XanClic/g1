@@ -79,7 +79,7 @@
     "z": "-main_engine",
     "x": "+main_engine",
 
-    "Gamepad.BottomRightShoulder.+z": "+main_engine",
+    "Gamepad.BottomRightShoulder.+z": { "target": "+main_engine", "deadzone": 0.05 },
 
     "Gamepad.LeftPad.+x": { "target": "aim.+x", "translate": "none", "multiplier": 0.2 },
     "Gamepad.LeftPad.-x": { "target": "aim.-x", "translate": "none", "multiplier": 0.2 },
