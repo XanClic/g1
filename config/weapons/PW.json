@@ -1,6 +1,7 @@
 {
     "type":         "PW",
     "full_name":    "Plasmawerfer",
+    "sound_file":   "pw.ogg",
 
     "cooldown": 0.1,
 

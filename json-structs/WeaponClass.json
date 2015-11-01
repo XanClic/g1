@@ -1,6 +1,7 @@
 {
     "type":         "WeaponType",
     "full_name":    "string",
+    "sound_file":   "string",
 
     "cooldown": "single",
 
