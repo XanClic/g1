@@ -30,6 +30,7 @@ You need:
 * GCC or clang (for building)
 * CMake (for building)
 * SDL2 (for an OpenGL context, and mouse and keyboard input)
+* SDL2\_mixer (for sound)
 * OpenGL (obviously)
 * libepoxy (for OpenGL function pointer management)
 * libpng (for some textures)
