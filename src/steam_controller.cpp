@@ -299,6 +299,15 @@ void SteamController::usb_update(SteamController *self)
         } else if (self->left_rumble) {
             self->send_rumble(1, self->left_rumble);
         }
+
+        if (self->left_rumble_autoclear) {
+            self->left_rumble = 0;
+            self->left_rumble_autoclear = false;
+        }
+        if (self->right_rumble_autoclear) {
+            self->right_rumble = 0;
+            self->right_rumble_autoclear = false;
+        }
     }
 }
 
