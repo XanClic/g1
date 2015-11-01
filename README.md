@@ -53,8 +53,8 @@ Once you gathered what you need:
     $ cmake ..
     $ make
 
-Of course untested on Windows. It will not work there, I can assure you of that.
-The least which is missing is linking GLEW in.
+Of course untested on Windows, and it will most likely not work there without
+modifications.
 
 Running
 -------
