@@ -61,6 +61,26 @@ static std::string str_tolower(const std::string &str)
 }
 
 
+GLTFObject::MeshPrimitive::MeshPrimitive(void)
+{
+}
+
+
+GLTFObject::MeshPrimitive::~MeshPrimitive(void)
+{
+    if (va) {
+        delete va;
+    }
+}
+
+
+GLTFObject::MeshPrimitive::MeshPrimitive(MeshPrimitive &&mp)
+{
+    va = mp.va;
+    mp.va = nullptr;
+}
+
+
 GLTFObject *GLTFObject::load(const std::string &name)
 {
     char *dn = strdup(name.c_str());
@@ -116,12 +136,14 @@ GLTFObject *GLTFObject::load(const std::string &name)
             obj->primitives.emplace_back();
             MeshPrimitive &prim = obj->primitives.back();
 
+            prim.va = new gl::vertex_array;
+
             prim.mode = mp.mode;
 
             if (mp.has_indices) {
                 const GLTFAccessor &acc = gltf.accessors[mp.indices];
 
-                gl::elements_array *ea = prim.va.indices();
+                gl::elements_array *ea = prim.va->indices();
                 ea->reuse_buffer(buffer_views[acc.bufferView]);
                 ea->format(element_count(acc.type), acc.componentType);
 
@@ -137,7 +159,7 @@ GLTFObject *GLTFObject::load(const std::string &name)
                 prim.vertices = gltf.accessors[acc_name].count;
             }
 
-            prim.va.set_elements(prim.vertices);
+            prim.va->set_elements(prim.vertices);
 
             for (const auto &a: mp.attributes) {
                 GLuint attr_index;
@@ -154,7 +176,7 @@ GLTFObject *GLTFObject::load(const std::string &name)
 
                 const GLTFAccessor &acc = gltf.accessors[a.second];
 
-                gl::vertex_attrib *attr = prim.va.attrib(attr_index);
+                gl::vertex_attrib *attr = prim.va->attrib(attr_index);
                 attr->reuse_buffer(buffer_views[acc.bufferView]);
                 attr->format(element_count(acc.type), acc.componentType);
                 attr->load(acc.byteStride, acc.byteOffset);
@@ -194,7 +216,7 @@ void GLTFObject::bind_program_vertex_attribs(gl::program &prg)
 
 gl::vertex_array &GLTFObject::vertex_array(int index)
 {
-    return primitives[index].va;
+    return *primitives[index].va;
 }
 
 
@@ -207,6 +229,6 @@ size_t GLTFObject::vertex_count(int index)
 void GLTFObject::draw(void)
 {
     for (MeshPrimitive &mp: primitives) {
-        mp.va.draw(mp.mode);
+        mp.va->draw(mp.mode);
     }
 }
