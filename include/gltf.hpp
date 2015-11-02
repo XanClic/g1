@@ -11,7 +11,13 @@
 class GLTFObject {
     private:
         struct MeshPrimitive {
-            dake::gl::vertex_array va;
+            MeshPrimitive(void);
+            MeshPrimitive(const MeshPrimitive &mp) = delete;
+            ~MeshPrimitive(void);
+
+            MeshPrimitive(MeshPrimitive &&mp);
+
+            dake::gl::vertex_array *va = nullptr;
             GLenum mode;
             size_t vertices;
         };
