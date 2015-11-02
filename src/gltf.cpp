@@ -146,11 +146,12 @@ GLTFObject *GLTFObject::load(const std::string &name)
                 gl::elements_array *ea = prim.va->indices();
                 ea->reuse_buffer(buffer_views[acc.bufferView]);
                 ea->format(element_count(acc.type), acc.componentType);
+                ea->set_offset(acc.byteOffset);
 
-                if (acc.byteOffset || acc.byteStride) {
+                if (acc.byteStride) {
                     delete obj;
-                    throw std::runtime_error("Cannot specify offset or stride "
-                                             "index accessors");
+                    throw std::runtime_error("Cannot specify stride for index "
+                                             "accessors");
                 }
 
                 prim.vertices = acc.count;
