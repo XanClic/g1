@@ -153,9 +153,6 @@ void Tile::load_image(void)
         uncompressed_image = new gl::image(source, source_size);
     }
 
-    image = new gl::image(*uncompressed_image, uncompressed_image->format());
-    return;
-
     if (uncompressed_image->channels() == 4) {
         image = new gl::image(*uncompressed_image, gl::image::COMPRESSED_S3TC_DXT5);
     } else {
