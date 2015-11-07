@@ -51,7 +51,8 @@ struct Tile {
     int refcount = 0;
     int index = 0;
 
-    void load_image(void);
+    void load_image(gl::image::channel_format compression =
+                    gl::image::LINEAR_UINT8);
     void load_texture(void);
     void unload_image(void);
     void unload_texture(void);
@@ -134,7 +135,7 @@ void Tile::load_alpha_source(const char *name, int lod, int si, int ti)
 }
 
 
-void Tile::load_image(void)
+void Tile::load_image(gl::image::channel_format compression)
 {
     if (image) {
         return;
@@ -153,11 +154,7 @@ void Tile::load_image(void)
         uncompressed_image = new gl::image(source, source_size);
     }
 
-    if (uncompressed_image->channels() == 4) {
-        image = new gl::image(*uncompressed_image, gl::image::COMPRESSED_S3TC_DXT5);
-    } else {
-        image = new gl::image(*uncompressed_image, gl::image::COMPRESSED_S3TC_DXT1);
-    }
+    image = new gl::image(*uncompressed_image, compression);
 }
 
 
@@ -533,10 +530,12 @@ static void lod_load_images(void)
         for (int x = 0; x < day_lods[lod].horz_tiles; x++) {
             for (int y = 0; y < day_lods[lod].vert_tiles; y++) {
                 if (day_lods[lod].tiles[x][y].refcount) {
-                    day_lods[lod].tiles[x][y].load_image();
+                    day_lods[lod].tiles[x][y].
+                        load_image(gl::image::COMPRESSED_S3TC_DXT5);
                 }
                 if ((lod >= 2) && night_lods[lod].tiles[x][y].refcount) {
-                    night_lods[lod].tiles[x][y].load_image();
+                    night_lods[lod].tiles[x][y].
+                        load_image(gl::image::COMPRESSED_RGTC_RG);
                 }
             }
         }
