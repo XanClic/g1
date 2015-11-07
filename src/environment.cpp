@@ -317,12 +317,13 @@ void init_environment(void)
     if (!gl::glext.has_extension(gl::BINDLESS_TEXTURE)) {
         day_tex = new gl::array_texture;
         day_tex->wrap(GL_MIRRORED_REPEAT);
-        day_tex->format(GL_RGBA, 2048, 2048, max_tex_per_type);
+        day_tex->format(GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 2048, 2048,
+                        max_tex_per_type);
 
         night_tex = new gl::array_texture;
         night_tex->tmu() = 1;
         night_tex->wrap(GL_MIRRORED_REPEAT);
-        night_tex->format(GL_RG, 2048, 2048, max_tex_per_type);
+        night_tex->format(GL_COMPRESSED_RG_RGTC2, 2048, 2048, max_tex_per_type);
     }
 
     cloud_normal_map = new gl::texture("assets/cloud_normals.jpg");
