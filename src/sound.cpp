@@ -57,7 +57,8 @@ SoundEffect::SoundEffect(const std::string &file)
 
     sdl_chunk = Mix_LoadWAV(fname.c_str());
     if (!sdl_chunk) {
-        throw std::runtime_error("Failed to load sound file " + fname);
+        throw std::runtime_error("Failed to load sound file " + fname + ": " +
+                                 Mix_GetError());
     }
 }
 
