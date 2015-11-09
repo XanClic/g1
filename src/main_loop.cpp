@@ -72,6 +72,7 @@ void main_loop(const std::string &scenario)
     std::thread physics_thr(physics_worker, std::ref(info));
 
     while (!quit) {
+        ui_fetch_events(*info.input);
         do_graphics(*info.world_states[info.current_graphics_state]);
         do_force_feedback(*info.world_states[info.current_graphics_state]);
         do_sound(*info.world_states[info.current_graphics_state]);

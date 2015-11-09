@@ -19,6 +19,7 @@ struct Input {
 
 void init_ui(void);
 
+void ui_fetch_events(Input &input);
 void ui_process_events(Input &input);
 void ui_process_menu_events(bool &quit, bool &mouse_down,
                             dake::math::fvec2 &mouse_pos);
