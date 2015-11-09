@@ -33,7 +33,10 @@ ExternalProject_Add(
     GIT_TAG origin/master
     SOURCE_DIR dake
     CMAKE_COMMAND true
-    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} "CXX=${CMAKE_CXX_COMPILER}" libdake.a
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
+                  "CC=${CMAKE_C_COMPILER}"
+                  "CXX=${CMAKE_CXX_COMPILER}"
+                  libdake.a
     BINARY_DIR dake
     INSTALL_COMMAND true
 )
