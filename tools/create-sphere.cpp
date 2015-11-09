@@ -7,8 +7,9 @@
 #include <cstring>
 #include <initializer_list>
 
-#include <dake/math.hpp>
+#include <dake/cross.hpp>
 #include <dake/gl.hpp>
+#include <dake/math.hpp>
 
 
 using namespace dake;

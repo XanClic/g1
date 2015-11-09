@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <dake/cross.hpp>
+
 
 template <typename T>
 class AlignAllocator {
@@ -41,13 +43,13 @@ class AlignAllocator {
 
         T *allocate(size_t n, const T * = nullptr)
         {
-            void *ptr = aligned_alloc(alignof(T), n * sizeof(T));
+            void *ptr = dake::cross::aligned_alloc(alignof(T), n * sizeof(T));
             if (!ptr) {
                 throw std::bad_alloc();
             }
             return static_cast<T *>(ptr);
         }
-        void deallocate(T *ptr, size_t) { free(ptr); }
+        void deallocate(T *ptr, size_t) { dake::cross::aligned_free(ptr); }
 
         size_t max_size(void) const { return SIZE_MAX / sizeof(T); }
 
