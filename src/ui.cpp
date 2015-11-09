@@ -849,7 +849,9 @@ void ui_process_events(Input &input)
 {
     SDL_Event event;
 
-    while (SDL_PollEvent(&event)) {
+    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT,
+                          SDL_FIRSTEVENT, SDL_LASTEVENT) > 0)
+    {
         switch (event.type) {
             case SDL_QUIT:
                 quit_main_loop();
@@ -895,6 +897,14 @@ void ui_process_events(Input &input)
     if (input.get_mapping("next_localization")) {
         olo = static_cast<Localization>((olo + 1) % LOCALIZATIONS);
     }
+}
+
+
+void ui_fetch_events(Input &input)
+{
+    (void)input;
+
+    SDL_PumpEvents();
 }
 
 
