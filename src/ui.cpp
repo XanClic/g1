@@ -21,6 +21,8 @@
 #include "steam_controller.hpp"
 #endif
 
+#include <dake/cross/undef-macros.hpp>
+
 
 using namespace dake::math;
 

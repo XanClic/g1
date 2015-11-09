@@ -10,6 +10,8 @@
 #include <getopt.h>
 #include <string>
 
+#include <dake/cross.hpp>
+
 #include "graphics.hpp"
 #include "main_loop.hpp"
 #include "menu.hpp"
