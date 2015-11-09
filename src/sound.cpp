@@ -9,7 +9,6 @@
 #include "physics.hpp"
 #include "ship.hpp"
 #include "sound.hpp"
-#include "steam_controller.hpp"
 #include "weapons.hpp"
 
 
