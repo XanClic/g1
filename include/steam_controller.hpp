@@ -4,7 +4,7 @@
 #include <dake/math/fmatrix.hpp>
 
 extern "C" {
-#include <libusb.h>
+#include <hidapi.h>
 }
 
 #include <thread>
@@ -31,15 +31,13 @@ class SteamController {
             uint8_t unknown_4[40];
         } __attribute__((packed));
 
-        const libusb_endpoint_descriptor *
-            set_interface(const libusb_config_descriptor *cfg_desc);
+        bool enumerate(void);
 
-        static void usb_update(SteamController *self);
+        static void raw_update(SteamController *self);
 
         void send_rumble(uint8_t index, uint16_t intensity);
 
-        libusb_device *dev = nullptr;
-        libusb_device_handle *handle = nullptr;
+        hid_device *dev = nullptr;
         int interface = -1, ep = -1;
         bool wireless = false;
 
@@ -52,8 +50,8 @@ class SteamController {
         dake::math::fvec2 analog_status = dake::math::fvec2::zero();
         float lshoulder_status = 0.f, rshoulder_status = 0.f;
 
-        std::thread *usb_thread = nullptr;
-        bool usb_thread_quit = false;
+        std::thread *update_thread = nullptr;
+        bool update_thread_quit = false;
 
         uint16_t left_rumble = 0, right_rumble = 0;
         bool left_rumble_autoclear = false, right_rumble_autoclear = false;

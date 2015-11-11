@@ -1,6 +1,6 @@
 -Iinclude
 -Ibuild/include
 -Ibuild/dake/include
--I/usr/include/libusb-1.0
+-I/usr/include/hidapi
 -std=c++11
 -DHAS_LIBUSB

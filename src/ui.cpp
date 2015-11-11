@@ -17,7 +17,7 @@
 #include "sound.hpp"
 #include "ui.hpp"
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 #include "steam_controller.hpp"
 #endif
 
@@ -37,7 +37,7 @@ enum MouseAxis {
 };
 
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 enum GamepadAxis {
     AXIS_UNKNOWN,
 
@@ -75,7 +75,7 @@ namespace std
 int_hash(SDL_Scancode);
 int_hash(MouseAxis);
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 int_hash(SteamController::Button);
 int_hash(GamepadAxis);
 #endif
@@ -117,7 +117,7 @@ struct Action {
 static SDL_Window *wnd;
 static int wnd_width, wnd_height;
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 static SteamController *gamepad;
 #endif
 
@@ -126,7 +126,7 @@ static std::unordered_map<SDL_Scancode, std::vector<Action>> keyboard_mappings;
 static std::unordered_map<int, std::vector<Action>> mouse_button_mappings;
 static std::unordered_map<MouseAxis, std::vector<Action>> mouse_axis_mappings;
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 static std::unordered_map<SteamController::Button, std::vector<Action>>
     gamepad_button_mappings;
 static std::unordered_map<GamepadAxis, std::vector<Action>>
@@ -164,7 +164,7 @@ static MouseAxis get_mouse_axis_from_name(const char *name)
 }
 
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 static SteamController::Button get_gamepad_button_from_name(const char *name)
 {
     if (!strcmp(name, "BottomLeftShoulder")) {
@@ -286,7 +286,7 @@ static void create_context(int w, int h, int major = 0, int minor = 0)
 }
 
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 static void destroy_gamepad(void)
 {
     if (gamepad) {
@@ -481,7 +481,7 @@ void init_ui(void)
     printf("OpenGL %i.%i Core initialized\n", maj, min);
 
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
     try {
         gamepad = new SteamController;
         atexit(destroy_gamepad);
@@ -542,7 +542,7 @@ void init_ui(void)
                 }
             }
         } else if (!strncmp(m.first.c_str(), "Gamepad.", 8)) {
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
             GamepadAxis a = get_gamepad_axis_from_name(m.first.c_str() + 8);
             if (a != AXIS_UNKNOWN) {
                 verify_axis_actions(m.first, action_list);
@@ -652,7 +652,7 @@ static void update_axis(Input &input, Action &a, float state)
     ns = clamp(ns + state * a.multiplier);
 }
 
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
 static void update_1way_axis(Input &input, GamepadAxis axis, float state)
 {
     if (state < 0.f) {
@@ -876,7 +876,7 @@ void ui_process_events(Input &input)
 
     process_mouse_events(input, true);
     process_keyboard_events(input, true);
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
     if (gamepad) {
         process_gamepad_events(input, gamepad, true);
     }
@@ -884,7 +884,7 @@ void ui_process_events(Input &input)
 
     process_mouse_events(input, false);
     process_keyboard_events(input, false);
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
     if (gamepad) {
         process_gamepad_events(input, gamepad, false);
     }
@@ -971,7 +971,7 @@ float Input::get_mapping(const std::string &n) const
 
 void do_force_feedback(const WorldState &ws)
 {
-#ifdef HAS_LIBUSB
+#ifdef HAS_HIDAPI
     if (!gamepad) {
         return;
     }
