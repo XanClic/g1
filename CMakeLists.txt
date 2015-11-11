@@ -13,7 +13,13 @@ find_package(Lua REQUIRED)
 pkg_search_module(SDL2 REQUIRED sdl2)
 pkg_search_module(SDL2_MIXER REQUIRED SDL2_mixer)
 pkg_search_module(LIBEPOXY REQUIRED epoxy)
-pkg_search_module(LIBUSB OPTIONAL libusb-1.0)
+
+if (("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux") OR
+    ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD"))
+    pkg_search_module(HIDAPI OPTIONAL hidapi-libusb)
+else ()
+    pkg_search_module(HIDAPI OPTIONAL hidapi)
+endif ()
 
 find_library(LIBTXC_DXTN txc_dxtn)
 
@@ -80,17 +86,17 @@ set(THREAD_LIBS pthread)
 
 include_directories(include "${CMAKE_BINARY_DIR}/include" "${dake_dir}/include"
                     ${SDL2_INCLUDE_DIRS} ${SDL2_MIXER_INCLUDE_DIRS}
-                    ${LUA_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIRS}
+                    ${LUA_INCLUDE_DIR} ${HIDAPI_INCLUDE_DIRS}
                     ${LIBEPOXY_INCLUDE_DIRS})
 link_directories("${dake_dir}")
 
-if (LIBUSB_FOUND)
+if (HIDAPI_FOUND)
     set(SC_FILES src/steam_controller.cpp)
-    set(SC_CXXFLAGS -DHAS_LIBUSB)
-else (LIBUSB_FOUND)
+    set(SC_CXXFLAGS -DHAS_HIDAPI)
+else (HIDAPI_FOUND)
     set(SC_FILES)
     set(SC_CXXFLAGS)
-endif (LIBUSB_FOUND)
+endif (HIDAPI_FOUND)
 
 add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
                   src/physics.cpp src/environment.cpp src/cockpit.cpp
@@ -105,7 +111,7 @@ add_executable(g1 src/main.cpp src/ui.cpp src/main_loop.cpp src/graphics.cpp
 target_link_libraries(g1 dake ${OPENGL_LIBRARIES} ${PNG_LIBRARIES}
                          ${JPEG_LIBRARIES} ${SDL2_LIBRARIES}
                          ${SDL2_MIXER_LIBRARIES} ${LUA_LIBRARIES}
-                         ${LIBUSB_LIBRARIES} ${LIBTXC_DXTN}
+                         ${HIDAPI_LIBRARIES} ${LIBTXC_DXTN}
                          ${LIBEPOXY_LIBRARIES} ${THREAD_LIBS} m)
 
 add_executable(create-sphere tools/create-sphere.cpp)

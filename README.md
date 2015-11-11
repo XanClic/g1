@@ -40,7 +40,7 @@ You need:
 * libjpeg (for other textures)
 * libtxc\_dxtn (for on-GPU texture compression)
 * Lua (for scripting (IGS: “In-Game Software”))
-* Optionally: libusb (for Steam Controller input)
+* Optionally: HIDAPI (for Steam Controller input)
 
 I am running Arch Linux, so I do not tend to make sure everything works with
 build tools or libraries that are not bleeding edge. Feel free to open an issue
@@ -58,10 +58,10 @@ Once you gathered what you need:
 
 ### On Linux for Windows ###
 
-You need the same prerequisites as above, except libusb will not do you any
-good, and of course you need MinGW and all the libraries built for MinGW. While
-you can use your standard system Ruby and CMake, you will need a special
-pkg-config for the MinGW libraries.
+You need the same prerequisites as above, but your compiler must be MinGW's GCC
+(maybe it works with other compilers, too, I have not tested that), the
+pkg-config has to be tuned to your MinGW installation, and all the libraries
+must have been built for MinGW. However, Ruby and CMake should be native.
 
 The project includes a toolchain file, and you can use it like so:
 
