@@ -28,8 +28,15 @@ if (NOT LIBTXC_DXTN)
 endif (NOT LIBTXC_DXTN)
 
 if (NOT TARGET_ARCHITECTURE)
-    set(TARGET_ARCHITECTURE native)
-endif (NOT TARGET_ARCHITECTURE)
+    set(MARCH -march=native)
+    set(MTUNE -mtune=native)
+elseif ("${TARGET_ARCHITECTURE}" STREQUAL "generic")
+    set(MARCH -march=x86-64)
+    set(MTUNE -mtune=generic)
+else ()
+    set(MARCH -march=${TARGET_ARCHITECTURE})
+    set(MTUNE -mtune=${TARGET_ARCHITECTURE})
+endif ()
 
 ExternalProject_Add(
     dake_source
@@ -40,7 +47,8 @@ ExternalProject_Add(
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
                   "CC=${CMAKE_C_COMPILER}"
                   "CXX=${CMAKE_CXX_COMPILER}"
-                  "TARGET_ARCHITECTURE=${TARGET_ARCHITECTURE}"
+                  "MARCH=${MARCH}"
+                  "MTUNE=${MTUNE}"
                   libdake.a
     BINARY_DIR dake
     INSTALL_COMMAND true
@@ -108,6 +116,5 @@ target_link_libraries(polar-to-cube dake ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
                                     txc_dxtn m)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3 -g2 -Wall -Wextra -Wshadow ${SC_CXXFLAGS} \
-                     -march=${TARGET_ARCHITECTURE} \
-                     -mtune=${TARGET_ARCHITECTURE} -fno-math-errno \
+                     ${MARCH} ${MTUNE} -fno-math-errno \
                      -fomit-frame-pointer -flto ${THREAD_CXXFLAGS}")
