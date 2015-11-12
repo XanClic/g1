@@ -32,6 +32,7 @@ class SteamController {
         } __attribute__((packed));
 
         // Use git blame to read the exciting story behind this!
+        // (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52991)
         static_assert(sizeof(InputData) == 64, "InputData has invalid size");
 
         bool enumerate(void);
