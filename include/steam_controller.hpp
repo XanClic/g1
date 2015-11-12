@@ -19,8 +19,8 @@ class SteamController {
             uint8_t unknown_1;
             uint8_t seqnum;         // 0x04
             uint8_t unknown_2[3];
-            uint8_t buttons_0;      // 0x08
-            uint16_t buttons_1;     // 0x09
+            uint16_t buttons_0;     // 0x08
+            uint8_t buttons_1;      // 0x0a
             uint8_t lshoulder;      // 0x0b
             uint8_t rshoulder;      // 0x0c
             uint8_t unknown_3[3];   // 0x0d
@@ -30,6 +30,9 @@ class SteamController {
             int16_t rpad_y;         // 0x16
             uint8_t unknown_4[40];
         } __attribute__((packed));
+
+        // Use git blame to read the exciting story behind this!
+        static_assert(sizeof(InputData) == 64, "InputData has invalid size");
 
         bool enumerate(void);
 

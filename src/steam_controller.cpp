@@ -119,7 +119,7 @@ void SteamController::raw_update(SteamController *self)
         }
 
         self->raw_button_state =  self->raw_state.buttons_0
-                               | (self->raw_state.buttons_1 << 8);
+                               | (self->raw_state.buttons_1 << 16);
 
         if (self->analog_valid() && self->button_state(LEFT_PAD)) {
             self->raw_button_state &= ~(1 << LEFT_PAD);
