@@ -9,6 +9,12 @@ struct Options {
     bool uniform_scratch_map = false;
 
     int star_map_resolution = 2048;
+
+    enum Bloom {
+        NO_BLOOM,
+        LQ_BLOOM,
+        HQ_BLOOM,
+    } bloom_type = HQ_BLOOM;
 };
 
 

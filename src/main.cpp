@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
             {"scratch-map-res", required_argument, nullptr, 259},
             {"uniform-scratch-map", no_argument, nullptr, 260},
             {"star-map-res", required_argument, nullptr, 261},
+            {"bloom", required_argument, nullptr, 262},
 
             {nullptr, 0, nullptr, 0}
         };
@@ -64,6 +65,9 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "  --star-map-res=resolution\n");
                 fprintf(stderr, "                   Sets the resolution of one side of the star map\n");
                 fprintf(stderr, "                   (512, 1024 or 2048)\n");
+                fprintf(stderr, "  --bloom=<no,lq,hq>\n");
+                fprintf(stderr, "                   Chooses how to draw bloom (no: not at all; lq: with rather\n");
+                fprintf(stderr, "                   low quality; hq (default): best quality available)\n");
                 return 0;
 
             case 256: {
@@ -125,6 +129,19 @@ int main(int argc, char *argv[])
                 global_options.star_map_resolution = res;
                 break;
             }
+
+            case 262:
+                if (!strcmp(optarg, "no")) {
+                    global_options.bloom_type = Options::NO_BLOOM;
+                } else if (!strcmp(optarg, "lq")) {
+                    global_options.bloom_type = Options::LQ_BLOOM;
+                } else if (!strcmp(optarg, "hq")) {
+                    global_options.bloom_type = Options::HQ_BLOOM;
+                } else {
+                    fprintf(stderr, "Invalid argument given for --bloom (allowed: no, lq, hq)\n");
+                    return 1;
+                }
+                break;
         }
     }
 

@@ -5,6 +5,7 @@
 #include "environment.hpp"
 #include "graphics.hpp"
 #include "menu.hpp"
+#include "options.hpp"
 #include "particles.hpp"
 #include "physics.hpp"
 #include "text.hpp"
@@ -63,12 +64,15 @@ void init_game_graphics(void)
     (*main_fb)[0].wrap(GL_CLAMP_TO_BORDER);
     (*main_fb)[0].set_border_color(vec4::zero());
 
-    for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
-        (*bloom_fb)[0].set_tmu(1);
-        (*bloom_fb)[0].filter(GL_LINEAR);
-        (*bloom_fb)[0].wrap(GL_CLAMP_TO_BORDER);
-        (*bloom_fb)[0].set_border_color(vec4::zero());
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        for (gl::framebuffer *&bloom_fb: bloom_fbs) {
+            bloom_fb = new gl::framebuffer(1, GL_R11F_G11F_B10F,
+                                           gl::framebuffer::NO_DEPTH_OR_STENCIL);
+            (*bloom_fb)[0].set_tmu(1);
+            (*bloom_fb)[0].filter(GL_LINEAR);
+            (*bloom_fb)[0].wrap(GL_CLAMP_TO_BORDER);
+            (*bloom_fb)[0].set_border_color(vec4::zero());
+        }
     }
 
     avg_fb = new gl::framebuffer(1, GL_R32F, gl::framebuffer::NO_DEPTH_OR_STENCIL);
@@ -90,8 +94,15 @@ void init_game_graphics(void)
 
     gl::shader fb_vert_sh(gl::shader::VERTEX, "shaders/fb_vert.glsl");
 
-    fb_combine_prg = new gl::program {gl::shader::frag("shaders/fb_frag.glsl")};
-    high_pass_prg  = new gl::program {gl::shader::frag("shaders/high_pass_frag.glsl")};
+    if (global_options.bloom_type == Options::NO_BLOOM) {
+        fb_combine_prg = new gl::program
+                         {gl::shader::frag("shaders/fbnb_frag.glsl")};
+    } else {
+        fb_combine_prg = new gl::program
+                         {gl::shader::frag("shaders/fb_frag.glsl")};
+    }
+    high_pass_prg = new gl::program
+                    {gl::shader::frag("shaders/high_pass_frag.glsl")};
 
     *fb_combine_prg << fb_vert_sh;
     *high_pass_prg  << fb_vert_sh;
@@ -118,10 +129,14 @@ void init_game_graphics(void)
     }
 
 
-    avg_prg  = new gl::program {gl::shader::frag("shaders/avg_frag.glsl")};
-    *avg_prg  << fb_vert_sh;
-    avg_prg ->bind_attrib("in_pos", 0);
-    avg_prg ->bind_frag("out_value", 0);
+    if (global_options.bloom_type == Options::NO_BLOOM) {
+        avg_prg = new gl::program {gl::shader::frag("shaders/avgnb_frag.glsl")};
+    } else {
+        avg_prg = new gl::program {gl::shader::frag("shaders/avg_frag.glsl")};
+    }
+    *avg_prg << fb_vert_sh;
+    avg_prg->bind_attrib("in_pos", 0);
+    avg_prg->bind_frag("out_value", 0);
 
 
     status.z_near = 1.f;
@@ -158,7 +173,18 @@ void update_resolution(void)
     main_fb->resize(change_width, change_height);
 
     for (gl::framebuffer *&bloom_fb: bloom_fbs) {
-        bloom_fb->resize(change_width, change_height);
+        switch (global_options.bloom_type) {
+            case Options::NO_BLOOM:
+                break;
+
+            case Options::LQ_BLOOM:
+                bloom_fb->resize(change_width / 4, change_height / 4);
+                break;
+
+            case Options::HQ_BLOOM:
+                bloom_fb->resize(change_width, change_height);
+                break;
+        }
     }
 
     for (void (*rh)(unsigned w, unsigned h): resize_handlers) {
@@ -192,6 +218,46 @@ static void calculate_camera(fmat4 &mat, const fvec3 &pos, const fvec3 &forward,
     mat[3] = fvec4( 0.f,  0.f,   0.f, 1.f);
 
     mat.translate(-pos);
+}
+
+
+static void do_bloom(void)
+{
+    bloom_fbs[0]->bind();
+    if (global_options.bloom_type == Options::HQ_BLOOM) {
+        glViewport(0, 0, status.width, status.height);
+    } else {
+        glViewport(0, 0, status.width / 4, status.height / 4);
+    }
+
+    (*main_fb)[0].bind();
+
+    high_pass_prg->use();
+    high_pass_prg->uniform<float>("factor") = .7f / status.luminance;
+    high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
+
+    quad_vertices->draw(GL_TRIANGLE_STRIP);
+
+    int low_i = (global_options.bloom_type == Options::HQ_BLOOM) ? 0 : 3;
+
+    for (int i = 5; i >= low_i; i--) {
+        float mag = exp2f(i);
+
+        for (int cur_fb: {0, 1}) {
+            gl::program *blur_prg = blur_prgs[(i == 5 ? 0 : 2) + cur_fb];
+
+            bloom_fbs[!cur_fb]->bind();
+
+            (*bloom_fbs[cur_fb])[0].bind();
+
+            blur_prg->use();
+            blur_prg->uniform<float>("epsilon") =
+                mag / (cur_fb ? 1024.f : 1024.f * status.aspect);
+            blur_prg->uniform<gl::texture>("tex") = (*bloom_fbs[cur_fb])[0];
+
+            quad_vertices->draw(GL_TRIANGLE_STRIP);
+        }
+    }
 }
 
 
@@ -241,50 +307,28 @@ void do_graphics(const WorldState &input)
     glDisable(GL_BLEND);
 
 
-    bloom_fbs[0]->bind();
-    glViewport(0, 0, status.width, status.height);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    (*main_fb)[0].bind();
-
-    high_pass_prg->use();
-    high_pass_prg->uniform<float>("factor") = .7f / status.luminance;
-    high_pass_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
-
-    quad_vertices->draw(GL_TRIANGLE_STRIP);
-
-    for (int i = 5; i >= 0; i--) {
-        float mag = exp2f(i);
-
-        for (int cur_fb: {0, 1}) {
-            gl::program *blur_prg = blur_prgs[(i == 5 ? 0 : 2) + cur_fb];
-
-            bloom_fbs[!cur_fb]->bind();
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            (*bloom_fbs[cur_fb])[0].bind();
-
-            blur_prg->use();
-            blur_prg->uniform<float>("epsilon") = mag / (cur_fb ? 1024.f : 1024.f * status.width / status.height);
-            blur_prg->uniform<gl::texture>("tex") = (*bloom_fbs[cur_fb])[0];
-
-            quad_vertices->draw(GL_TRIANGLE_STRIP);
-        }
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        do_bloom();
     }
 
 
     avg_fb->bind();
     glViewport(0, 0, 256, 256);
-    glClear(GL_COLOR_BUFFER_BIT);
 
     (*main_fb)[0].bind();
-    (*bloom_fbs[0])[0].bind();
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        (*bloom_fbs[0])[0].bind();
+    }
 
     avg_prg->use();
     avg_prg->uniform<gl::texture>("tex") = (*main_fb)[0];
-    avg_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        avg_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
+    }
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
+
+    gl::framebuffer::unbind();
 
 
     (*avg_fb)[0].bind();
@@ -303,17 +347,19 @@ void do_graphics(const WorldState &input)
     highest_avg = helper::maximum(highest_avg, .05f);
 
 
-    gl::framebuffer::unbind();
     glViewport(0, 0, status.width, status.height);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     (*main_fb)[0].bind();
-    (*bloom_fbs[0])[0].bind();
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        (*bloom_fbs[0])[0].bind();
+    }
 
     fb_combine_prg->use();
     fb_combine_prg->uniform<float>("factor") = .7f / status.luminance;
     fb_combine_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
-    fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
+    if (global_options.bloom_type > Options::NO_BLOOM) {
+        fb_combine_prg->uniform<gl::texture>("bloom") = (*bloom_fbs[0])[0];
+    }
 
     quad_vertices->draw(GL_TRIANGLE_STRIP);
 
