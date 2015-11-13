@@ -165,7 +165,7 @@ TODO
       from the ground
 - ~~Aurora~~
 - Specify bytecode for in-game software (IGS)
-- Performance improvements
+- ~~Performance improvements~~
     - ~~Pipelining (split physics and graphics into separate threads)~~
     - ~~Texture fusion (fuse e.g. cloud layer and earth texture into a single 4
       channel texture)~~
