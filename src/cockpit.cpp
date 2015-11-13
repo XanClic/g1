@@ -319,9 +319,9 @@ static void draw_scratches(const GraphicsStatus &status,
     scratch_prg->uniform<fmat3>("normal_mat") = fmat3(ship.right, ship.up,
                                                       ship.forward);
     scratch_prg->uniform<float>("aspect") = status.aspect / (16.f / 9.f);
-    scratch_prg->uniform<float>("xhfov") = status.yfov / 2.f
-                                           * status.width / status.height;
-    scratch_prg->uniform<float>("yhfov") = status.yfov / 2.f;
+    scratch_prg->uniform<float>("tan_xhfov") = tanf(status.yfov / 2.f)
+                                               * status.aspect;
+    scratch_prg->uniform<float>("tan_yhfov") = tanf(status.yfov / 2.f);
     scratch_prg->uniform<gl::texture>("fb") = (*main_fb)[0];
     scratch_prg->uniform<gl::texture>("scratches") = *scratch_tex;
     scratch_prg->uniform<gl::texture>("normals") = *normals_tex;
