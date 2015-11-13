@@ -14,6 +14,8 @@
 
 // #define COCKPIT_SUPERSAMPLING
 
+#define MAX_LINES 128
+
 
 using namespace dake;
 using namespace dake::math;
@@ -43,18 +45,16 @@ static void resize(unsigned w, unsigned h);
 void init_cockpit(void)
 {
     line_va = new gl::vertex_array;
-    line_va->set_elements(2);
 
-    float boole[] = {0.f, 1.f};
-
-    line_va->attrib(0)->format(1);
-    line_va->attrib(0)->data(boole);
+    line_va->attrib(0)->format(2);
+    line_va->attrib(0)->data(nullptr, MAX_LINES * 2 * sizeof(vec2),
+                             GL_DYNAMIC_DRAW, false);
 
 
     line_prg = new gl::program {gl::shader::vert("shaders/line_vert.glsl"),
                                 gl::shader::frag("shaders/line_frag.glsl")};
 
-    line_prg->bind_attrib("va_segment", 0);
+    line_prg->bind_attrib("va_position", 0);
     line_prg->bind_frag("out_col", 0);
 
     if (global_options.uniform_scratch_map) {
@@ -140,13 +140,40 @@ static void resize(unsigned w, unsigned h)
 }
 
 
-static void draw_line(const fvec2 &start, const fvec2 &end)
+static vec2 *line_mapping;
+static int line_vertex_count;
+
+static void start_lines(void)
+{
+    line_mapping = static_cast<vec2 *>(line_va->attrib(0)->map());
+    line_vertex_count = 0;
+}
+
+
+static void push_line(const fvec2 &start, const fvec2 &end)
+{
+    if (line_vertex_count >= MAX_LINES * 2) {
+        fprintf(stderr, "Warning: Too many lines to be drawn\n");
+        return;
+    }
+    line_mapping[line_vertex_count++] = start;
+    line_mapping[line_vertex_count++] = end;
+}
+
+
+static void finish_lines(void)
+{
+    line_va->attrib(0)->unmap();
+    line_mapping = nullptr;
+
+    line_va->attrib(0)->load();
+}
+
+
+static void draw_lines(void)
 {
     line_prg->use();
-
-    line_prg->uniform<fvec2>("start") = start;
-    line_prg->uniform<fvec2>("end")   = end;
-
+    line_va->set_elements(line_vertex_count);
     line_va->draw(GL_LINES);
 }
 
@@ -340,8 +367,8 @@ static void draw_target_cross(const GraphicsStatus &status,
     const ShipState &ship = world.ships[world.player_ship];
 
     fvec2 fwd_proj = project(status, ship.forward);
-    draw_line(fwd_proj + fvec2(-sxs, 0.f), fwd_proj + fvec2(sxs, 0.f));
-    draw_line(fwd_proj + fvec2(0.f, -sys), fwd_proj + fvec2(0.f, sys));
+    push_line(fwd_proj + fvec2(-sxs, 0.f), fwd_proj + fvec2(sxs, 0.f));
+    push_line(fwd_proj + fvec2(0.f, -sys), fwd_proj + fvec2(0.f, sys));
 
 
     fvec2 sprite_size = 2.f * fvec2(sxs, sys);
@@ -452,7 +479,7 @@ static void draw_orbit_grid(const GraphicsStatus &status,
                 proj_vec + fvec2(dvec.x() * sxs, dvec.y() * sys)
             };
 
-            draw_line(pos[0], pos[1]);
+            push_line(pos[0], pos[1]);
 
             if (!(angle % 10)) {
                 draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1])
@@ -497,7 +524,7 @@ static void draw_artificial_horizon(const GraphicsStatus &status,
                 proj_vec + fvec2(dvec.x() * sxs, dvec.y() * sys)
             };
 
-            draw_line(pos[0], pos[1]);
+            push_line(pos[0], pos[1]);
 
             if (!(angle % 10)) {
                 draw_text((pos[0].x() > pos[1].x() ? pos[0] : pos[1])
@@ -673,21 +700,26 @@ void draw_cockpit(const GraphicsStatus &status, const WorldState &world)
     hby[1] = 1.f;
 
 
-    draw_velocity_indicators(status, world, cockpit_brightness, sxs, sys,
-                             hbx, hby);
+    start_lines();
 
     draw_orbit_grid(status, world, cockpit_brightness, aspect, sxs, sys,
                     hbx, hby);
     draw_artificial_horizon(status, world, aspect, sxs, sys, hbx, hby);
 
+    draw_target_cross(status, world, cockpit_brightness, blink_time, sxs, sys,
+                      hbx, hby);
+
+    finish_lines();
+
+
+    draw_velocity_indicators(status, world, cockpit_brightness, sxs, sys,
+                             hbx, hby);
 
     draw_radar_contacts(status, world, cockpit_brightness, blink_time, sxs, sys,
                         hbx, hby);
 
 
-    draw_target_cross(status, world, cockpit_brightness, blink_time, sxs, sys,
-                      hbx, hby);
-
+    draw_lines();
 
     glDisable(GL_SCISSOR_TEST);
 

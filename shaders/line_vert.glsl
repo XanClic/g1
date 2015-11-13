@@ -1,11 +1,9 @@
 #version 150 core
 
-in float va_segment;
-
-uniform vec2 start, end;
+in vec2 va_position;
 
 
 void main(void)
 {
-    gl_Position = vec4(start + (end - start) * va_segment, 0.5, 1.0);
+    gl_Position = vec4(va_position, 0.5, 1.0);
 }
