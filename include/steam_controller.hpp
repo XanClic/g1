@@ -28,7 +28,11 @@ class SteamController {
             int16_t lpad_y;         // 0x12
             int16_t rpad_x;         // 0x14
             int16_t rpad_y;         // 0x16
-            uint8_t unknown_4[40];
+            uint8_t unknown_4[10];
+            int16_t gyro_x;         // 0x22
+            int16_t gyro_z;         // 0x24
+            int16_t gyro_y;         // 0x26
+            uint8_t unknown_5[24];
         } __attribute__((packed));
 
         // Use git blame to read the exciting story behind this!
@@ -52,6 +56,7 @@ class SteamController {
         dake::math::fvec2 lpad_status = dake::math::fvec2::zero();
         dake::math::fvec2 rpad_status = dake::math::fvec2::zero();
         dake::math::fvec2 analog_status = dake::math::fvec2::zero();
+        dake::math::fvec3 gyro_status = dake::math::vec3::zero();
         float lshoulder_status = 0.f, rshoulder_status = 0.f;
 
         std::thread *update_thread = nullptr;
@@ -111,6 +116,8 @@ class SteamController {
         float rshoulder(void) const { return rshoulder_status; }
 
         uint32_t buttons(void) const { return raw_button_state; }
+
+        const dake::math::fvec3 &gyro(void) const { return gyro_status; }
 
         bool button_state(Button b) const { return buttons() & (1 << b); }
 

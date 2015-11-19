@@ -47,7 +47,7 @@ SteamController::SteamController(void)
         0,
         0x87, 0x15, 0x32, 0x84, 0x03, 0x18, 0x00, 0x00,
         0x31, 0x02, 0x00, 0x08, 0x07, 0x00, 0x07, 0x07,
-        0x00, 0x30, 0x00, 0x00, 0x2f, 0x01, 0x00, 0x00
+        0x00, 0x30, 0x14, 0x00, 0x2f, 0x01, 0x00, 0x00
     };
     hid_send_feature_report(dev, init_2, sizeof(init_2));
 }
@@ -152,6 +152,10 @@ void SteamController::raw_update(SteamController *self)
 
         self->lshoulder_status = self->raw_state.lshoulder / 255.f;
         self->rshoulder_status = self->raw_state.rshoulder / 255.f;
+
+        self->gyro_status.x() = self->raw_state.gyro_x / 32767.f;
+        self->gyro_status.y() = self->raw_state.gyro_y / 32767.f;
+        self->gyro_status.z() = self->raw_state.gyro_z / 32767.f;
 
         if (self->left_rumble && self->right_rumble) {
             if (self->rumble_index) {
