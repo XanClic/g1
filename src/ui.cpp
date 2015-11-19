@@ -217,6 +217,10 @@ static SteamController::Button get_gamepad_button_from_name(const char *name)
         return SteamController::RIGHT_PAD;
     } else if (!strcmp(name, "Analog")) {
         return SteamController::ANALOG_STICK;
+    } else if (!strcmp(name, "LeftPadTouched")) {
+        return SteamController::LEFT_PAD_TOUCH;
+    } else if (!strcmp(name, "RightPadTouched")) {
+        return SteamController::RIGHT_PAD_TOUCH;
     } else {
         return SteamController::NONE;
     }
