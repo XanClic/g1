@@ -76,6 +76,34 @@
     "Gamepad.RightPad.-z":  { "target": "rotate.-z", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
     "Gamepad.RightPad.+z":  { "target": "rotate.+z", "translate": "circle_difference", "multiplier": 5, "unless": "modifier.rpad_absolute" },
 
+    "Gamepad.LeftPadTouched": [
+        { "target": "modifier.inhibit_gyro" },
+        { "target": "aim.-x", "translate": "cumulative_reset" },
+        { "target": "aim.+x", "translate": "cumulative_reset" },
+        { "target": "aim.-y", "translate": "cumulative_reset" },
+        { "target": "aim.+y", "translate": "cumulative_reset" },
+    ],
+
+    "Gamepad.Gyro.-y": [
+        { "target": "aim.+x", "translate": "cumulative", "multiplier":  0.2, "unless": "modifier.inhibit_gyro" },
+        { "target": "aim.-x", "translate": "cumulative", "multiplier": -0.2, "unless": "modifier.inhibit_gyro" }
+    ],
+
+    "Gamepad.Gyro.+y": [
+        { "target": "aim.-x", "translate": "cumulative", "multiplier":  0.2, "unless": "modifier.inhibit_gyro" },
+        { "target": "aim.+x", "translate": "cumulative", "multiplier": -0.2, "unless": "modifier.inhibit_gyro" }
+    ],
+
+    "Gamepad.Gyro.-x": [
+        { "target": "aim.-y", "translate": "cumulative", "multiplier":  0.2, "unless": "modifier.inhibit_gyro" },
+        { "target": "aim.+y", "translate": "cumulative", "multiplier": -0.2, "unless": "modifier.inhibit_gyro" }
+    ],
+
+    "Gamepad.Gyro.+x": [
+        { "target": "aim.+y", "translate": "cumulative", "multiplier":  0.2, "unless": "modifier.inhibit_gyro" },
+        { "target": "aim.-y", "translate": "cumulative", "multiplier": -0.2, "unless": "modifier.inhibit_gyro" }
+    ],
+
     "z": "-main_engine",
     "x": "+main_engine",
 
