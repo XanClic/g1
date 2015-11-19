@@ -96,6 +96,8 @@ struct Action {
         DIFFERENCE,
         CIRCLE_DIFFERENCE,
         FOV_ANGLE,
+        CUMULATIVE,
+        CUMULATIVE_RESET,
     };
 
     Action(void) {}
@@ -116,6 +118,7 @@ struct Action {
 // State shared for one action target by multiple mappings
 struct ActionShared {
     bool sticky_state = false;
+    float cumulative_state = 0.f;
 };
 
 static std::unordered_map<std::string, ActionShared> saved_action_state;
@@ -310,7 +313,7 @@ static void verify_axis_actions(const std::string &name,
     for (const Action &a: al) {
         if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
             a.trans != Action::CIRCLE_DIFFERENCE &&
-            a.trans != Action::FOV_ANGLE)
+            a.trans != Action::FOV_ANGLE && a.trans != Action::CUMULATIVE)
         {
             throw std::runtime_error("Invalid translation for an axis event "
                                      "(for “" + name + "”");
@@ -324,7 +327,7 @@ static void verify_button_actions(const std::string &name,
 {
     for (const Action &a: al) {
         if (a.trans != Action::NONE && a.trans != Action::STICKY &&
-            a.trans != Action::ONE_SHOT)
+            a.trans != Action::ONE_SHOT && a.trans != Action::CUMULATIVE_RESET)
         {
             throw std::runtime_error("Invalid translation for an axis event "
                                      "(for “" + name + "”");
@@ -380,6 +383,10 @@ static void fill_action(std::vector<Action> *al, const GDObject &cm,
             a.trans = Action::CIRCLE_DIFFERENCE;
         } else if (trans_str == "fov_angle") {
             a.trans = Action::FOV_ANGLE;
+        } else if (trans_str == "cumulative") {
+            a.trans = Action::CUMULATIVE;
+        } else if (trans_str == "cumulative_reset") {
+            a.trans = Action::CUMULATIVE_RESET;
         } else {
             throw std::runtime_error("Invalid value “" + trans_str + "” given "
                                      "as @translate for “" + event + "”");
@@ -610,6 +617,11 @@ static void button_down(Input &input, Action &action)
         if (action.registered) {
             state = 0.f;
         }
+    } else if (action.trans == Action::CUMULATIVE_RESET) {
+        if (!action.registered) {
+            saved_action_state[action.name].cumulative_state = 0.f;
+        }
+        state = 0.f;
     }
 
     input.mapping_states[action.name] += state;
@@ -660,6 +672,11 @@ static void update_axis(Input &input, Action &a, float state)
                a.trans == Action::FOV_ANGLE)
     {
         // Has been taken care of already
+    } else if (a.trans == Action::CUMULATIVE) {
+        float &cum = saved_action_state[a.name].cumulative_state;
+        cum += state * effective_multiplier;
+        state = cum;
+        effective_multiplier = 1.f;
     } else {
         state = (state - (a.deadzone)) / (1.f - a.deadzone);
     }
