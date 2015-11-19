@@ -25,7 +25,7 @@
     ],
 
     "Mouse.LButton":    "modifier.mouse_rotate",
-    "m":    { "target": "modifier.gamepad_aim", "translate": "sticky" },
+    "Gamepad.Action":   { "target": "modifier.gamepad_aim", "translate": "sticky" },
 
     "Mouse.Down":  [
         { "target": "rotate.-x", "if": "modifier.mouse_rotate" },
