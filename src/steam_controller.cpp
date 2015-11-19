@@ -87,14 +87,18 @@ bool SteamController::enumerate(void)
 }
 
 
-void SteamController::send_rumble(uint8_t index, uint16_t intensity)
+void SteamController::send_rumble(uint8_t index, uint16_t intensity,
+                                  uint16_t period, uint16_t count)
 {
     uint8_t cmd[65] = {
         0,
         0x8f, 0x07, index,
         static_cast<uint8_t>(intensity & 0xff),
         static_cast<uint8_t>(intensity >> 8),
-        0x00, 0x00, 0x01
+        static_cast<uint8_t>(period & 0xff),
+        static_cast<uint8_t>(period >> 8),
+        static_cast<uint8_t>(count & 0xff),
+        static_cast<uint8_t>(count >> 8),
     };
 
     hid_send_feature_report(dev, cmd, sizeof(cmd));

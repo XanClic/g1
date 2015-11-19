@@ -43,7 +43,8 @@ class SteamController {
 
         static void raw_update(SteamController *self);
 
-        void send_rumble(uint8_t index, uint16_t intensity);
+        void send_rumble(uint8_t index, uint16_t intensity, uint16_t period = 0,
+                         uint16_t count = 1);
 
         hid_device *dev = nullptr;
         int interface = -1, ep = -1;
