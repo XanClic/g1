@@ -108,10 +108,17 @@ struct Action {
     float multiplier = 1.f, deadzone = 0.f;
     bool is_modifier = false;
 
-    bool registered = false, sticky_state = false;
+    bool registered = false;
     float previous_state = NAN;
     std::string only_if, only_unless;
 };
+
+// State shared for one action target by multiple mappings
+struct ActionShared {
+    bool sticky_state = false;
+};
+
+static std::unordered_map<std::string, ActionShared> saved_action_state;
 
 
 static SDL_Window *wnd;
@@ -589,18 +596,23 @@ static bool modifiers_present(const Input &i, const Action &a)
 
 static void button_down(Input &input, Action &action)
 {
-    float &s = input.mapping_states[action.name];
+    float state = action.multiplier;
 
     if (action.trans == Action::STICKY) {
+        bool &ss = saved_action_state[action.name].sticky_state;
         if (!action.registered) {
-            action.sticky_state = !action.sticky_state;
+            ss = !ss;
         }
-        s = clamp(action.sticky_state ? action.multiplier : 0.f);
+        if (!ss) {
+            state = 0.f;
+        }
     } else if (action.trans == Action::ONE_SHOT) {
-        s = clamp(action.registered ? 0.f : action.multiplier);
-    } else {
-        s = clamp(action.multiplier);
+        if (action.registered) {
+            state = 0.f;
+        }
     }
+
+    input.mapping_states[action.name] += state;
 
     action.registered = true;
 }
@@ -608,8 +620,10 @@ static void button_down(Input &input, Action &action)
 
 static void button_up(Input &input, Action &action)
 {
-    if (action.trans == Action::STICKY && action.sticky_state) {
-        input.mapping_states[action.name] = clamp(action.multiplier);
+    if (action.trans == Action::STICKY &&
+        saved_action_state[action.name].sticky_state)
+    {
+        input.mapping_states[action.name] = action.multiplier;
     }
 
     action.registered = false;
@@ -632,7 +646,8 @@ static void update_axis(Input &input, Action &a, float state)
         return;
     }
 
-    float &ns = input.mapping_states[a.name];
+    float effective_multiplier = a.multiplier;
+
     if (a.trans == Action::DIFFERENCE) {
         float s = state;
         if (isnanf(a.previous_state)) {
@@ -649,7 +664,7 @@ static void update_axis(Input &input, Action &a, float state)
         state = (state - (a.deadzone)) / (1.f - a.deadzone);
     }
 
-    ns = clamp(ns + state * a.multiplier);
+    input.mapping_states[a.name] += state * effective_multiplier;
 }
 
 #ifdef HAS_HIDAPI
@@ -889,6 +904,11 @@ void ui_process_events(Input &input)
         process_gamepad_events(input, gamepad, false);
     }
 #endif
+
+
+    for (auto &p: input.mapping_states) {
+        p.second = clamp(p.second);
+    }
 
 
     if (input.get_mapping("quit")) {
