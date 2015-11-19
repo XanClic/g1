@@ -3,4 +3,4 @@
 -Ibuild/dake/include
 -I/usr/include/hidapi
 -std=c++11
--DHAS_LIBUSB
+-DHAS_HIDAPI
