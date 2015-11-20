@@ -162,9 +162,21 @@ void SteamController::raw_update(SteamController *self)
         self->lshoulder_status = self->raw_state.lshoulder / 255.f;
         self->rshoulder_status = self->raw_state.rshoulder / 255.f;
 
-        self->gyro_status.x() = self->raw_state.rotation_x / 32767.f;
-        self->gyro_status.y() = self->raw_state.rotation_y / 32767.f;
-        self->gyro_status.z() = self->raw_state.rotation_z / 32767.f;
+        self->acceleration_data.x() = self->raw_state.acceleration_x / 16383.f;
+        self->acceleration_data.y() = self->raw_state.acceleration_y / 16383.f;
+        self->acceleration_data.z() = self->raw_state.acceleration_z / 16383.f;
+
+        self->rotation_data.x() = self->raw_state.rotation_x / 32767.f;
+        self->rotation_data.y() = self->raw_state.rotation_y / 32767.f;
+        self->rotation_data.z() = self->raw_state.rotation_z / 32767.f;
+
+        self->orientation_data.x() =
+            2.f * asinf(self->raw_state.orientation_x / 32767.f);
+        self->orientation_data.z() =
+            2.f * asinf(self->raw_state.orientation_z / 32767.f);
+        self->orientation_data.y() =
+            2.f * atan2f(self->raw_state.orientation_yb / 32767.f,
+                         self->raw_state.orientation_ya / 32767.f);
 
         if (self->left_rumble && self->right_rumble) {
             if (self->rumble_index) {

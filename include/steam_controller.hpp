@@ -127,8 +127,11 @@ class SteamController {
         dake::math::fvec2 lpad_status = dake::math::fvec2::zero();
         dake::math::fvec2 rpad_status = dake::math::fvec2::zero();
         dake::math::fvec2 analog_status = dake::math::fvec2::zero();
-        dake::math::fvec3 gyro_status = dake::math::vec3::zero();
         float lshoulder_status = 0.f, rshoulder_status = 0.f;
+
+        dake::math::fvec3 acceleration_data = dake::math::fvec3::zero();
+        dake::math::fvec3 rotation_data     = dake::math::fvec3::zero();
+        dake::math::fvec3 orientation_data  = dake::math::fvec3::zero();
 
         std::thread *update_thread = nullptr;
         bool update_thread_quit = false;
@@ -188,7 +191,15 @@ class SteamController {
 
         uint32_t buttons(void) const { return raw_button_state; }
 
-        const dake::math::fvec3 &gyro(void) const { return gyro_status; }
+        // Unit: g (== 9.81 m/s²)
+        const dake::math::fvec3 &acceleration(void) const
+        { return acceleration_data; }
+        // Unit: I have no idea
+        const dake::math::fvec3 &gyro(void) const { return rotation_data; }
+        const dake::math::fvec3 &rotation(void) const { return rotation_data; }
+        // Unit: radian
+        const dake::math::fvec3 &orientation(void) const
+        { return orientation_data; }
 
         bool button_state(Button b) const { return buttons() & (1 << b); }
 
