@@ -195,7 +195,6 @@ class SteamController {
         const dake::math::fvec3 &acceleration(void) const
         { return acceleration_data; }
         // Unit: I have no idea
-        const dake::math::fvec3 &gyro(void) const { return rotation_data; }
         const dake::math::fvec3 &rotation(void) const { return rotation_data; }
         // Unit: radian
         const dake::math::fvec3 &orientation(void) const

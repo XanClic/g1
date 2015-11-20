@@ -61,12 +61,12 @@ enum GamepadAxis {
     AXIS_ANALOG_CCW,
     AXIS_LSHOULDER,
     AXIS_RSHOULDER,
-    AXIS_GYRO_NEG_X,
-    AXIS_GYRO_POS_X,
-    AXIS_GYRO_NEG_Y,
-    AXIS_GYRO_POS_Y,
-    AXIS_GYRO_NEG_Z,
-    AXIS_GYRO_POS_Z,
+    AXIS_ROTATION_NEG_X,
+    AXIS_ROTATION_POS_X,
+    AXIS_ROTATION_NEG_Y,
+    AXIS_ROTATION_POS_Y,
+    AXIS_ROTATION_NEG_Z,
+    AXIS_ROTATION_POS_Z,
 };
 #endif
 
@@ -275,18 +275,18 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_LSHOULDER;
     } else if (!strcmp(name, "BottomRightShoulder.+z")) {
         return AXIS_RSHOULDER;
-    } else if (!strcmp(name, "Gyro.-x")) {
-        return AXIS_GYRO_NEG_X;
-    } else if (!strcmp(name, "Gyro.+x")) {
-        return AXIS_GYRO_POS_X;
-    } else if (!strcmp(name, "Gyro.-y")) {
-        return AXIS_GYRO_NEG_Y;
-    } else if (!strcmp(name, "Gyro.+y")) {
-        return AXIS_GYRO_POS_Y;
-    } else if (!strcmp(name, "Gyro.-z")) {
-        return AXIS_GYRO_NEG_Z;
-    } else if (!strcmp(name, "Gyro.+z")) {
-        return AXIS_GYRO_POS_Z;
+    } else if (!strcmp(name, "Rotation.-x")) {
+        return AXIS_ROTATION_NEG_X;
+    } else if (!strcmp(name, "Rotation.+x")) {
+        return AXIS_ROTATION_POS_X;
+    } else if (!strcmp(name, "Rotation.-y")) {
+        return AXIS_ROTATION_NEG_Y;
+    } else if (!strcmp(name, "Rotation.+y")) {
+        return AXIS_ROTATION_POS_Y;
+    } else if (!strcmp(name, "Rotation.-z")) {
+        return AXIS_ROTATION_NEG_Z;
+    } else if (!strcmp(name, "Rotation.+z")) {
+        return AXIS_ROTATION_POS_Z;
     } else {
         return AXIS_UNKNOWN;
     }
@@ -818,12 +818,12 @@ void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
         update_1way_axis(input, AXIS_LSHOULDER, gp->lshoulder());
         update_1way_axis(input, AXIS_RSHOULDER, gp->rshoulder());
 
-        update_1way_axis(input, AXIS_GYRO_NEG_X, -gp->gyro().x());
-        update_1way_axis(input, AXIS_GYRO_POS_X,  gp->gyro().x());
-        update_1way_axis(input, AXIS_GYRO_NEG_Y, -gp->gyro().y());
-        update_1way_axis(input, AXIS_GYRO_POS_Y,  gp->gyro().y());
-        update_1way_axis(input, AXIS_GYRO_NEG_Z, -gp->gyro().z());
-        update_1way_axis(input, AXIS_GYRO_POS_Z,  gp->gyro().z());
+        update_1way_axis(input, AXIS_ROTATION_NEG_X, -gp->rotation().x());
+        update_1way_axis(input, AXIS_ROTATION_POS_X,  gp->rotation().x());
+        update_1way_axis(input, AXIS_ROTATION_NEG_Y, -gp->rotation().y());
+        update_1way_axis(input, AXIS_ROTATION_POS_Y,  gp->rotation().y());
+        update_1way_axis(input, AXIS_ROTATION_NEG_Z, -gp->rotation().z());
+        update_1way_axis(input, AXIS_ROTATION_POS_Z,  gp->rotation().z());
     }
 
 
