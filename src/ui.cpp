@@ -61,12 +61,24 @@ enum GamepadAxis {
     AXIS_ANALOG_CCW,
     AXIS_LSHOULDER,
     AXIS_RSHOULDER,
+    AXIS_ACCELERATION_NEG_X,
+    AXIS_ACCELERATION_POS_X,
+    AXIS_ACCELERATION_NEG_Y,
+    AXIS_ACCELERATION_POS_Y,
+    AXIS_ACCELERATION_NEG_Z,
+    AXIS_ACCELERATION_POS_Z,
     AXIS_ROTATION_NEG_X,
     AXIS_ROTATION_POS_X,
     AXIS_ROTATION_NEG_Y,
     AXIS_ROTATION_POS_Y,
     AXIS_ROTATION_NEG_Z,
     AXIS_ROTATION_POS_Z,
+    AXIS_ORIENTATION_NEG_X,
+    AXIS_ORIENTATION_POS_X,
+    AXIS_ORIENTATION_NEG_Y,
+    AXIS_ORIENTATION_POS_Y,
+    AXIS_ORIENTATION_NEG_Z,
+    AXIS_ORIENTATION_POS_Z,
 };
 #endif
 
@@ -275,6 +287,18 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_LSHOULDER;
     } else if (!strcmp(name, "BottomRightShoulder.+z")) {
         return AXIS_RSHOULDER;
+    } else if (!strcmp(name, "Acceleration.-x")) {
+        return AXIS_ACCELERATION_NEG_X;
+    } else if (!strcmp(name, "Acceleration.+x")) {
+        return AXIS_ACCELERATION_POS_X;
+    } else if (!strcmp(name, "Acceleration.-y")) {
+        return AXIS_ACCELERATION_NEG_Y;
+    } else if (!strcmp(name, "Acceleration.+y")) {
+        return AXIS_ACCELERATION_POS_Y;
+    } else if (!strcmp(name, "Acceleration.-z")) {
+        return AXIS_ACCELERATION_NEG_Z;
+    } else if (!strcmp(name, "Acceleration.+z")) {
+        return AXIS_ACCELERATION_POS_Z;
     } else if (!strcmp(name, "Rotation.-x")) {
         return AXIS_ROTATION_NEG_X;
     } else if (!strcmp(name, "Rotation.+x")) {
@@ -287,6 +311,18 @@ static GamepadAxis get_gamepad_axis_from_name(const char *name)
         return AXIS_ROTATION_NEG_Z;
     } else if (!strcmp(name, "Rotation.+z")) {
         return AXIS_ROTATION_POS_Z;
+    } else if (!strcmp(name, "Orientation.-x")) {
+        return AXIS_ORIENTATION_NEG_X;
+    } else if (!strcmp(name, "Orientation.+x")) {
+        return AXIS_ORIENTATION_POS_X;
+    } else if (!strcmp(name, "Orientation.-y")) {
+        return AXIS_ORIENTATION_NEG_Y;
+    } else if (!strcmp(name, "Orientation.+y")) {
+        return AXIS_ORIENTATION_POS_Y;
+    } else if (!strcmp(name, "Orientation.-z")) {
+        return AXIS_ORIENTATION_NEG_Z;
+    } else if (!strcmp(name, "Orientation.+z")) {
+        return AXIS_ORIENTATION_POS_Z;
     } else {
         return AXIS_UNKNOWN;
     }
@@ -818,12 +854,32 @@ void process_gamepad_events(Input &input, SteamController *gp, bool modifiers)
         update_1way_axis(input, AXIS_LSHOULDER, gp->lshoulder());
         update_1way_axis(input, AXIS_RSHOULDER, gp->rshoulder());
 
+        update_1way_axis(input, AXIS_ACCELERATION_NEG_X,
+                         -gp->acceleration().x());
+        update_1way_axis(input, AXIS_ACCELERATION_POS_X,
+                          gp->acceleration().x());
+        update_1way_axis(input, AXIS_ACCELERATION_NEG_Y,
+                         -gp->acceleration().y());
+        update_1way_axis(input, AXIS_ACCELERATION_POS_Y,
+                          gp->acceleration().y());
+        update_1way_axis(input, AXIS_ACCELERATION_NEG_Z,
+                         -gp->acceleration().z());
+        update_1way_axis(input, AXIS_ACCELERATION_POS_Z,
+                          gp->acceleration().z());
+
         update_1way_axis(input, AXIS_ROTATION_NEG_X, -gp->rotation().x());
         update_1way_axis(input, AXIS_ROTATION_POS_X,  gp->rotation().x());
         update_1way_axis(input, AXIS_ROTATION_NEG_Y, -gp->rotation().y());
         update_1way_axis(input, AXIS_ROTATION_POS_Y,  gp->rotation().y());
         update_1way_axis(input, AXIS_ROTATION_NEG_Z, -gp->rotation().z());
         update_1way_axis(input, AXIS_ROTATION_POS_Z,  gp->rotation().z());
+
+        update_1way_axis(input, AXIS_ORIENTATION_NEG_X, -gp->orientation().x());
+        update_1way_axis(input, AXIS_ORIENTATION_POS_X,  gp->orientation().x());
+        update_1way_axis(input, AXIS_ORIENTATION_NEG_Y, -gp->orientation().y());
+        update_1way_axis(input, AXIS_ORIENTATION_POS_Y,  gp->orientation().y());
+        update_1way_axis(input, AXIS_ORIENTATION_NEG_Z, -gp->orientation().z());
+        update_1way_axis(input, AXIS_ORIENTATION_POS_Z,  gp->orientation().z());
     }
 
 
