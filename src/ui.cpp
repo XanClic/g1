@@ -116,6 +116,7 @@ struct Action {
         FOV_ANGLE,
         CUMULATIVE,
         CUMULATIVE_RESET,
+        CUMULATIVE_DIFFERENCE,
     };
 
     Action(void) {}
@@ -371,7 +372,8 @@ static void verify_axis_actions(const std::string &name,
     for (const Action &a: al) {
         if (a.trans != Action::NONE && a.trans != Action::DIFFERENCE &&
             a.trans != Action::CIRCLE_DIFFERENCE &&
-            a.trans != Action::FOV_ANGLE && a.trans != Action::CUMULATIVE)
+            a.trans != Action::FOV_ANGLE && a.trans != Action::CUMULATIVE &&
+            a.trans != Action::CUMULATIVE_DIFFERENCE)
         {
             throw std::runtime_error("Invalid translation for an axis event "
                                      "(for “" + name + "”");
@@ -445,6 +447,8 @@ static void fill_action(std::vector<Action> *al, const GDObject &cm,
             a.trans = Action::CUMULATIVE;
         } else if (trans_str == "cumulative_reset") {
             a.trans = Action::CUMULATIVE_RESET;
+        } else if (trans_str == "cumulative_difference") {
+            a.trans = Action::CUMULATIVE_DIFFERENCE;
         } else {
             throw std::runtime_error("Invalid value “" + trans_str + "” given "
                                      "as @translate for “" + event + "”");
@@ -731,6 +735,19 @@ static void update_axis(Input &input, Action &a, float state)
     {
         // Has been taken care of already
     } else if (a.trans == Action::CUMULATIVE) {
+        float &cum = saved_action_state[a.name].cumulative_state;
+        cum += state * effective_multiplier;
+        state = cum;
+        effective_multiplier = 1.f;
+    } else if (a.trans == Action::CUMULATIVE_DIFFERENCE) {
+        float s = state;
+        if (isnanf(a.previous_state)) {
+            state = 0.f;
+        } else {
+            state -= a.previous_state;
+        }
+        a.previous_state = s;
+
         float &cum = saved_action_state[a.name].cumulative_state;
         cum += state * effective_multiplier;
         state = cum;
