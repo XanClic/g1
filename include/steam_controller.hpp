@@ -13,31 +13,101 @@ extern "C" {
 class SteamController {
     private:
         struct InputData {
+            // Apparently always one (maybe the status report ID?)
             uint8_t always_one;     // 0x00
             uint8_t unknown_0;
-            uint8_t validity;       // 0x02
-            uint8_t unknown_1;
-            uint8_t seqnum;         // 0x04
-            uint8_t unknown_2[3];
+
+            // Status of the device
+            uint16_t status;
+
+            // A sequence number
+            uint16_t seqnum;        // 0x04
+
+            uint8_t unknown_2[2];
+
+            // Bitmask of all buttons
             uint16_t buttons_0;     // 0x08
             uint8_t buttons_1;      // 0x0a
+
+            // Analog state of the shoulder triggers
             uint8_t lshoulder;      // 0x0b
             uint8_t rshoulder;      // 0x0c
+
             uint8_t unknown_3[3];   // 0x0d
+
+            // Position of a finger on the left touch pad OR
+            // position of the analog stick
             int16_t lpad_x;         // 0x10
             int16_t lpad_y;         // 0x12
+
+            // Position of a finger on the right touch pad
             int16_t rpad_x;         // 0x14
             int16_t rpad_y;         // 0x16
-            uint8_t unknown_4[10];
-            int16_t gyro_x;         // 0x22
-            int16_t gyro_z;         // 0x24
-            int16_t gyro_y;         // 0x26
-            uint8_t unknown_5[24];
+
+            uint8_t unknown_4[4];
+
+            // Linear acceleration
+            int16_t acceleration_x; // 0x1c
+            int16_t acceleration_z; // 0x1e
+            int16_t acceleration_y; // 0x20
+
+            // Rotational velocity
+            int16_t rotation_x;     // 0x22
+            int16_t rotation_z;     // 0x24
+            int16_t rotation_y;     // 0x26
+
+            // Orientation in space
+            int16_t orientation_ya; // 0x28
+            int16_t orientation_x;  // 0x2a
+            int16_t orientation_z;  // 0x2c
+            int16_t orientation_yb; // 0x2e
+
+            uint8_t unknown_5[16];
         } __attribute__((packed));
 
         // Use git blame to read the exciting story behind this!
         // (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52991)
         static_assert(sizeof(InputData) == 64, "InputData has invalid size");
+
+        enum DeviceStatus {
+            STATUS_SLEEPING = 0x0b04,
+            STATUS_VALID    = 0x3c01,
+        };
+
+        struct HIDFeatureReport {
+            uint8_t report_id;
+        } __attribute__((packed));
+
+        struct ConfigureInputReport {
+            HIDFeatureReport hfr;
+            uint8_t command;        // 0x00
+            uint8_t unknown_0[4];
+            uint8_t preprocess;     // 0x05
+            uint8_t unknown_1[12];
+            uint8_t input_mask;     // 0x12
+            uint8_t unknown_2[3];
+
+            uint8_t padding[42];
+
+            operator const uint8_t *(void) const
+            { return reinterpret_cast<const uint8_t *>(this); }
+        } __attribute__((packed));
+
+        static_assert(sizeof(ConfigureInputReport) == 1 + 64,
+                      "ConfigureInputReport has invalid size");
+
+        enum CIRPreprocess {
+            PREPROCESS_BASE = 0x08,
+
+            PREPROCESS_RAW  = 0x10, // Do not smoothen the touchpad values
+        };
+
+        enum CIRInputMask {
+            INPUT_MASK_ORIENTATION  = 0x04,
+            INPUT_MASK_ACCELERATION = 0x08,
+            INPUT_MASK_ROTATION     = 0x10,
+        };
+
 
         bool enumerate(void);
 
