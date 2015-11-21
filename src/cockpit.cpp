@@ -498,7 +498,7 @@ static void draw_artificial_horizon(const GraphicsStatus &status,
 {
     const ShipState &ship = world.ships[world.player_ship];
 
-    fvec3 earth_upward = fvec3(ship.position).approx_normalized();
+    fvec3 earth_upward = fvec3(ship.position).normalized();
     fvec3 horizon = (status.camera_forward -
                      dotp(status.camera_forward, earth_upward) * earth_upward)
                     .approx_normalized();
