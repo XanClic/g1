@@ -1139,8 +1139,9 @@ void draw_environment(const GraphicsStatus &status, const WorldState &world)
         draw_earth_prg->uniform<fvec3>("cam_right") = ship.right;
         draw_earth_prg->uniform<fvec3>("cam_up") = ship.up;
         draw_earth_prg->uniform<float>("height") = height / 70e3f;
-        draw_earth_prg->uniform<float>("xhfov") = status.yfov * status.width / status.height / 2.f;
-        draw_earth_prg->uniform<float>("yhfov") = status.yfov / 2.f;
+        draw_earth_prg->uniform<float>("tan_xhfov") = tanf(status.yfov / 2.f)
+                                                      * status.aspect;
+        draw_earth_prg->uniform<float>("tan_yhfov") = tanf(status.yfov / 2.f);
     }
     draw_earth_prg->uniform<fvec3>("cam_pos") = status.camera_position;
     draw_earth_prg->uniform<fvec3>("cam_fwd") = status.camera_forward;
