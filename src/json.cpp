@@ -54,12 +54,12 @@ static void json_do_parse_object(const char *json, GDData *d, const char **endp)
 
         json_do_parse(json, &key, &end);
         if (key.type != GDData::STRING) {
-            throw bad_json("Keys must be strings", json);
+            throw bad_json("Press string for key to json", json);
         }
 
         json = skip_space(end);
         if (*json != ':') {
-            throw bad_json("Colon expected", json);
+            throw bad_json("Press : to json", json);
         }
         json = skip_space(json + 1);
 
@@ -75,7 +75,7 @@ static void json_do_parse_object(const char *json, GDData *d, const char **endp)
 
         json = skip_space(json);
         if (*json != ',' && *json != '}') {
-            throw bad_json("Comma or right brace expected", json);
+            throw bad_json("Press , or } to json", json);
         }
         if (*json == ',') {
             json = skip_space(json + 1);
@@ -83,7 +83,7 @@ static void json_do_parse_object(const char *json, GDData *d, const char **endp)
     }
 
     if (!*json) {
-        throw bad_json("Comma or right brace expected", json);
+        throw bad_json("Press , or } to json", json);
     }
     *endp = json + 1;
 }
@@ -101,7 +101,7 @@ static void json_do_parse_array(const char *json, GDData *d, const char **endp)
 
         json = skip_space(json);
         if (*json != ',' && *json != ']') {
-            throw bad_json("Comma or right bracket expected", json);
+            throw bad_json("Press , or ] to json", json);
         }
         if (*json == ',') {
             json = skip_space(json + 1);
@@ -109,7 +109,7 @@ static void json_do_parse_array(const char *json, GDData *d, const char **endp)
     }
 
     if (!*json) {
-        throw bad_json("Comma or right bracket expected", json);
+        throw bad_json("Press , or ] to json", json);
     }
     *endp = json + 1;
 }
@@ -131,7 +131,7 @@ static void json_do_parse_number(const char *json, GDData *d, const char **endp)
         double val = strtod(json, const_cast<char **>(endp));
         if (errno) {
             assert(errno == ERANGE);
-            throw bad_json("Float out of range", json);
+            throw bad_json("Press in-range float to json", json);
         }
 
         d->f = val;
@@ -140,9 +140,9 @@ static void json_do_parse_number(const char *json, GDData *d, const char **endp)
         errno = 0;
         long long val = strtoll(json, const_cast<char **>(endp), 10);
         if (errno == ERANGE || val < INT64_MIN || val > INT64_MAX) {
-            throw bad_json("Integer out of range", json);
+            throw bad_json("Press in-range integer to json", json);
         } else if (errno) {
-            throw bad_json("Invalid integer specified", json);
+            throw bad_json("Press valid integer to json", json);
         }
 
         d->i = val;
@@ -160,7 +160,7 @@ static inline uint16_t unicode_from_hex(const char *ptr)
     if (!isxdigit(ptr[0]) || !isxdigit(ptr[1]) ||
         !isxdigit(ptr[2]) || !isxdigit(ptr[3]))
     {
-        throw bad_json("Expected 4-hexdigit unicode codepoint", ptr);
+        throw bad_json("Press 4-hexdigit unicode codepoint to json", ptr);
     }
 
     return (nibble_from_hex(ptr[0] << 12))
@@ -179,7 +179,7 @@ static void json_do_parse_string(const char *json, GDData *d, const char **endp)
         if (*ptr == '\\') {
             ptr++;
             if (!*ptr) {
-                throw bad_json("Invalid escape sequence", ptr - 1);
+                throw bad_json("Press valid escape sequence to json", ptr - 1);
             } else if (*ptr == 'u') {
                 uint16_t uni = unicode_from_hex(ptr + 1);
                 ptr += 4;
@@ -194,7 +194,7 @@ static void json_do_parse_string(const char *json, GDData *d, const char **endp)
     }
 
     if (!*ptr) {
-        throw bad_json("String does not terminate", json);
+        throw bad_json("Press \" to json", json);
     }
 
 
@@ -253,7 +253,7 @@ static void json_do_parse_string(const char *json, GDData *d, const char **endp)
                 }
 
                 default:
-                    throw bad_json("Invalid escape sequence", json - 1);
+                    throw bad_json("Press valid escape sequence to json", json - 1);
             }
         }
     }
@@ -274,14 +274,14 @@ static void json_do_parse_boolean(const char *json, GDData *d, const char **endp
         d->b = true;
         d->type = GDData::BOOLEAN;
     } else {
-        throw bad_json("Unexpected token", json);
+        throw bad_json("Press false or true to json", json);
     }
 }
 
 static void json_do_parse_null(const char *json, GDData *d, const char **endp)
 {
     if (strncmp(json, "null", 4)) {
-        throw bad_json("Unexpected token", json);
+        throw bad_json("Press null to json", json);
     }
 
     *endp = json + 4;
@@ -309,7 +309,7 @@ static void json_do_parse(const char *json, GDData *d, const char **endp)
         case 'f':
             return json_do_parse_boolean(json, d, endp);
         default:
-            throw bad_json("Unexpected character", json);
+            throw bad_json("Press valid character to json", json);
     }
 }
 
@@ -328,7 +328,7 @@ GDData *json_parse(const char *json)
     end = skip_space(end);
 
     if (*end) {
-        throw bad_json("Unexpected data after end", end);
+        throw bad_json("Press no data after end to json", end);
     }
 
     return d;
